@@ -1,5 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  site: {
+    name: 'Vue Check-in',
+    description: 'Documentation for Vue Check-in composable and features',
+  },
+  app: {
+    baseURL: '/vue-checkin/',
+  },
   modules: ["@nuxt/content", "@nuxt/eslint", "@nuxt/ui"],
   robots: {
     robotsTxt: false,
