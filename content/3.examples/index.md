@@ -52,6 +52,15 @@ Découvrez différents cas d'usage de **vue-checkin** à travers des exemples pr
   ---
   Enregistrement et synchronisation automatiques des composants enfants.
   ::
+
+  ::card
+  ---
+  title: Shopping Cart Example
+  icon: i-heroicons-shopping-cart
+  to: /examples/shopping-cart-example
+  ---
+  Panier e-commerce avec gestion de produits, quantités et calcul de total.
+  ::
 ::
 
 ## Vue d'ensemble
