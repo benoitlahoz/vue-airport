@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useCheckIn, type CheckInDesk } from '@/vue-checkin/composables/useCheckIn';
+import { useCheckIn } from '@/vue-checkin/composables/useCheckIn';
+import { PLUGIN_DESK_KEY } from './index';
 
 interface ListItem {
   name: string;
@@ -11,7 +12,6 @@ const props = defineProps<{
   name: string;
   description: string;
   isActive: boolean;
-  desk: CheckInDesk<ListItem>;
 }>();
 
 const emit = defineEmits<{
@@ -20,7 +20,7 @@ const emit = defineEmits<{
 }>();
 
 // Auto check-in avec watch des données
-useCheckIn<ListItem>().checkIn(props.desk, {
+useCheckIn<ListItem>().checkIn(PLUGIN_DESK_KEY, {
   id: props.id,
   autoCheckIn: true,
   watchData: true,

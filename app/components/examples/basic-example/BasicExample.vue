@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn } from '@/vue-checkin/composables/useCheckIn';
 import TodoItem from './TodoItem.vue';
+import { TODO_DESK_KEY } from './index';
 
 // Type pour les items de la liste
 interface TodoItem {
@@ -10,7 +11,7 @@ interface TodoItem {
 
 // Créer un desk pour gérer les items
 const { createDesk } = useCheckIn<TodoItem>();
-const { desk } = createDesk('todoDesk', {
+const { desk } = createDesk(TODO_DESK_KEY, {
   debug: true,
   onCheckIn: (id, data) => {
     console.log(`✅ Item ajouté: ${id}`, data);
@@ -27,8 +28,7 @@ const todos = ref<Array<{
   done: boolean;
 }>>([]);
 
-// Computed pour afficher les items
-const items = computed(() => desk.getAll());
+// Computed pour le nombre d'items
 const itemCount = computed(() => desk.registry.value.size);
 
 // Ajouter un item manuellement
@@ -100,7 +100,6 @@ const clearAll = () => {
         :key="todo.id"
         :label="todo.label"
         :done="todo.done"
-        :desk="desk"
         @toggle="toggleItem"
         @remove="removeItem"
       />

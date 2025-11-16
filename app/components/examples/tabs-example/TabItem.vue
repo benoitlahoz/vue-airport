@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useCheckIn, type CheckInDesk } from '@/vue-checkin/composables/useCheckIn';
+import { useCheckIn } from '@/vue-checkin/composables/useCheckIn';
+import { TABS_DESK_KEY } from './index';
 
 interface TabItem {
   label: string;
@@ -14,7 +15,6 @@ const props = defineProps<{
   icon?: string;
   isActive: boolean;
   canClose: boolean;
-  desk: CheckInDesk<TabItem>;
 }>();
 
 const emit = defineEmits<{
@@ -23,7 +23,7 @@ const emit = defineEmits<{
 }>();
 
 // Auto check-in avec watch des données
-useCheckIn<TabItem>().checkIn(props.desk, {
+useCheckIn<TabItem>().checkIn(TABS_DESK_KEY, {
   id: props.id,
   autoCheckIn: true,
   watchData: true,

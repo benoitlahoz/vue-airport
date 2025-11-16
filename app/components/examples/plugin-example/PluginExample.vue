@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn, createActiveItemPlugin, createHistoryPlugin, type CheckInItem } from '@/vue-checkin/composables/useCheckIn';
 import PluginListItem from './PluginListItem.vue';
+import { PLUGIN_DESK_KEY } from './index';
 
 // Type pour les items
 interface ListItem {
@@ -14,7 +15,7 @@ const historyPlugin = createHistoryPlugin<ListItem>({ maxHistory: 10 });
 
 // Créer un desk avec les plugins
 const { createDesk } = useCheckIn<ListItem>();
-const { desk } = createDesk('pluginDesk', {
+const { desk } = createDesk(PLUGIN_DESK_KEY, {
   debug: true,
   plugins: [activeItemPlugin, historyPlugin],
 });
@@ -159,7 +160,6 @@ onMounted(() => {
             :name="item.name"
             :description="item.description"
             :is-active="item.id === activeId"
-            :desk="desk"
             @select="selectItem"
             @remove="removeItem"
           />

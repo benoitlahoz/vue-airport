@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn, createValidationPlugin } from '@/vue-checkin/composables/useCheckIn';
 import FormField from './FormField.vue';
+import { FORM_DESK_KEY } from './index';
 
 // Type pour un champ de formulaire
 interface FieldData {
@@ -32,7 +33,7 @@ const validationPlugin = createValidationPlugin<FieldData>({
 
 // Créer un desk avec validation
 const { createDesk } = useCheckIn<FieldData>();
-const { desk } = createDesk('formDesk', {
+const { desk } = createDesk(FORM_DESK_KEY, {
   debug: true,
   plugins: [validationPlugin],
 });
@@ -127,7 +128,6 @@ const resetForm = () => {
         :type="field.type"
         :required="field.required"
         :error="errors[field.id]"
-        :desk="desk"
         @update="updateFieldValue"
       />
 

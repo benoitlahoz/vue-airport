@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useCheckIn, type CheckInDesk } from '@/vue-checkin/composables/useCheckIn';
+import { useCheckIn } from '@/vue-checkin/composables/useCheckIn';
+import { TODO_DESK_KEY } from './index';
 
 interface TodoItem {
   label: string;
@@ -10,7 +11,6 @@ const props = defineProps<{
   id: string | number;
   label: string;
   done: boolean;
-  desk: CheckInDesk<TodoItem>;
 }>();
 
 const emit = defineEmits<{
@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>();
 
 // Auto check-in avec watch des données
-useCheckIn<TodoItem>().checkIn(props.desk, {
+useCheckIn<TodoItem>().checkIn(TODO_DESK_KEY, {
   id: props.id,
   autoCheckIn: true,
   watchData: true,

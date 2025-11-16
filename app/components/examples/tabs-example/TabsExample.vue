@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn } from '@/vue-checkin/composables/useCheckIn';
 import TabItem from './TabItem.vue';
+import { TABS_DESK_KEY } from './index';
 
 // Type pour un onglet
 interface TabItem {
@@ -14,7 +15,7 @@ const activeTabId = ref<string | number>('tab-1');
 
 // Créer un desk avec contexte
 const { createDesk } = useCheckIn<TabItem, { activeTab: Ref<string | number> }>();
-const { desk } = createDesk('tabsDesk', {
+const { desk } = createDesk(TABS_DESK_KEY, {
   context: { activeTab: activeTabId },
   debug: false,
 });
@@ -109,7 +110,6 @@ const activeTabContent = computed(() => {
           :icon="tab.icon"
           :is-active="tab.id === activeTabId"
           :can-close="tabsData.length > 1"
-          :desk="desk"
           @select="selectTab"
           @close="closeTab"
         />

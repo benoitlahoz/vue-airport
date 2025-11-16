@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useCheckIn, type CheckInDesk } from '@/vue-checkin/composables/useCheckIn';
+import { useCheckIn } from '@/vue-checkin/composables/useCheckIn';
+import { FORM_DESK_KEY } from './index';
 
 interface FormField {
   label: string;
@@ -15,7 +16,6 @@ const props = defineProps<{
   type: 'text' | 'email' | 'number';
   required: boolean;
   error?: string;
-  desk: CheckInDesk<FormField>;
 }>();
 
 const emit = defineEmits<{
@@ -23,7 +23,7 @@ const emit = defineEmits<{
 }>();
 
 // Auto check-in avec watch des données
-useCheckIn<FormField>().checkIn(props.desk, {
+useCheckIn<FormField>().checkIn(FORM_DESK_KEY, {
   id: props.id,
   autoCheckIn: true,
   watchData: true,

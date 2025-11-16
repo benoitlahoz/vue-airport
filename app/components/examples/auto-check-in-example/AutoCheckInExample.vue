@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useCheckIn } from '@/vue-checkin/composables/useCheckIn';
+import { AUTO_DESK_KEY } from './index';
 
 // Type pour un composant enfant
 interface ChildData {
@@ -10,7 +11,7 @@ interface ChildData {
 
 // Créer un desk parent
 const { createDesk } = useCheckIn<ChildData>();
-const { desk } = createDesk('autoDesk', {
+const { desk } = createDesk(AUTO_DESK_KEY, {
   debug: true,
 });
 
@@ -98,7 +99,6 @@ const toggleStatus = (id: string) => {
             :name="child.name"
             :status="child.status"
             :count="child.count"
-            :desk="desk"
             @increment="incrementCount(child.id)"
             @toggle-status="toggleStatus(child.id)"
             @remove="removeChild(child.id)"
