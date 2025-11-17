@@ -59,6 +59,16 @@ export interface DeskCore<T = any> {
    */
   readonly sortedRegistry: ComputedRef<CheckInItem<T>[]>;
   
+  /**
+   * Reactive count of items in the registry
+   */
+  readonly size: ComputedRef<number>;
+  
+  /**
+   * Reactive count of items in the registry
+   */
+  readonly size: ComputedRef<number>;
+  
   checkIn: (id: string | number, data: T, meta?: Record<string, any>) => boolean;
   checkOut: (id: string | number) => boolean;
   get: (id: string | number) => CheckInItem<T> | undefined;
@@ -327,6 +337,11 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     });
   });
 
+  /**
+   * Reactive size/count of items in the registry
+   */
+  const size = computed(() => registryList.value.length);
+
   // ==========================================
   // PLUGIN SYSTEM
   // ==========================================
@@ -566,6 +581,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     registryMap,
     registryList,
     sortedRegistry,
+    size,
     checkIn,
     checkOut,
     get,

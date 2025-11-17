@@ -37,12 +37,6 @@ const todos = ref<Array<{
 }>>([]);
 
 /**
- * Computed count of items currently checked in at the desk
- * Uses the registryMap directly for O(1) access
- */
-const itemCount = computed(() => desk.registryMap.size);
-
-/**
  * Add a new todo item
  * The TodoItem component will auto check-in when mounted
  */
@@ -95,13 +89,13 @@ const clearAll = () => {
         color="error"
         variant="soft"
         icon="i-heroicons-trash"
-        :disabled="itemCount === 0"
+        :disabled="desk.size.value === 0"
         @click="clearAll"
       >
         Clear All
       </UButton>
       <UBadge color="primary" variant="subtle">
-        {{ itemCount }} item(s)
+        {{ desk.size.value }} item(s)
       </UBadge>
     </div>
 
