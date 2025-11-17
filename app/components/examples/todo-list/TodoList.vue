@@ -87,11 +87,6 @@ const clearAll = () => {
 
 <template>
   <div class="demo-container">
-    <h2>Basic Example - Todo List</h2>
-    <p class="description">
-      Demonstration of the check-in/check-out system with a simple todo list.
-    </p>
-
     <div class="controls">
       <UButton icon="i-heroicons-plus" @click="addItem">
         Add Task
