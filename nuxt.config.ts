@@ -17,7 +17,8 @@ export default defineNuxtConfig({
       path: '~/components',
       pathPrefix: false,
       extensions: ['.vue'],
-      ignore: ['**/index.ts']
+      ignore: ['**/index.ts'],
+      global: true
     },
   ],
   modules: ["@nuxt/content", "@nuxt/eslint", "@nuxt/ui"],

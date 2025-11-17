@@ -80,7 +80,7 @@ const clearAll = () => {
 </script>
 
 <template>
-  <div class="demo-container">
+  <div>
     <div class="controls">
       <UButton icon="i-heroicons-plus" @click="addItem">
         Add Task
@@ -118,18 +118,6 @@ const clearAll = () => {
 </template>
 
 <style scoped>
-.demo-container {
-  padding: 1.5rem;
-  border: 1px solid var(--ui-border-primary);
-  border-radius: 0.5rem;
-  background: var(--ui-bg-elevated);
-}
-
-.description {
-  color: var(--ui-text-secondary);
-  margin-bottom: 1.5rem;
-}
-
 .controls {
   display: flex;
   gap: 0.75rem;
