@@ -61,6 +61,15 @@ Discover different use cases of **vue-checkin** through practical and detailed e
   ---
   E-commerce cart with product management, quantities and total calculation.
   ::
+
+  ::card
+  ---
+  title: Debounce Plugin Example
+  icon: i-heroicons-clock
+  to: /examples/debounce-plugin-example
+  ---
+  Real-time search with event debouncing for optimized performance.
+  ::
 ::
 
 ## Overview

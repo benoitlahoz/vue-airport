@@ -4,3 +4,4 @@ export * from './tabs-example';
 export * from './plugin-example';
 export * from './form-example';
 export * from './auto-check-in-example';
+export * from './debounce-example';
