@@ -1,7 +1,7 @@
 {
   "name": "vue-checkin",
   "version": "1.0.0",
-  "description": "A generic check-in system for parent/child component registration pattern in Vue 3",
+  "description": "A generic check-in system (local IoC container) for parent/child component registration pattern in Vue 3",
   "author": "Benoit Lahoz",
   "license": "MIT",
   "repository": {
@@ -29,7 +29,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "../README.md"
   ],
   "scripts": {
     "dev": "vite",
