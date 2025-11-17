@@ -9,5 +9,5 @@ export interface SearchResult {
 
 export const SEARCH_DESK_KEY: InjectionKey<DeskCore<SearchResult>> = Symbol('searchDesk');
 
-export { default as DebounceExample } from './DebouncedSearch.vue';
+export { default as DebouncedSearch } from './DebouncedSearch.vue';
 export { default as SearchResultItem } from './SearchResultItem.vue';
