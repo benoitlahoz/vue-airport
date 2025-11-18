@@ -4,11 +4,10 @@ import { type PluginItemData, PLUGIN_DESK_KEY } from '.';
 
 /**
  * Plugin List Item Component
- * 
+ *
  * Individual list item that automatically checks in to the desk
  * and watches prop changes for synchronization.
  */
-
 
 const props = defineProps<{
   id: string | number;
@@ -36,13 +35,15 @@ useCheckIn<PluginItemData>().checkIn(PLUGIN_DESK_KEY, {
 
 <template>
   <li
-    class="item"
-    :class="{ active: props.isActive }"
+    class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+    :class="{
+      'bg-primary-50 dark:bg-primary-900/20 border-primary-500': props.isActive,
+    }"
     @click="emit('select', props.id)"
   >
-    <div class="item-content">
+    <div class="flex flex-col gap-1">
       <strong>{{ props.name }}</strong>
-      <span class="item-id">ID: {{ props.id }}</span>
+      <span class="text-xs text-gray-600 dark:text-gray-400">ID: {{ props.id }}</span>
     </div>
     <UButton
       size="xs"
@@ -53,36 +54,3 @@ useCheckIn<PluginItemData>().checkIn(PLUGIN_DESK_KEY, {
     />
   </li>
 </template>
-
-<style scoped>
-.item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem;
-  border: 1px solid var(--ui-border-primary);
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.item:hover {
-  background: var(--ui-bg-secondary);
-}
-
-.item.active {
-  background: var(--ui-primary-50);
-  border-color: var(--ui-primary);
-}
-
-.item-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.item-id {
-  font-size: 0.75rem;
-  color: var(--ui-text-secondary);
-}
-</style>

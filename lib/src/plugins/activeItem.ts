@@ -11,7 +11,7 @@ import type { DeskCore } from '../composables/desk-core';
  *
  * @example
  * ```ts
- * const { desk } = createDesk('handlers', {
+ * const { desk } = createDesk(Symbol('handlers'), {
  *   plugins: [createActiveItemPlugin()]
  * });
  *

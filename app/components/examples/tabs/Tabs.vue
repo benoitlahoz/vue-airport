@@ -114,7 +114,9 @@ const activeTabContent = computed(() => {
       <UButton size="sm" icon="i-heroicons-plus" @click="addTab"> New Tab </UButton>
     </div>
 
-    <div class="relative overflow-hidden p-6 min-h-[150px] bg-white dark:bg-gray-800 rounded-md mb-4">
+    <div
+      class="relative overflow-hidden p-6 min-h-[150px] bg-white dark:bg-gray-800 rounded-md mb-4"
+    >
       <Transition name="slide-fade" mode="out-in">
         <p :key="activeTabId">{{ activeTabContent }}</p>
       </Transition>

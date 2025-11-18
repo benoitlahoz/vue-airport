@@ -31,7 +31,7 @@ export interface ValidationError {
  *
  * @example
  * ```ts
- * const { desk } = createDesk('handlers', {
+ * const { desk } = createDesk(Symbol('handlers'), {
  *   plugins: [
  *     createValidationPlugin({
  *       required: ['name', 'email'],
@@ -44,7 +44,7 @@ export interface ValidationError {
  *     })
  *   ]
  * });
- * 
+ *
  * // Access validation errors
  * const errors = desk.getValidationErrors();
  * const lastError = desk.getLastValidationError();
@@ -127,16 +127,16 @@ export const createValidationPlugin = <T = unknown>(
       /**
        * Get the last validation error
        */
-      getLastValidationError: () => 
-        validationErrors.value.length > 0 
-          ? validationErrors.value[validationErrors.value.length - 1] 
+      getLastValidationError: () =>
+        validationErrors.value.length > 0
+          ? validationErrors.value[validationErrors.value.length - 1]
           : null,
 
       /**
        * Get validation errors for a specific item ID
        */
-      getValidationErrorsById: (_desk: any, id: string | number) => 
-        validationErrors.value.filter(error => error.id === id),
+      getValidationErrorsById: (_desk: any, id: string | number) =>
+        validationErrors.value.filter((error) => error.id === id),
 
       /**
        * Clear all validation errors
@@ -149,7 +149,7 @@ export const createValidationPlugin = <T = unknown>(
        * Get validation errors by type
        */
       getValidationErrorsByType: (_desk: any, type: ValidationError['type']) =>
-        validationErrors.value.filter(error => error.type === type),
+        validationErrors.value.filter((error) => error.type === type),
     },
 
     computed: {

@@ -15,19 +15,27 @@ export interface HistoryOptions {
 }
 
 /**
- * Plugin to track history of check-in/check-out operations.
- * Adds methods: getHistory, clearHistory
- * Adds property: history (reactive array)
+ * Plugin to track history of check-in/check-out/update operations.
+ * Provides a reactive log of all desk operations with timestamps.
  *
  * @example
  * ```ts
- * const { desk } = createDesk('handlers', {
+ * const { desk } = createDesk(Symbol('items'), {
  *   plugins: [
  *     createHistoryPlugin({ maxHistory: 100 })
  *   ]
  * });
  *
+ * // Get the full history
  * const history = desk.getHistory();
+ *
+ * // Get recent history
+ * const recent = desk.getLastHistory(10);
+ *
+ * // Filter by action type
+ * const checkIns = desk.getHistoryByAction('check-in');
+ *
+ * // Clear history
  * desk.clearHistory();
  * ```
  */
@@ -45,26 +53,35 @@ export const createHistoryPlugin = <T = unknown>(options?: HistoryOptions): Chec
       (desk as any).history = history;
 
       // Listen to events
-      const unsubCheckIn = desk.on('check-in', ({ id, data, timestamp }: { id?: string | number; data?: T; timestamp: number }) => {
-        history.value.push({ action: 'check-in', id: id!, data: data as any, timestamp });
-        if (history.value.length > maxHistory) {
-          history.value.shift();
+      const unsubCheckIn = desk.on(
+        'check-in',
+        ({ id, data, timestamp }: { id?: string | number; data?: T; timestamp: number }) => {
+          history.value.push({ action: 'check-in', id: id!, data: data as any, timestamp });
+          if (history.value.length > maxHistory) {
+            history.value.shift();
+          }
         }
-      });
+      );
 
-      const unsubCheckOut = desk.on('check-out', ({ id, timestamp }: { id?: string | number; data?: T; timestamp: number }) => {
-        history.value.push({ action: 'check-out', id: id!, timestamp });
-        if (history.value.length > maxHistory) {
-          history.value.shift();
+      const unsubCheckOut = desk.on(
+        'check-out',
+        ({ id, timestamp }: { id?: string | number; data?: T; timestamp: number }) => {
+          history.value.push({ action: 'check-out', id: id!, timestamp });
+          if (history.value.length > maxHistory) {
+            history.value.shift();
+          }
         }
-      });
+      );
 
-      const unsubUpdate = desk.on('update', ({ id, data, timestamp }: { id?: string | number; data?: T; timestamp: number }) => {
-        history.value.push({ action: 'update', id: id!, data: data as any, timestamp });
-        if (history.value.length > maxHistory) {
-          history.value.shift();
+      const unsubUpdate = desk.on(
+        'update',
+        ({ id, data, timestamp }: { id?: string | number; data?: T; timestamp: number }) => {
+          history.value.push({ action: 'update', id: id!, data: data as any, timestamp });
+          if (history.value.length > maxHistory) {
+            history.value.shift();
+          }
         }
-      });
+      );
 
       // Cleanup
       return () => {

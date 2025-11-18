@@ -8,5 +8,5 @@ export interface PluginItemData {
 
 export const PLUGIN_DESK_KEY: InjectionKey<DeskCore<PluginItemData>> = Symbol('pluginDesk');
 
-export { default as MultiPlugin } from './MutiPlugin.vue';
+export { default as MultiPlugin } from './MultiPlugin.vue';
 export { default as PluginListItem } from './PluginListItem.vue';
