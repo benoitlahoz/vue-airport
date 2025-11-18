@@ -1,6 +1,6 @@
-# VueCheckIn
+# VueAirport
 
-[![npm version](https://img.shields.io/npm/v/vue-checkin.svg)](https://www.npmjs.com/package/vue-checkin)
+[![npm version](https://img.shields.io/npm/v/vue-airport.svg)](https://www.npmjs.com/package/vue-airport)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 A generic check-in system (local IoC container) for parent/child component registration patterns in Vue 3 using Inversion of Control (IoC).
@@ -28,16 +28,16 @@ Full documentation is available at: [https://benoitlahoz.github.io/vue-checkin](
 
 ```bash
 # npm
-npm install vue-checkin
+npm install vue-airport
 
 # yarn
-yarn add vue-checkin
+yarn add vue-airport
 
 # pnpm
-pnpm add vue-checkin
+pnpm add vue-airport
 
 # bun
-bun add vue-checkin
+bun add vue-airport
 ```
 
 ## 🚀 Quick Start
@@ -46,7 +46,7 @@ bun add vue-checkin
 
 ```vue
 <script setup lang="ts">
-import { useCheckIn } from 'vue-checkin';
+import { useCheckIn } from 'vue-airport';
 
 interface TabItem {
   label: string;
@@ -80,7 +80,7 @@ const tabs = computed(() => desk.getAll());
 
 ```vue
 <script setup lang="ts">
-import { useCheckIn } from 'vue-checkin';
+import { useCheckIn } from 'vue-airport';
 
 const props = defineProps<{
   id: string;
@@ -96,7 +96,7 @@ interface TabItem {
 }
 
 // Automatically register with data watching enabled
-useCheckIn<TabItem>().checkIn(Symbol('tabs'), {
+useCheckIn<TabItem>().checkIn('tabs', {
   id: props.id,
   autoCheckIn: true,
   watchData: true,
@@ -116,10 +116,10 @@ useCheckIn<TabItem>().checkIn(Symbol('tabs'), {
 Track which item is currently active:
 
 ```ts
-import { useCheckIn, createActiveItemPlugin } from 'vue-checkin';
+import { useCheckIn, createActiveItemPlugin } from 'vue-airport';
 
 const { createDesk } = useCheckIn();
-const { desk } = createDesk(Symbol('tabs'), {
+const { desk } = createDesk('tabs', {
   plugins: [createActiveItemPlugin()]
 });
 
@@ -133,9 +133,9 @@ const hasActive = computed(() => desk.hasActive);
 Validate data before check-in:
 
 ```ts
-import { createValidationPlugin } from 'vue-checkin';
+import { createValidationPlugin } from 'vue-airport';
 
-const { desk } = createDesk(Symbol('form'), {
+const { desk } = createDesk('form', {
   plugins: [
     createValidationPlugin({
       required: ['name', 'email'],
@@ -157,9 +157,9 @@ const lastError = desk.getLastValidationError();
 Track operation history:
 
 ```ts
-import { createHistoryPlugin } from 'vue-checkin';
+import { createHistoryPlugin } from 'vue-airport';
 
-const { desk } = createDesk(Symbol('items'), {
+const { desk } = createDesk('items', {
   plugins: [createHistoryPlugin({ maxHistory: 100 })]
 });
 
@@ -174,9 +174,9 @@ desk.clearHistory();
 Debounce operations:
 
 ```ts
-import { createDebouncePlugin } from 'vue-checkin';
+import { createDebouncePlugin } from 'vue-airport';
 
-const { desk } = createDesk(Symbol('search'), {
+const { desk } = createDesk('search', {
   plugins: [
     createDebouncePlugin({
       delay: 300,
@@ -202,7 +202,7 @@ This is a monorepo containing the library and its documentation.
 ```bash
 # Clone the repository
 git clone https://github.com/benoitlahoz/vue-checkin.git
-cd vue-checkin
+cd vue-airport
 
 # Install dependencies
 yarn && yarn lib:install
