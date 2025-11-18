@@ -107,3 +107,93 @@ Core Features
   Efficiently handle multiple items at once with checkInMany, checkOutMany, and updateMany methods for optimal performance.
   :::
 ::
+
+::u-page-section
+#title
+Use Cases
+
+#description
+VueAirport excels in scenarios where you need dynamic parent-child relationships
+
+#features
+  :::u-page-feature
+  ---
+  icon: i-lucide-layout-panel-top
+  ---
+  #title
+  Tab Systems
+  
+  #description
+  Create dynamic tabs where children register their content and metadata automatically.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-list-checks
+  ---
+  #title
+  Todo Lists
+  
+  #description
+  Build interactive lists where items can self-register and manage their own state.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-file-text
+  ---
+  #title
+  Forms & Validation
+  
+  #description
+  Complex forms where fields register themselves and validation state is centrally managed.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-shopping-cart
+  ---
+  #title
+  Shopping Carts
+  
+  #description
+  Product cards that automatically add/remove themselves from a central cart system.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-search
+  ---
+  #title
+  Search Results
+  
+  #description
+  Dynamic search with debounced updates and automatic result management.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-panel-left
+  ---
+  #title
+  Accordions & Menus
+  
+  #description
+  Collapsible sections that coordinate state through a shared desk.
+  :::
+::
+
+  :::
+::
+
+::u-page-section
+#title
+See It In Action
+
+#description
+Try our interactive examples to understand how VueAirport works
+
+:tabs
+
+:todo-list
+::
