@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/vue-checkin.svg)](https://www.npmjs.com/package/vue-checkin)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A generic check-in system for parent/child component registration patterns in Vue 3 using Inversion of Control (IoC).
+A generic check-in system (local IoC container) for parent/child component registration patterns in Vue 3 using Inversion of Control (IoC).
 
 Think of it like an airport check-in desk: parent components provide a check-in counter where child components register themselves with their data.
 
@@ -21,6 +21,8 @@ Full documentation is available at: [https://benoitlahoz.github.io/vue-checkin](
 - 🧩 **Dependency Injection** - Uses Vue's provide/inject pattern
 - 🛠️ **Batch Operations** - Handle multiple items efficiently
 - 📝 **Auto Check-In** - Components can register automatically on mount
+- 🔍 **Watch Data** - Automatic updates when component props change
+- 🎨 **Shared Context** - Share context between components via the desk
 
 ## 📦 Installation
 
@@ -49,17 +51,26 @@ import { useCheckIn } from 'vue-checkin';
 interface TabItem {
   label: string;
   content: string;
+  icon?: string;
 }
 
-const { createDesk } = useCheckIn<TabItem>();
-const { desk } = createDesk('tabs');
-const activeTab = ref('tab1');
+// Create a desk with shared context
+const activeTabId = ref<string | number>('tab-1');
+const { createDesk } = useCheckIn<TabItem, { activeTab: Ref<string | number> }>();
+const { desk } = createDesk('tabs', {
+  context: { activeTab: activeTabId }
+});
+
+// Access registered items
+const tabs = computed(() => desk.getAll());
 </script>
 
 <template>
   <div>
-    <div v-for="item in desk.getAll()" :key="item.id">
-      <button @click="activeTab = item.id">{{ item.data.label }}</button>
+    <div v-for="item in tabs" :key="item.id">
+      <button @click="activeTabId = item.id">
+        {{ item.data.label }}
+      </button>
     </div>
   </div>
 </template>
@@ -74,14 +85,26 @@ import { useCheckIn } from 'vue-checkin';
 const props = defineProps<{
   id: string;
   label: string;
+  content: string;
+  icon?: string;
 }>();
 
-const { checkIn } = useCheckIn<TabItem>();
+interface TabItem {
+  label: string;
+  content: string;
+  icon?: string;
+}
 
-checkIn('tabs', {
-  autoCheckIn: true,
+// Automatically register with data watching enabled
+useCheckIn<TabItem>().checkIn(Symbol('tabs'), {
   id: props.id,
-  data: () => ({ label: props.label, content: 'Tab content' })
+  autoCheckIn: true,
+  watchData: true,
+  data: () => ({
+    label: props.label,
+    content: props.content,
+    icon: props.icon
+  })
 });
 </script>
 ```
@@ -96,12 +119,13 @@ Track which item is currently active:
 import { useCheckIn, createActiveItemPlugin } from 'vue-checkin';
 
 const { createDesk } = useCheckIn();
-const { desk } = createDesk('tabs', {
+const { desk } = createDesk(Symbol('tabs'), {
   plugins: [createActiveItemPlugin()]
 });
 
 desk.setActive('tab-1');
 const active = desk.getActive();
+const hasActive = computed(() => desk.hasActive);
 ```
 
 ### Validation Plugin
@@ -111,7 +135,7 @@ Validate data before check-in:
 ```ts
 import { createValidationPlugin } from 'vue-checkin';
 
-const { desk } = createDesk('form', {
+const { desk } = createDesk(Symbol('form'), {
   plugins: [
     createValidationPlugin({
       required: ['name', 'email'],
@@ -122,6 +146,10 @@ const { desk } = createDesk('form', {
     })
   ]
 });
+
+// Access validation errors
+const errors = desk.getValidationErrors();
+const lastError = desk.getLastValidationError();
 ```
 
 ### History Plugin
@@ -131,26 +159,28 @@ Track operation history:
 ```ts
 import { createHistoryPlugin } from 'vue-checkin';
 
-const { desk } = createDesk('items', {
+const { desk } = createDesk(Symbol('items'), {
   plugins: [createHistoryPlugin({ maxHistory: 100 })]
 });
 
 const history = desk.getHistory();
 const lastThree = desk.getLastHistory(3);
+const checkIns = desk.getHistoryByAction('check-in');
+desk.clearHistory();
 ```
 
-### Logger Plugin
+### Debounce Plugin
 
-Log all operations:
+Debounce operations:
 
 ```ts
-import { createLoggerPlugin } from 'vue-checkin';
+import { createDebouncePlugin } from 'vue-checkin';
 
-const { desk } = createDesk('items', {
+const { desk } = createDesk(Symbol('search'), {
   plugins: [
-    createLoggerPlugin({
-      prefix: '[MyDesk]',
-      verbose: true
+    createDebouncePlugin({
+      delay: 300,
+      operations: ['check-in', 'update']
     })
   ]
 });
@@ -162,7 +192,8 @@ const { desk } = createDesk('items', {
 - **Form Management** - Fields register with forms
 - **Shopping Carts** - Products check into carts
 - **Navigation Menus** - Items register with navigation
-- **Any parent-child communication** pattern
+- **Debounced Search** - Search results management with debouncing
+- **Any parent-child communication pattern**
 
 ## 🛠️ Development
 
