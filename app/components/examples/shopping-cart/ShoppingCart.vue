@@ -22,11 +22,6 @@ const { desk } = createDesk(CART_DESK_KEY, {
   onCheckOut: (id) => {
     console.log(`Product removed from cart: ${id}`);
   },
-  onBeforeCheckOut: () => {
-    // const confirmed = confirm('Do you really want to remove this product from the cart?');
-    // return confirmed;
-    return true;
-  },
 });
 
 // Available products catalog
@@ -77,7 +72,11 @@ const products = ref([
 
 // Computed properties for cart data
 const cartItems = computed(() => desk.getAll());
-const cartCount = computed(() => desk.registryMap.size);
+const cartCount = computed(() => {
+  return cartItems.value.reduce((total, item) => {
+    return total + item.data.quantity;
+  }, 0);
+});
 const cartTotal = computed(() => {
   return cartItems.value.reduce((total, item) => {
     return total + item.data.price * item.data.quantity;
@@ -92,9 +91,22 @@ const updateQuantity = (id: string, quantity: number) => {
   }
 };
 
+// Function to remove item from cart
+const removeFromCart = (id: string | number) => {
+  if (window.confirm('Remove this item from cart?')) {
+    desk.checkOut(id);
+  }
+};
+
+// Function to update cart item quantity
+const updateCartQuantity = (id: string | number, newQty: number) => {
+  desk.update(id, { quantity: newQty });
+  updateQuantity(id as string, newQty);
+};
+
 // Function to clear the entire cart
 const clearCart = () => {
-  if (confirm('Do you really want to empty the cart?')) {
+  if (window.confirm('Do you really want to empty the cart?')) {
     desk.clear();
   }
 };
@@ -102,7 +114,7 @@ const clearCart = () => {
 // Function to proceed to checkout
 const checkout = () => {
   if (cartItems.value.length === 0) {
-    alert('Your cart is empty!');
+    window.alert('Your cart is empty!');
     return;
   }
 
@@ -113,23 +125,19 @@ const checkout = () => {
     )
     .join('\n');
 
-  alert(`Order confirmed!\n\nSummary:\n${orderSummary}\n\nTotal: $${cartTotal.value.toFixed(2)}`);
+  window.alert(
+    `Order confirmed!\n\nSummary:\n${orderSummary}\n\nTotal: $${cartTotal.value.toFixed(2)}`
+  );
   desk.clear();
 };
 </script>
 
 <template>
   <div>
-    <h2>Shopping Cart Example</h2>
-    <p class="description">
-      E-commerce shopping cart with product management and automatic total calculation.
-    </p>
-
-    <div class="shop-layout">
+    <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 mt-6">
       <!-- Products section -->
-      <div class="products-section">
-        <h3>Available Products</h3>
-        <div class="products-grid">
+      <div>
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
           <ProductCard
             v-for="product in products"
             :id="product.id"
@@ -144,39 +152,88 @@ const checkout = () => {
       </div>
 
       <!-- Shopping cart -->
-      <div class="cart-section">
-        <div class="cart-header">
-          <h3>Cart</h3>
+      <div
+        class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-900 h-fit sticky top-4"
+      >
+        <div class="flex justify-between items-center mb-4">
+          <UBadge color="primary" variant="subtle"> {{ desk.size }} type(s) </UBadge>
           <UBadge color="primary" variant="subtle"> {{ cartCount }} item(s) </UBadge>
         </div>
 
-        <div v-if="cartItems.length === 0" class="empty-cart">
-          <UIcon name="i-heroicons-shopping-cart" class="empty-icon" />
+        <div
+          v-if="cartItems.length === 0"
+          class="text-center py-12 px-4 text-gray-500 dark:text-gray-400"
+        >
+          <UIcon name="i-heroicons-shopping-cart" class="text-5xl mb-4 opacity-30" />
           <p>Your cart is empty</p>
         </div>
 
-        <div v-else class="cart-content">
-          <div class="cart-items">
-            <div v-for="item in cartItems" :key="item.id" class="cart-item">
-              <div class="item-info">
-                <UIcon :name="item.data.imageUrl || 'i-heroicons-cube'" class="item-icon" />
-                <div>
-                  <strong>{{ item.data.name }}</strong>
-                  <span class="item-quantity">Quantity: {{ item.data.quantity }}</span>
+        <div v-else class="flex flex-col gap-4">
+          <div class="flex flex-col gap-3 max-h-[400px] overflow-y-auto">
+            <div
+              v-for="item in cartItems"
+              :key="item.id"
+              class="flex flex-col gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800"
+            >
+              <div class="flex justify-between items-start">
+                <div class="flex items-center gap-3">
+                  <UIcon
+                    :name="item.data.imageUrl || 'i-heroicons-cube'"
+                    class="text-2xl text-primary"
+                  />
+                  <div class="flex flex-col gap-1">
+                    <strong>{{ item.data.name }}</strong>
+                    <span class="text-sm text-gray-500 dark:text-gray-400"
+                      >${{ item.data.price.toFixed(2) }} each</span
+                    >
+                  </div>
+                </div>
+                <div class="font-semibold text-primary">
+                  ${{ (item.data.price * item.data.quantity).toFixed(2) }}
                 </div>
               </div>
-              <div class="item-price">${{ (item.data.price * item.data.quantity).toFixed(2) }}</div>
+
+              <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                  <UButton
+                    size="xs"
+                    color="primary"
+                    variant="soft"
+                    icon="i-heroicons-minus"
+                    :disabled="item.data.quantity <= 1"
+                    @click="updateCartQuantity(item.id, item.data.quantity - 1)"
+                  />
+                  <span class="min-w-8 text-center font-semibold">{{ item.data.quantity }}</span>
+                  <UButton
+                    size="xs"
+                    color="primary"
+                    variant="soft"
+                    icon="i-heroicons-plus"
+                    @click="updateCartQuantity(item.id, item.data.quantity + 1)"
+                  />
+                </div>
+
+                <UButton
+                  size="xs"
+                  color="error"
+                  variant="ghost"
+                  icon="i-heroicons-trash"
+                  @click="removeFromCart(item.id)"
+                >
+                  Remove
+                </UButton>
+              </div>
             </div>
           </div>
 
-          <div class="cart-summary">
-            <div class="total-line">
-              <span class="total-label">Total</span>
-              <span class="total-amount">${{ cartTotal.toFixed(2) }}</span>
+          <div class="border-t-2 border-gray-200 dark:border-gray-700 pt-4">
+            <div class="flex justify-between items-center">
+              <span class="text-lg font-semibold">Total</span>
+              <span class="text-2xl font-bold text-primary">${{ cartTotal.toFixed(2) }}</span>
             </div>
           </div>
 
-          <div class="cart-actions">
+          <div class="flex flex-col gap-2">
             <UButton color="primary" icon="i-heroicons-check" block @click="checkout">
               Checkout
             </UButton>
@@ -189,148 +246,3 @@ const checkout = () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.description {
-  color: var(--ui-text-muted);
-  margin-bottom: 1.5rem;
-}
-
-.shop-layout {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
-  margin-top: 1.5rem;
-}
-
-@media (max-width: 1024px) {
-  .shop-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.products-section h3 {
-  margin-bottom: 1rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
-.cart-section {
-  border: 1px solid var(--ui-border-primary);
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  background: var(--ui-bg);
-  height: fit-content;
-  position: sticky;
-  top: 1rem;
-}
-
-.cart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.cart-header h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.empty-cart {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--ui-text-muted);
-}
-
-.empty-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  opacity: 0.3;
-}
-
-.cart-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.cart-items {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.cart-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  border: 1px solid var(--ui-border-primary);
-  border-radius: 0.375rem;
-  background: var(--ui-bg-elevated);
-}
-
-.item-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.item-icon {
-  font-size: 1.5rem;
-  color: var(--ui-primary);
-}
-
-.item-info > div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.item-quantity {
-  font-size: 0.875rem;
-  color: var(--ui-text-muted);
-}
-
-.item-price {
-  font-weight: 600;
-  color: var(--ui-primary);
-}
-
-.cart-summary {
-  border-top: 2px solid var(--ui-border-primary);
-  padding-top: 1rem;
-}
-
-.total-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.total-label {
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.total-amount {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--ui-primary);
-}
-
-.cart-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-</style>

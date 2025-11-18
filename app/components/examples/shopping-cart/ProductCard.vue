@@ -33,17 +33,31 @@ const isInCart = computed(() => desk?.has(props.id) ?? false);
 
 // Function to add product to cart
 const addToCart = () => {
-  desk?.checkIn(props.id, {
-    name: props.name,
-    price: props.price,
-    quantity: props.quantity,
-    imageUrl: props.imageUrl,
-  });
+  // If already in cart, just increment quantity
+  if (desk?.has(props.id)) {
+    const currentItem = desk.get(props.id);
+    if (currentItem) {
+      desk.update(props.id, {
+        quantity: currentItem.data.quantity + 1,
+      });
+      emit('updateQuantity', props.id, currentItem.data.quantity + 1);
+    }
+  } else {
+    // Add new item to cart
+    desk?.checkIn(props.id, {
+      name: props.name,
+      price: props.price,
+      quantity: props.quantity,
+      imageUrl: props.imageUrl,
+    });
+  }
 };
 
 // Function to remove product from cart
 const removeFromCart = () => {
-  desk?.checkOut(props.id);
+  if (confirm('Do you really want to remove this product from the cart?')) {
+    desk?.checkOut(props.id);
+  }
 };
 
 // Function to increment quantity
@@ -72,17 +86,19 @@ const decrement = () => {
 </script>
 
 <template>
-  <div class="product-card">
-    <div class="product-icon">
+  <div
+    class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900 flex flex-col gap-3 transition-all duration-200 hover:border-primary hover:shadow-md"
+  >
+    <div class="flex justify-center items-center h-16 text-5xl text-primary opacity-70">
       <UIcon :name="imageUrl || 'i-heroicons-cube'" />
     </div>
 
-    <div class="product-info">
-      <h4 class="product-name">{{ name }}</h4>
-      <div class="product-price">${{ price.toFixed(2) }}</div>
+    <div class="flex flex-col gap-2 flex-1">
+      <h4 class="text-base font-semibold m-0">{{ name }}</h4>
+      <div class="text-xl font-bold text-primary">${{ price.toFixed(2) }}</div>
     </div>
 
-    <div class="product-actions">
+    <div class="flex flex-col gap-2">
       <!-- Add to Cart button when not in cart -->
       <UButton
         v-if="!isInCart"
@@ -96,7 +112,7 @@ const decrement = () => {
       </UButton>
 
       <!-- Quantity controls when in cart -->
-      <div v-if="isInCart" class="quantity-controls">
+      <div v-if="isInCart" class="flex items-center gap-2 justify-center">
         <UButton
           size="xs"
           color="primary"
@@ -105,7 +121,7 @@ const decrement = () => {
           :disabled="quantity <= 1"
           @click="decrement"
         />
-        <span class="quantity-value">{{ quantity }}</span>
+        <span class="min-w-8 text-center font-semibold">{{ quantity }}</span>
         <UButton
           size="xs"
           color="primary"
@@ -133,69 +149,3 @@ const decrement = () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.product-card {
-  border: 1px solid var(--ui-border-primary);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  background: var(--ui-bg);
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  transition: all 0.2s;
-}
-
-.product-card:hover {
-  border-color: var(--ui-primary);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-}
-
-.product-icon {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 4rem;
-  font-size: 3rem;
-  color: var(--ui-primary);
-  opacity: 0.7;
-}
-
-.product-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
-}
-
-.product-name {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.product-price {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--ui-primary);
-}
-
-.product-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.quantity-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: center;
-}
-
-.quantity-value {
-  min-width: 2rem;
-  text-align: center;
-  font-weight: 600;
-}
-</style>
