@@ -219,15 +219,4 @@ export const useCheckIn = <T = any, TContext extends Record<string, any> = {}>()
   };
 };
 
-export {
-  createActiveItemPlugin,
-  createValidationPlugin,
-  createDebouncePlugin,
-  createHistoryPlugin,
-  type ValidationOptions,
-  type DebounceOptions,
-  type HistoryOptions,
-  type HistoryEntry,
-} from '../plugins';
-
 export type { CheckInPlugin } from './types';

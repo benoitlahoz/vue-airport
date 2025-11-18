@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import type { CheckInPlugin } from '../composables';
+import type { CheckInPlugin } from 'vue-airport';
 
 export interface ValidationOptions<T = unknown> {
   /** List of required fields */

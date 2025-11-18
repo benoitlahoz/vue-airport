@@ -110,6 +110,48 @@ Core Features
 
 ::u-page-section
 #title
+Modular Architecture
+
+#description
+VueAirport is organized as a monorepo with separate packages for maximum flexibility
+
+#features
+  :::u-page-feature
+  ---
+  icon: i-lucide-box
+  ---
+  #title
+  vue-airport
+  
+  #description
+  Core composable and desk system. Install only what you need for minimal bundle size.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-plug
+  ---
+  #title
+  @vue-airport/plugins
+  
+  #description
+  Built-in plugins: activeItem, validation, debounce, and history. Optional, install separately.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-bug
+  ---
+  #title
+  vue-airport-devtools
+  
+  #description
+  Vue DevTools integration for debugging and inspecting check-in registries.
+  :::
+::
+
+::u-page-section
+#title
 Use Cases
 
 #description

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useCheckIn } from '#vue-airport/composables/useCheckIn';
+import { useCheckIn } from '#vue-airport';
 import {
   createActiveItemPlugin,
   createHistoryPlugin,
   createValidationPlugin,
   createDebouncePlugin,
-} from '#vue-airport/plugins';
+} from '@vue-airport/plugins';
 import MetricWidget from './MetricWidget.vue';
 import ChartWidget from './ChartWidget.vue';
 import ActivityWidget from './ActivityWidget.vue';

@@ -1,4 +1,4 @@
-import type { CheckInPlugin } from '../composables';
+import type { CheckInPlugin } from 'vue-airport';
 
 export interface DebounceOptions {
   /** Debounce delay in milliseconds for check-in operations */
