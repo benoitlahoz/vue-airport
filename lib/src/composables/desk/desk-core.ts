@@ -103,11 +103,13 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
   const debug = options?.debug ? Debug : NoOp;
   const deskId = options?.deskId || `desk-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Register desk with DevTools
+  // Register desk with DevTools with plugin information
   registerDeskWithDevTools(deskId, {
     deskId,
     debug: options?.debug,
     createdAt: new Date().toLocaleString(),
+    plugins: options?.plugins?.map((p) => p.name) || [],
+    label: options?.deskId || 'Default Desk',
   });
 
   /**
@@ -204,9 +206,32 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       timestamp: Date.now(),
       deskId,
       childId: id,
-      data: meta,
+      data: data as Record<string, unknown>,
+      meta: meta as Record<string, unknown>,
+      registrySize: registryMap.size,
     });
     updateDevToolsRegistry(deskId, registryMap);
+
+    // Call plugin hooks and track execution
+    if (options?.plugins) {
+      for (const plugin of options.plugins) {
+        if (plugin.onCheckIn) {
+          const startTime = performance.now();
+          plugin.onCheckIn(id, data);
+          const duration = performance.now() - startTime;
+
+          emitDevToolsEvent({
+            type: 'plugin-execute',
+            timestamp: Date.now(),
+            deskId,
+            childId: id,
+            pluginName: plugin.name,
+            duration,
+            data: { hook: 'onCheckIn' },
+          });
+        }
+      }
+    }
 
     // Lifecycle: after
     options?.onCheckIn?.(id, data);
@@ -266,8 +291,30 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       timestamp: Date.now(),
       deskId,
       childId: id,
+      registrySize: registryMap.size,
     });
     updateDevToolsRegistry(deskId, registryMap);
+
+    // Call plugin hooks and track execution
+    if (options?.plugins) {
+      for (const plugin of options.plugins) {
+        if (plugin.onCheckOut) {
+          const startTime = performance.now();
+          plugin.onCheckOut(id);
+          const duration = performance.now() - startTime;
+
+          emitDevToolsEvent({
+            type: 'plugin-execute',
+            timestamp: Date.now(),
+            deskId,
+            childId: id,
+            pluginName: plugin.name,
+            duration,
+            data: { hook: 'onCheckOut' },
+          });
+        }
+      }
+    }
 
     // Lifecycle: after
     options?.onCheckOut?.(id);
@@ -355,11 +402,23 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       // Invalidate sort cache only if sorted fields might have changed
       sortCache.invalidate();
 
-      // Call onUpdate hooks
+      // Call onUpdate hooks and track execution
       if (options?.plugins) {
         for (const plugin of options.plugins) {
           if (plugin.onUpdate) {
+            const startTime = performance.now();
             plugin.onUpdate(id, existing.data);
+            const duration = performance.now() - startTime;
+
+            emitDevToolsEvent({
+              type: 'plugin-execute',
+              timestamp: Date.now(),
+              deskId,
+              childId: id,
+              pluginName: plugin.name,
+              duration,
+              data: { hook: 'onUpdate' },
+            });
           }
         }
       }
@@ -374,6 +433,8 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
         deskId,
         childId: id,
         data: data as Record<string, unknown>,
+        previousData: previousData as Record<string, unknown>,
+        registrySize: registryMap.size,
       });
       updateDevToolsRegistry(deskId, registryMap);
 
@@ -410,6 +471,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       type: 'clear',
       timestamp: Date.now(),
       deskId,
+      registrySize: count,
     });
     updateDevToolsRegistry(deskId, registryMap);
 
@@ -460,35 +522,40 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
   if (options?.plugins) {
     options.plugins.forEach((plugin) => {
       debug(`${DebugPrefix} Installing plugin:`, plugin.name);
+
       // 1. Install plugin
       if (plugin.install) {
+        const startTime = performance.now();
         const cleanup = plugin.install(desk as any);
+        const duration = performance.now() - startTime;
+
+        // Track plugin execution in DevTools
+        emitDevToolsEvent({
+          type: 'plugin-execute',
+          timestamp: Date.now(),
+          deskId,
+          pluginName: plugin.name,
+          duration,
+          data: { phase: 'install' },
+        });
+
         if (cleanup) {
           pluginCleanups.push(cleanup);
         }
       }
 
-      // 2. Hook events via event system
-      if (plugin.onCheckIn) {
-        desk.on('check-in', ({ id, data }) => {
-          plugin.onCheckIn!(id!, data!);
-        });
-      }
+      // Note: Plugin lifecycle hooks (onCheckIn, onCheckOut, onUpdate) are now
+      // called directly in the respective methods (checkIn, checkOut, update)
+      // to ensure proper tracking in DevTools timeline
 
-      if (plugin.onCheckOut) {
-        desk.on('check-out', ({ id }) => {
-          plugin.onCheckOut!(id!);
-        });
-      }
-
-      // 3. Add custom methods
+      // 2. Add custom methods
       if (plugin.methods) {
         Object.entries(plugin.methods).forEach(([name, method]) => {
           (desk as any)[name] = (...args: any[]) => method(desk as any, ...args);
         });
       }
 
-      // 4. Add computed properties
+      // 3. Add computed properties
       if (plugin.computed) {
         Object.entries(plugin.computed).forEach(([name, getter]) => {
           Object.defineProperty(desk, name, {

@@ -11,6 +11,9 @@ export interface DevToolsEvent {
   pluginName?: string;
   duration?: number;
   data?: Record<string, unknown>;
+  previousData?: Record<string, unknown>;
+  meta?: Record<string, unknown>;
+  registrySize?: number;
 }
 
 export interface DevToolsHook {

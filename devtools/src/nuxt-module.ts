@@ -8,7 +8,7 @@ export default defineNuxtModule({
   defaults: {
     enabled: true,
   },
-  setup(options, nuxt) {
+  setup(options, _nuxt) {
     if (!options.enabled) {
       return;
     }
