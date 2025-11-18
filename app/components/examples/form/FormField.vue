@@ -4,7 +4,7 @@ import { type FieldData, FORM_DESK_KEY } from '.';
 
 /**
  * Form Field Component
- * 
+ *
  * Individual form field that automatically checks in to the form desk
  * and watches value changes for validation.
  */
@@ -22,14 +22,33 @@ const emit = defineEmits<{
   'update:value': [value: string];
 }>();
 
-// Automatically check in to the desk with data watching enabled
+// Local value that syncs with prop
+const localValue = ref(props.value);
+
+// Sync local value with prop changes
+watch(
+  () => props.value,
+  (newValue) => {
+    localValue.value = newValue;
+  }
+);
+
+// Update local value and emit
+const handleInput = (value: string | number) => {
+  // Convert to string to avoid type mismatch warnings
+  const stringValue = String(value);
+  localValue.value = stringValue;
+  emit('update:value', stringValue);
+};
+
+// Check in to the desk with watchData on local value
 useCheckIn<FieldData>().checkIn(FORM_DESK_KEY, {
   id: props.id,
   autoCheckIn: true,
   watchData: true,
   data: () => ({
     label: props.label,
-    value: props.value,
+    value: localValue.value,
     type: props.type,
     required: props.required,
   }),
@@ -37,42 +56,22 @@ useCheckIn<FieldData>().checkIn(FORM_DESK_KEY, {
 </script>
 
 <template>
-  <div class="form-field">
-    <label :for="String(props.id)" class="label">
+  <div class="flex flex-col gap-2">
+    <label :for="String(props.id)" class="font-medium text-gray-900 dark:text-gray-100">
       {{ props.label }}
-      <span v-if="props.required" class="required">*</span>
+      <span v-if="props.required" class="text-red-500">*</span>
     </label>
     <UInput
       :id="String(props.id)"
-      :model-value="props.value"
+      :model-value="localValue"
       :type="props.type"
       :placeholder="`Enter ${props.label.toLowerCase()}`"
-      @update:model-value="emit('update:value', $event)"
+      @update:model-value="handleInput"
     />
-    <span v-if="props.error" class="error">
+    <span v-if="props.error" class="text-red-500 text-sm">
       {{ props.error }}
     </span>
   </div>
 </template>
 
-<style scoped>
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.label {
-  font-weight: 500;
-  color: var(--ui-text-primary);
-}
-
-.required {
-  color: var(--ui-error);
-}
-
-.error {
-  color: var(--ui-error);
-  font-size: 0.875rem;
-}
-</style>
+<style scoped></style>

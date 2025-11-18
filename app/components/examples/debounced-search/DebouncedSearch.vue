@@ -6,7 +6,7 @@ import { type SearchResult, SEARCH_DESK_KEY } from '.';
 
 /**
  * Debounce Plugin Example - Search Results
- * 
+ *
  * Demonstrates:
  * - Debouncing check-in events
  * - Search-as-you-type functionality
@@ -44,12 +44,14 @@ const deskWithDebounce = desk as DeskWithDebounce;
 // Search state
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
-const searchResults = ref<Array<{
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-}>>([]);
+const searchResults = ref<
+  Array<{
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+  }>
+>([]);
 const isSearching = ref(false);
 const lastDebouncedEventTime = ref<string>('Never');
 const eventLog = ref<Array<{ time: string; message: string }>>([]);
@@ -57,16 +59,51 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Mock search database
 const mockDatabase = [
-  { id: 'vue-1', title: 'Vue 3 Composition API', description: 'Learn about the new Composition API', category: 'Vue' },
+  {
+    id: 'vue-1',
+    title: 'Vue 3 Composition API',
+    description: 'Learn about the new Composition API',
+    category: 'Vue',
+  },
   { id: 'vue-2', title: 'Vue Router', description: 'Official routing library', category: 'Vue' },
-  { id: 'vue-3', title: 'VueCheckIn Library', description: 'Generic check-in system for Vue', category: 'Vue' },
-  { id: 'ts-1', title: 'TypeScript Basics', description: 'Introduction to TypeScript', category: 'TypeScript' },
-  { id: 'ts-2', title: 'TypeScript Advanced', description: 'Advanced TypeScript patterns', category: 'TypeScript' },
-  { id: 'js-1', title: 'JavaScript ES6+', description: 'Modern JavaScript features', category: 'JavaScript' },
-  { id: 'js-2', title: 'Async/Await', description: 'Asynchronous programming', category: 'JavaScript' },
+  {
+    id: 'vue-3',
+    title: 'VueCheckIn Library',
+    description: 'Generic check-in system for Vue',
+    category: 'Vue',
+  },
+  {
+    id: 'ts-1',
+    title: 'TypeScript Basics',
+    description: 'Introduction to TypeScript',
+    category: 'TypeScript',
+  },
+  {
+    id: 'ts-2',
+    title: 'TypeScript Advanced',
+    description: 'Advanced TypeScript patterns',
+    category: 'TypeScript',
+  },
+  {
+    id: 'js-1',
+    title: 'JavaScript ES6+',
+    description: 'Modern JavaScript features',
+    category: 'JavaScript',
+  },
+  {
+    id: 'js-2',
+    title: 'Async/Await',
+    description: 'Asynchronous programming',
+    category: 'JavaScript',
+  },
   { id: 'css-1', title: 'CSS Grid Layout', description: 'Master CSS Grid', category: 'CSS' },
   { id: 'css-2', title: 'Flexbox Guide', description: 'Complete flexbox guide', category: 'CSS' },
-  { id: 'node-1', title: 'Node.js Fundamentals', description: 'Server-side JavaScript', category: 'Node.js' },
+  {
+    id: 'node-1',
+    title: 'Node.js Fundamentals',
+    description: 'Server-side JavaScript',
+    category: 'Node.js',
+  },
 ];
 
 // Listen to debounced check-in events
@@ -98,17 +135,18 @@ const performSearch = async (query: string) => {
   addEventLog(`Search executing: "${query}"`);
 
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const results = mockDatabase.filter(item =>
-    item.title.toLowerCase().includes(query.toLowerCase()) ||
-    item.description.toLowerCase().includes(query.toLowerCase()) ||
-    item.category.toLowerCase().includes(query.toLowerCase())
+  const results = mockDatabase.filter(
+    (item) =>
+      item.title.toLowerCase().includes(query.toLowerCase()) ||
+      item.description.toLowerCase().includes(query.toLowerCase()) ||
+      item.category.toLowerCase().includes(query.toLowerCase())
   );
 
-  searchResults.value = results.map(r => ({ ...r }));
+  searchResults.value = results.map((r) => ({ ...r }));
   isSearching.value = false;
-  
+
   addEventLog(`Found ${results.length} results`);
 };
 
@@ -170,7 +208,7 @@ const clearSearch = () => {
 
 // Remove a result
 const removeResult = (id: string) => {
-  const index = searchResults.value.findIndex(r => r.id === id);
+  const index = searchResults.value.findIndex((r) => r.id === id);
   if (index !== -1) {
     searchResults.value.splice(index, 1);
   }
@@ -179,11 +217,6 @@ const removeResult = (id: string) => {
 
 <template>
   <div>
-    <h2>Debounce Plugin Example - Search</h2>
-    <p class="description">
-      Search-as-you-type with debounced event notifications. Events are batched and fired after 500ms of inactivity (max 2s wait).
-    </p>
-
     <!-- Search Controls -->
     <div class="search-section">
       <UInput
@@ -193,7 +226,7 @@ const removeResult = (id: string) => {
         placeholder="Vue, CSS, Typescript, ..."
         class="search-input"
       />
-      
+
       <div class="controls">
         <UButton
           icon="i-heroicons-arrow-path"
@@ -211,13 +244,7 @@ const removeResult = (id: string) => {
         >
           Cancel Pending
         </UButton>
-        <UButton
-          icon="i-heroicons-trash"
-          color="error"
-          @click="clearSearch"
-        >
-          Clear All
-        </UButton>
+        <UButton icon="i-heroicons-trash" color="error" @click="clearSearch"> Clear All </UButton>
       </div>
     </div>
 
@@ -276,18 +303,12 @@ const removeResult = (id: string) => {
       <h3>Event Log</h3>
       <div class="log-entries">
         <TransitionGroup name="log" tag="div">
-          <div
-            v-for="(entry, index) in eventLog"
-            :key="`${entry.time}-${index}`"
-            class="log-entry"
-          >
+          <div v-for="(entry, index) in eventLog" :key="`${entry.time}-${index}`" class="log-entry">
             <span class="log-time">{{ entry.time }}</span>
             <span class="log-message">{{ entry.message }}</span>
           </div>
         </TransitionGroup>
-        <div v-if="eventLog.length === 0" class="log-empty">
-          No events yet
-        </div>
+        <div v-if="eventLog.length === 0" class="log-empty">No events yet</div>
       </div>
     </div>
 
@@ -479,7 +500,7 @@ h2 {
 }
 
 .info-box li::before {
-  content: "→";
+  content: '→';
   position: absolute;
   left: 0;
   color: var(--ui-primary);

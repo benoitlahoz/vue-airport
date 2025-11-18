@@ -6,7 +6,7 @@ import { type FieldData, FORM_DESK_KEY } from '.';
 
 /**
  * Form Example - Validation Plugin
- * 
+ *
  * Demonstrates:
  * - Custom validation plugin
  * - Form field validation
@@ -22,7 +22,7 @@ const validationPlugin = createValidationPlugin<FieldData>({
     if (data.required && !data.value) {
       return 'This field is required';
     }
-    
+
     // Validate email format
     if (data.type === 'email' && data.value) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -30,8 +30,15 @@ const validationPlugin = createValidationPlugin<FieldData>({
         return 'Invalid email';
       }
     }
-    
-    return true;
+
+    // Validate age if provided
+    if (data.type === 'number' && data.value) {
+      const age = Number(data.value);
+      if (isNaN(age) || age < 18 || age > 120) {
+        return 'Age must be a number between 18 and 120';
+      }
+    }
+    return true; // No errors
   },
   maxErrors: 100, // Keep up to 100 validation errors
 });
@@ -58,13 +65,15 @@ type DeskWithValidation = typeof desk & {
 const validatedDesk = desk as DeskWithValidation;
 
 // Form fields state
-const fieldsData = ref<Array<{
-  id: string;
-  label: string;
-  value: string;
-  type: 'text' | 'email' | 'number';
-  required: boolean;
-}>>([
+const fieldsData = ref<
+  Array<{
+    id: string;
+    label: string;
+    value: string;
+    type: 'text' | 'email' | 'number';
+    required: boolean;
+  }>
+>([
   {
     id: 'name',
     label: 'Name',
@@ -88,27 +97,42 @@ const fieldsData = ref<Array<{
   },
 ]);
 
+// Track which fields have been touched
+const touchedFields = ref<Set<string>>(new Set());
+
 // Computed properties for validation
 const validationErrors = computed(() => validatedDesk.getValidationErrors?.() || []);
-const hasErrors = computed(() => validatedDesk.hasValidationErrors ?? false);
 
-// Get current errors by field ID
+// Get current errors by field ID - only show errors for touched fields
 const errors = computed(() => {
   const errorMap: Record<string, string> = {};
   validationErrors.value.forEach((error: ValidationError) => {
-    if (!errorMap[error.id]) {
+    if (touchedFields.value.has(String(error.id)) && !errorMap[error.id]) {
       errorMap[error.id] = error.message;
     }
   });
   return errorMap;
 });
 
-// Check if form is valid (no errors and all fields checked in)
-const isFormValid = computed(() => !hasErrors.value && (validatedDesk.count ?? 0) > 0);
+// Check if form is valid (all fields filled and no validation errors)
+const isFormValid = computed(() => {
+  // Check if all required fields have values
+  const allRequiredFilled = fieldsData.value
+    .filter((f) => f.required)
+    .every((f) => f.value.trim() !== '');
+
+  // Check if there are NO validation errors at all
+  const noValidationErrors = validationErrors.value.length === 0;
+
+  return allRequiredFilled && noValidationErrors;
+});
 
 // Function to update field value
 const updateFieldValue = (id: string, value: string) => {
-  const field = fieldsData.value.find(f => f.id === id);
+  // Mark field as touched
+  touchedFields.value.add(id);
+
+  const field = fieldsData.value.find((f) => f.id === id);
   if (field) {
     field.value = value;
   }
@@ -117,17 +141,22 @@ const updateFieldValue = (id: string, value: string) => {
 // Function to submit the form
 const submitForm = () => {
   if (isFormValid.value) {
-    const formData = fieldsData.value.reduce((acc, field) => {
-      acc[field.id] = field.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const formData = fieldsData.value.reduce(
+      (acc, field) => {
+        acc[field.id] = field.value;
+        return acc;
+      },
+      {} as Record<string, string>
+    );
 
     alert('Form submitted successfully!\n\n' + JSON.stringify(formData, null, 2));
-    
+
     // Clear validation errors after successful submission
     validatedDesk.clearValidationErrors?.();
   } else {
-    const errorList = validationErrors.value.map((e: ValidationError) => `- ${e.message}`).join('\n');
+    const errorList = validationErrors.value
+      .map((e: ValidationError) => `- ${e.message}`)
+      .join('\n');
     alert('The form contains errors. Please correct them:\n\n' + errorList);
   }
 };
@@ -137,7 +166,10 @@ const resetForm = () => {
   fieldsData.value.forEach((field) => {
     field.value = '';
   });
-  
+
+  // Clear touched fields
+  touchedFields.value.clear();
+
   // Clear validation errors when resetting
   validatedDesk.clearValidationErrors?.();
 };
@@ -145,12 +177,7 @@ const resetForm = () => {
 
 <template>
   <div>
-    <h2>Form Example - Validation</h2>
-    <p class="description">
-      Example usage with a form and validation plugin.
-    </p>
-
-    <form class="form" @submit.prevent="submitForm">
+    <form class="flex flex-col gap-6" @submit.prevent="submitForm">
       <FormField
         v-for="field in fieldsData"
         :id="field.id"
@@ -160,32 +187,24 @@ const resetForm = () => {
         :type="field.type"
         :required="field.required"
         :error="errors[field.id]"
-        @update="updateFieldValue"
+        @update:value="updateFieldValue(field.id, $event)"
       />
 
-      <div class="form-actions">
-        <UButton
-          type="submit"
-          icon="i-heroicons-check"
-          :disabled="!isFormValid"
-        >
-          Submit
-        </UButton>
-        <UButton
-          type="button"
-          variant="soft"
-          icon="i-heroicons-arrow-path"
-          @click="resetForm"
-        >
+      <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <UButton type="submit" icon="i-heroicons-check" :disabled="!isFormValid"> Submit </UButton>
+        <UButton type="button" variant="soft" icon="i-heroicons-arrow-path" @click="resetForm">
           Reset
         </UButton>
       </div>
 
-      <div class="validation-status">
+      <div class="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-md">
         <UBadge :color="isFormValid ? 'success' : 'error'">
           {{ isFormValid ? '✓ Valid form' : '✗ Invalid form' }}
         </UBadge>
-        <span v-if="Object.keys(errors).length > 0" class="error-count">
+        <span
+          v-if="Object.keys(errors).length > 0"
+          class="text-sm text-gray-600 dark:text-gray-400"
+        >
           {{ Object.keys(errors).length }} error(s)
         </span>
       </div>
@@ -193,56 +212,4 @@ const resetForm = () => {
   </div>
 </template>
 
-<style scoped>
-.description {
-  color: var(--ui-text-secondary);
-  margin-bottom: 1.5rem;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.label {
-  font-weight: 500;
-  color: var(--ui-text-primary);
-}
-
-.required {
-  color: var(--ui-error);
-}
-
-.error {
-  color: var(--ui-error);
-  font-size: 0.875rem;
-}
-
-.form-actions {
-  display: flex;
-  gap: 0.75rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--ui-border-primary);
-}
-
-.validation-status {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--ui-bg-secondary);
-  border-radius: 0.375rem;
-}
-
-.error-count {
-  font-size: 0.875rem;
-  color: var(--ui-text-secondary);
-}
-</style>
+<style scoped></style>
