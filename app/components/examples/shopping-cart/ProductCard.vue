@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { useCheckIn } from '#vue-checkin/composables/useCheckIn';
+import { inject } from 'vue';
 import { type CartItem, CART_DESK_KEY } from '.';
+import type { DeskCore } from '#vue-checkin/composables/useCheckIn';
 
 /**
  * Product Card Component
- * 
+ *
  * Individual product card that can be added/removed from cart.
  * Handles quantity updates and cart operations.
  */
-
 
 const props = defineProps<{
   id: string;
@@ -22,13 +22,11 @@ const emit = defineEmits<{
   updateQuantity: [id: string, quantity: number];
 }>();
 
-// Get access to the cart desk (without auto check-in)
-useCheckIn<CartItem>();
-const desk = inject(CART_DESK_KEY);
-
-if (!desk) {
-  console.error('Cart desk not found!');
-}
+/**
+ * Get access to the cart desk directly via inject
+ * Products (NOT components) are manually added/removed from the cart
+ */
+const desk = inject<DeskCore<CartItem>>(CART_DESK_KEY);
 
 // Check if product is in the cart
 const isInCart = computed(() => desk?.has(props.id) ?? false);
@@ -52,20 +50,24 @@ const removeFromCart = () => {
 const increment = () => {
   const newQuantity = props.quantity + 1;
   emit('updateQuantity', props.id, newQuantity);
-  // Update the cart with new quantity
-  desk?.update(props.id, {
-    quantity: newQuantity,
-  });
+  // Update the cart with new quantity if item is in cart
+  if (desk?.has(props.id)) {
+    desk?.update(props.id, {
+      quantity: newQuantity,
+    });
+  }
 };
 
 // Function to decrement quantity
 const decrement = () => {
   const newQuantity = Math.max(1, props.quantity - 1);
   emit('updateQuantity', props.id, newQuantity);
-  // Update the cart with new quantity
-  desk?.update(props.id, {
-    quantity: newQuantity,
-  });
+  // Update the cart with new quantity if item is in cart
+  if (desk?.has(props.id)) {
+    desk?.update(props.id, {
+      quantity: newQuantity,
+    });
+  }
 };
 </script>
 
@@ -74,7 +76,7 @@ const decrement = () => {
     <div class="product-icon">
       <UIcon :name="imageUrl || 'i-heroicons-cube'" />
     </div>
-    
+
     <div class="product-info">
       <h4 class="product-name">{{ name }}</h4>
       <div class="product-price">${{ price.toFixed(2) }}</div>
@@ -123,7 +125,7 @@ const decrement = () => {
       >
         Remove
       </UButton>
-      
+
       <UBadge v-if="isInCart" color="success" variant="subtle">
         <UIcon name="i-heroicons-check" />
         In Cart

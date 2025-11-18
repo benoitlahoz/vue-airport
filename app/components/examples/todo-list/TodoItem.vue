@@ -20,7 +20,8 @@ const emit = defineEmits<{
  * 2. Watch props changes and update the desk
  * 3. Check out automatically when unmounted
  */
-useCheckIn<TodoItem>().checkIn(TODO_DESK_KEY, {
+const { checkIn } = useCheckIn<TodoItem>();
+checkIn(TODO_DESK_KEY, {
   id: props.id,
   autoCheckIn: true,
   watchData: true,
@@ -33,10 +34,7 @@ useCheckIn<TodoItem>().checkIn(TODO_DESK_KEY, {
 
 <template>
   <li class="item">
-    <UCheckbox
-      :model-value="props.done"
-      @update:model-value="emit('toggle', props.id)"
-    />
+    <UCheckbox :model-value="props.done" @update:model-value="emit('toggle', props.id)" />
     <span :class="{ done: props.done }">
       {{ props.label }}
     </span>

@@ -166,7 +166,7 @@ export const checkInToDesk = <T = any, TContext extends Record<string, any> = {}
 
     // Immediate check
     const shouldBeCheckedIn = typeof condition === 'function' ? condition() : condition.value;
-    if (shouldBeCheckedIn && checkInOptions?.autoCheckIn !== false) {
+    if (shouldBeCheckedIn && checkInOptions?.autoCheckIn === true) {
       performCheckIn();
     }
 
@@ -183,7 +183,7 @@ export const checkInToDesk = <T = any, TContext extends Record<string, any> = {}
     );
   }
   // Normal auto check-in (if no condition)
-  else if (checkInOptions?.autoCheckIn !== false) {
+  else if (checkInOptions?.autoCheckIn === true) {
     performCheckIn();
   }
 

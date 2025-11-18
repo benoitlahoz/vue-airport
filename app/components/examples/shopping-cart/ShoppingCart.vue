@@ -5,28 +5,27 @@ import { type CartItem, CART_DESK_KEY } from '.';
 
 /**
  * Shopping Cart Example - E-commerce Cart
- * 
+ *
  * Demonstrates:
- * - Auto check-in for product management
  * - Lifecycle hooks (onCheckIn, onCheckOut, onBeforeCheckOut)
  * - Dynamic cart total calculation
  * - User confirmation before removing items
  */
 
-
 // Create a desk for the shopping cart with lifecycle hooks
 const { createDesk } = useCheckIn<CartItem>();
 const { desk } = createDesk(CART_DESK_KEY, {
   debug: true,
-  onCheckIn: (id, data) => {
-    console.log(`✅ Product added to cart: ${data.name}`);
+  onCheckIn: (_id, data) => {
+    console.log(`Product added to cart: ${data.name}`);
   },
   onCheckOut: (id) => {
-    console.log(`❌ Product removed from cart: ${id}`);
+    console.log(`Product removed from cart: ${id}`);
   },
   onBeforeCheckOut: () => {
-    const confirmed = confirm('Do you really want to remove this product from the cart?');
-    return confirmed;
+    // const confirmed = confirm('Do you really want to remove this product from the cart?');
+    // return confirmed;
+    return true;
   },
 });
 
@@ -81,13 +80,13 @@ const cartItems = computed(() => desk.getAll());
 const cartCount = computed(() => desk.registryMap.size);
 const cartTotal = computed(() => {
   return cartItems.value.reduce((total, item) => {
-    return total + (item.data.price * item.data.quantity);
+    return total + item.data.price * item.data.quantity;
   }, 0);
 });
 
 // Function to update product quantity
 const updateQuantity = (id: string, quantity: number) => {
-  const product = products.value.find(p => p.id === id);
+  const product = products.value.find((p) => p.id === id);
   if (product) {
     product.quantity = Math.max(1, quantity);
   }
@@ -108,7 +107,10 @@ const checkout = () => {
   }
 
   const orderSummary = cartItems.value
-    .map(item => `${item.data.name} x${item.data.quantity} - $${(item.data.price * item.data.quantity).toFixed(2)}`)
+    .map(
+      (item) =>
+        `${item.data.name} x${item.data.quantity} - $${(item.data.price * item.data.quantity).toFixed(2)}`
+    )
     .join('\n');
 
   alert(`Order confirmed!\n\nSummary:\n${orderSummary}\n\nTotal: $${cartTotal.value.toFixed(2)}`);
@@ -145,9 +147,7 @@ const checkout = () => {
       <div class="cart-section">
         <div class="cart-header">
           <h3>Cart</h3>
-          <UBadge color="primary" variant="subtle">
-            {{ cartCount }} item(s)
-          </UBadge>
+          <UBadge color="primary" variant="subtle"> {{ cartCount }} item(s) </UBadge>
         </div>
 
         <div v-if="cartItems.length === 0" class="empty-cart">
@@ -157,11 +157,7 @@ const checkout = () => {
 
         <div v-else class="cart-content">
           <div class="cart-items">
-            <div
-              v-for="item in cartItems"
-              :key="item.id"
-              class="cart-item"
-            >
+            <div v-for="item in cartItems" :key="item.id" class="cart-item">
               <div class="item-info">
                 <UIcon :name="item.data.imageUrl || 'i-heroicons-cube'" class="item-icon" />
                 <div>
@@ -169,9 +165,7 @@ const checkout = () => {
                   <span class="item-quantity">Quantity: {{ item.data.quantity }}</span>
                 </div>
               </div>
-              <div class="item-price">
-                ${{ (item.data.price * item.data.quantity).toFixed(2) }}
-              </div>
+              <div class="item-price">${{ (item.data.price * item.data.quantity).toFixed(2) }}</div>
             </div>
           </div>
 
@@ -183,21 +177,10 @@ const checkout = () => {
           </div>
 
           <div class="cart-actions">
-            <UButton
-              color="primary"
-              icon="i-heroicons-check"
-              block
-              @click="checkout"
-            >
+            <UButton color="primary" icon="i-heroicons-check" block @click="checkout">
               Checkout
             </UButton>
-            <UButton
-              color="error"
-              variant="soft"
-              icon="i-heroicons-trash"
-              block
-              @click="clearCart"
-            >
+            <UButton color="error" variant="soft" icon="i-heroicons-trash" block @click="clearCart">
               Clear Cart
             </UButton>
           </div>

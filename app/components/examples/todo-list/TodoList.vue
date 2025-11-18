@@ -11,10 +11,10 @@ const { createDesk } = useCheckIn<TodoItemData>();
 const { desk } = createDesk(TODO_DESK_KEY, {
   debug: true,
   onCheckIn: (id, data) => {
-    console.log(`✅ Item added: ${id}`, data);
+    console.log(`Item added: ${id}`, data);
   },
   onCheckOut: (id) => {
-    console.log(`❌ Item removed: ${id}`);
+    console.log(`Item removed: ${id}`);
   },
 });
 
@@ -22,11 +22,13 @@ const { desk } = createDesk(TODO_DESK_KEY, {
  * Local state for managing todos
  * Each todo will automatically check in to the desk when mounted
  */
-const todos = ref<Array<{
-  id: number;
-  label: string;
-  done: boolean;
-}>>([]);
+const todos = ref<
+  Array<{
+    id: number;
+    label: string;
+    done: boolean;
+  }>
+>([]);
 
 /**
  * Add a new todo item
@@ -45,7 +47,7 @@ const addItem = () => {
  * Toggle the done state of a todo item
  */
 const toggleItem = (id: string | number) => {
-  const todo = todos.value.find(t => t.id === id);
+  const todo = todos.value.find((t) => t.id === id);
   if (todo) {
     todo.done = !todo.done;
   }
@@ -56,7 +58,7 @@ const toggleItem = (id: string | number) => {
  * Will trigger auto check-out when component unmounts
  */
 const removeItem = (id: string | number) => {
-  const index = todos.value.findIndex(t => t.id === id);
+  const index = todos.value.findIndex((t) => t.id === id);
   if (index !== -1) {
     todos.value.splice(index, 1);
   }
@@ -74,9 +76,7 @@ const clearAll = () => {
 <template>
   <div>
     <div class="controls">
-      <UButton icon="i-heroicons-plus" @click="addItem">
-        Add Task
-      </UButton>
+      <UButton icon="i-heroicons-plus" @click="addItem"> Add Task </UButton>
       <UButton
         color="error"
         variant="soft"
@@ -86,9 +86,7 @@ const clearAll = () => {
       >
         Clear All
       </UButton>
-      <UBadge color="primary" variant="subtle">
-        {{ desk.size.value }} item(s)
-      </UBadge>
+      <UBadge color="primary" variant="subtle"> {{ desk.size.value }} item(s) </UBadge>
     </div>
 
     <div v-if="todos.length === 0" class="empty-state">
