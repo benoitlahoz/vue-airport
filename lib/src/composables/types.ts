@@ -70,6 +70,17 @@ export interface CheckInPlugin<T = any> {
   onCheckIn?: (id: string | number, data: T) => void;
 
   /**
+   * Called before an item is updated.
+   * Return false to cancel the update.
+   */
+  onBeforeUpdate?: (id: string | number, data: Partial<T>) => boolean | undefined;
+
+  /**
+   * Called after an item is successfully updated.
+   */
+  onUpdate?: (id: string | number, data: Partial<T>) => void;
+
+  /**
    * Called before an item is checked out.
    * Return false to cancel the check-out.
    */

@@ -301,6 +301,19 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       return false;
     }
 
+    // Call onBeforeUpdate hooks
+    if (options?.plugins) {
+      for (const plugin of options.plugins) {
+        if (plugin.onBeforeUpdate) {
+          const result = plugin.onBeforeUpdate(id, data);
+          if (result === false) {
+            debug(`${DebugPrefix} update cancelled by plugin:`, plugin.name);
+            return false;
+          }
+        }
+      }
+    }
+
     if (typeof existing.data === 'object' && typeof data === 'object') {
       const previousData = { ...existing.data };
 
@@ -312,6 +325,15 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
 
       // Invalidate sort cache only if sorted fields might have changed
       sortCache.invalidate();
+
+      // Call onUpdate hooks
+      if (options?.plugins) {
+        for (const plugin of options.plugins) {
+          if (plugin.onUpdate) {
+            plugin.onUpdate(id, existing.data);
+          }
+        }
+      }
 
       // Emit event (will be batched)
       emit('update', { id, data: existing.data });

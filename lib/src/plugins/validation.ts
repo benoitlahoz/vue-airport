@@ -64,6 +64,55 @@ export const createValidationPlugin = <T = unknown>(
     }
   };
 
+  const removeErrorsForId = (id: string | number) => {
+    validationErrors.value = validationErrors.value.filter((error) => error.id !== id);
+  };
+
+  const validateData = (id: string | number, data: T, _isUpdate = false): boolean => {
+    // Remove previous errors for this ID
+    removeErrorsForId(id);
+
+    // Check required fields
+    if (options.required) {
+      for (const field of options.required) {
+        if (data[field] === undefined || data[field] === null || data[field] === '') {
+          addError({
+            id,
+            message: `Field '${String(field)}' is required for item ${id}`,
+            timestamp: Date.now(),
+            type: 'required-field',
+            field: String(field),
+          });
+        }
+      }
+    }
+
+    // Custom validation
+    if (options.validate) {
+      const result = options.validate(data);
+      if (result === false) {
+        addError({
+          id,
+          message: `Validation failed for item ${id}`,
+          timestamp: Date.now(),
+          type: 'custom-validation',
+        });
+      }
+      if (typeof result === 'string') {
+        addError({
+          id,
+          message: result,
+          timestamp: Date.now(),
+          type: 'custom-validation',
+        });
+      }
+    }
+
+    // Always return true to allow check-in/update even with validation errors
+    // Errors are stored and can be checked separately
+    return true;
+  };
+
   return {
     name: 'validation',
     version: '1.0.0',
@@ -76,46 +125,11 @@ export const createValidationPlugin = <T = unknown>(
     },
 
     onBeforeCheckIn: (id: string | number, data: T): boolean => {
-      // Check required fields
-      if (options.required) {
-        for (const field of options.required) {
-          if (data[field] === undefined || data[field] === null) {
-            addError({
-              id,
-              message: `Field '${String(field)}' is required for item ${id}`,
-              timestamp: Date.now(),
-              type: 'required-field',
-              field: String(field),
-            });
-            return false;
-          }
-        }
-      }
+      return validateData(id, data, false);
+    },
 
-      // Custom validation
-      if (options.validate) {
-        const result = options.validate(data);
-        if (result === false) {
-          addError({
-            id,
-            message: `Validation failed for item ${id}`,
-            timestamp: Date.now(),
-            type: 'custom-validation',
-          });
-          return false;
-        }
-        if (typeof result === 'string') {
-          addError({
-            id,
-            message: result,
-            timestamp: Date.now(),
-            type: 'custom-validation',
-          });
-          return false;
-        }
-      }
-
-      return true;
+    onBeforeUpdate: (id: string | number, data: Partial<T>): boolean => {
+      return validateData(id, data as T, true);
     },
 
     methods: {

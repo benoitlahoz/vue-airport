@@ -198,7 +198,7 @@ export const checkInToDesk = <T = any, TContext extends Record<string, any> = {}
           ? (checkInOptions.data as (() => T) | (() => Promise<T>))()
           : checkInOptions.data;
       },
-      async (newData) => {
+      async (newData, oldData) => {
         if (isCheckedIn.value && newData !== undefined) {
           // Start async guard
           const updateToken = asyncGuard.startUpdate();
