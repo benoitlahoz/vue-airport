@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../public/vue-airport.png" alt="VueAirport Logo" width="200"/>
+</p>
+
 # vue-airport-devtools
 
 Vue DevTools integration for [vue-airport](../lib) library.

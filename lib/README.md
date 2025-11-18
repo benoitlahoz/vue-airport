@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./public/vue-airport.png" alt="VueAirport Logo" width="200"/>
+</p>
+
 # VueAirport
 
 [![npm version](https://img.shields.io/npm/v/vue-airport.svg)](https://www.npmjs.com/package/vue-airport)
