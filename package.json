@@ -11,7 +11,10 @@
     "clean": "rimraf .nuxt",
     "lib:install": "cd lib && yarn",
     "lib:build": "cd lib && yarn build",
-    "lib:clean": "cd lib && yarn clean"
+    "lib:clean": "cd lib && yarn clean",
+    "devtools:install": "cd devtools && yarn",
+    "devtools:build": "cd devtools && yarn build",
+    "devtools:clean": "cd devtools && yarn clean"
   },
   "dependencies": {
     "@nuxt/content": "3.8.2",

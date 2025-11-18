@@ -14,7 +14,10 @@
     "composable",
     "registry",
     "dependency-injection",
-    "plugin"
+    "dependency-lookup",
+    "check-in",
+    "plugin",
+    "ioc"
   ],
   "type": "module",
   "main": "./dist/vue-airport.cjs",
