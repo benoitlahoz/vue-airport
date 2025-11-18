@@ -6,7 +6,7 @@ seo:
 
 ::u-page-hero
 #title
-VueAirport
+:hero-logo
 
 #description
 A generic check-in system for parent/child component registration pattern in Vue 3 using Inversion of Control (IoC).
