@@ -1,4 +1,4 @@
-import type { CheckInItem } from './desk-core';
+import type { CheckInItem } from '../desk/desk-core';
 
 /**
  * LRU cache for sorted registry results.

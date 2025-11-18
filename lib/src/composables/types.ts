@@ -1,10 +1,10 @@
-import type { DeskCore } from './desk-core';
+import type { DeskCore } from './desk/desk-core';
 
 /**
  * Plugin interface for extending CheckInDesk functionality.
  * Plugins can hook into the desk lifecycle and add custom methods/properties.
  *
- * ⚠️ BREAKING CHANGE: Plugins now MUST implement dispose() for proper cleanup.
+ * Warning: Plugins MUST implement dispose() for proper cleanup.
  *
  * @example
  * ```ts

@@ -1,6 +1,5 @@
 import { ref } from 'vue';
-import type { CheckInPlugin } from '../composables/types';
-import type { DeskCore } from '../composables/desk-core';
+import type { CheckInPlugin, DeskCore } from '../composables';
 
 export interface HistoryEntry<T = unknown> {
   action: 'check-in' | 'check-out' | 'update';

@@ -1,12 +1,4 @@
-// ==========================================
-// MAIN COMPOSABLE
-// ==========================================
-
 export { useCheckIn } from './useCheckIn';
-
-// ==========================================
-// CORE MODULES (Modular architecture)
-// ==========================================
 
 export {
   createDeskCore,
@@ -15,21 +7,16 @@ export {
   type DeskEventCallback,
   type CheckInItem,
   type DeskCoreOptions,
-} from './desk-core';
+} from './desk/desk-core';
 
-export { provideDesk, type DeskWithContext } from './desk-injection';
+export { provideDesk, type DeskWithContext } from './desk/desk-injection';
 
-export { checkInToDesk, type CheckInOptions, type CheckInResult } from './desk-child';
-
+export { checkInToDesk, type CheckInOptions, type CheckInResult } from './desk/desk-child';
 // ==========================================
 // HELPERS
 // ==========================================
 
 export { generateId, memoizedId, clearIdCache, isCheckedIn, getRegistry } from './useCheckIn';
-
-// ==========================================
-// PLUGIN SYSTEM
-// ==========================================
 
 export type { CheckInPlugin } from './types';
 

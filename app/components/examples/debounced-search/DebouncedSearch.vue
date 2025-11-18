@@ -250,42 +250,85 @@ const removeResult = (id: string) => {
 
     <!-- Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center">
-        <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Results Found</div>
-        <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ searchResults.length }}</div>
+      <div
+        class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center"
+      >
+        <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+          Results Found
+        </div>
+        <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          {{ searchResults.length }}
+        </div>
       </div>
-      <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center">
-        <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Checked In</div>
+      <div
+        class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center"
+      >
+        <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+          Checked In
+        </div>
         <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ itemCount }}</div>
       </div>
-      <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center">
-        <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Pending Events</div>
-        <div class="text-3xl font-bold" :class="hasPending ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-gray-100'">{{ pendingCheckIns }}</div>
+      <div
+        class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center"
+      >
+        <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+          Pending Events
+        </div>
+        <div
+          class="text-3xl font-bold"
+          :class="
+            hasPending
+              ? 'text-primary-600 dark:text-primary-400'
+              : 'text-gray-900 dark:text-gray-100'
+          "
+        >
+          {{ pendingCheckIns }}
+        </div>
       </div>
-      <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center">
-        <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">Last Debounced Event</div>
-        <div class="text-base font-bold text-gray-900 dark:text-gray-100">{{ lastDebouncedEventTime }}</div>
+      <div
+        class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center"
+      >
+        <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+          Last Debounced Event
+        </div>
+        <div class="text-base font-bold text-gray-900 dark:text-gray-100">
+          {{ lastDebouncedEventTime }}
+        </div>
       </div>
     </div>
 
     <!-- Search Results -->
     <div class="mb-8 min-h-[300px]">
-      <div v-if="isSearching" class="flex flex-col items-center justify-center gap-4 py-12 text-gray-500 dark:text-gray-400">
+      <div
+        v-if="isSearching"
+        class="flex flex-col items-center justify-center gap-4 py-12 text-gray-500 dark:text-gray-400"
+      >
         <UIcon name="i-heroicons-arrow-path" class="animate-spin text-3xl" />
         Searching...
       </div>
 
-      <div v-else-if="searchResults.length === 0 && searchQuery" class="flex flex-col items-center justify-center gap-4 py-12 text-gray-500 dark:text-gray-400">
+      <div
+        v-else-if="searchResults.length === 0 && searchQuery"
+        class="flex flex-col items-center justify-center gap-4 py-12 text-gray-500 dark:text-gray-400"
+      >
         <UIcon name="i-heroicons-magnifying-glass" class="text-5xl opacity-50" />
         <p>No results found for "{{ searchQuery }}"</p>
       </div>
 
-      <div v-else-if="searchResults.length === 0" class="flex flex-col items-center justify-center gap-4 py-12 text-gray-500 dark:text-gray-400">
+      <div
+        v-else-if="searchResults.length === 0"
+        class="flex flex-col items-center justify-center gap-4 py-12 text-gray-500 dark:text-gray-400"
+      >
         <UIcon name="i-heroicons-document-magnifying-glass" class="text-5xl opacity-50" />
         <p>Type to search...</p>
       </div>
 
-      <TransitionGroup v-else name="list" tag="div" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <TransitionGroup
+        v-else
+        name="list"
+        tag="div"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+      >
         <SearchResultItem
           v-for="result in searchResults"
           :id="result.id"
@@ -299,28 +342,63 @@ const removeResult = (id: string) => {
     </div>
 
     <!-- Event Log -->
-    <div class="mb-8 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+    <div
+      class="mb-8 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+    >
       <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Event Log</h3>
       <div class="max-h-[300px] overflow-y-auto">
         <TransitionGroup name="log" tag="div">
-          <div v-for="(entry, index) in eventLog" :key="`${entry.time}-${index}`" class="flex gap-4 py-3 border-b border-gray-200 dark:border-gray-700 text-sm last:border-b-0">
-            <span class="text-gray-500 dark:text-gray-400 font-mono shrink-0">{{ entry.time }}</span>
+          <div
+            v-for="(entry, index) in eventLog"
+            :key="`${entry.time}-${index}`"
+            class="flex gap-4 py-3 border-b border-gray-200 dark:border-gray-700 text-sm last:border-b-0"
+          >
+            <span class="text-gray-500 dark:text-gray-400 font-mono shrink-0">{{
+              entry.time
+            }}</span>
             <span class="text-gray-900 dark:text-gray-100">{{ entry.message }}</span>
           </div>
         </TransitionGroup>
-        <div v-if="eventLog.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400 italic">No events yet</div>
+        <div
+          v-if="eventLog.length === 0"
+          class="text-center py-8 text-gray-500 dark:text-gray-400 italic"
+        >
+          No events yet
+        </div>
       </div>
     </div>
 
     <!-- Info Box -->
-    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+    <div
+      class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+    >
       <h3 class="text-base font-semibold mb-3 text-gray-900 dark:text-gray-100">How it works:</h3>
       <ul class="space-y-2">
-        <li class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400">Search results check-in as you type</li>
-        <li class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400">Debounce plugin batches events (500ms delay)</li>
-        <li class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400">Events are forced after 2s (maxWait)</li>
-        <li class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400">You can manually flush or cancel pending events</li>
-        <li class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400">Check the event log to see debounced events firing</li>
+        <li
+          class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400"
+        >
+          Search results check-in as you type
+        </li>
+        <li
+          class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400"
+        >
+          Debounce plugin batches events (500ms delay)
+        </li>
+        <li
+          class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400"
+        >
+          Events are forced after 2s (maxWait)
+        </li>
+        <li
+          class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400"
+        >
+          You can manually flush or cancel pending events
+        </li>
+        <li
+          class="pl-6 relative text-gray-700 dark:text-gray-300 before:content-['→'] before:absolute before:left-0 before:text-primary-600 dark:before:text-primary-400"
+        >
+          Check the event log to see debounced events firing
+        </li>
       </ul>
     </div>
   </div>

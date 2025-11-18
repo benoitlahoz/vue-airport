@@ -4,9 +4,9 @@
  */
 
 import { ref, inject, onUnmounted, watch, type InjectionKey, type Ref } from 'vue';
-import type { DeskCore } from './desk-core';
-import { AsyncUpdateGuard } from './async-update-guard';
-import { NoOp, Debug } from './utils';
+import type { DeskCore } from '../desk/desk-core';
+import { AsyncUpdateGuard } from '../helpers/async-update-guard';
+import { NoOp, Debug } from '../utils';
 
 export interface CheckInOptions<T = any> {
   required?: boolean;
@@ -198,7 +198,7 @@ export const checkInToDesk = <T = any, TContext extends Record<string, any> = {}
           ? (checkInOptions.data as (() => T) | (() => Promise<T>))()
           : checkInOptions.data;
       },
-      async (newData, oldData) => {
+      async (newData) => {
         if (isCheckedIn.value && newData !== undefined) {
           // Start async guard
           const updateToken = asyncGuard.startUpdate();

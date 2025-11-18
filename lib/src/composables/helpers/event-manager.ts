@@ -1,6 +1,6 @@
 import { nextTick } from 'vue';
-import type { DeskEventType, DeskEventCallback } from './desk-core';
-import { NoOp, Debug } from './utils';
+import type { DeskEventType, DeskEventCallback } from '../desk/desk-core';
+import { NoOp, Debug } from '../utils';
 
 const DebugPrefix = '[EventManager]';
 

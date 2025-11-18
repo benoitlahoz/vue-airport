@@ -5,7 +5,7 @@
 
 import { provide, type InjectionKey } from 'vue';
 import type { DeskCore } from './desk-core';
-import { NoOp, Debug } from './utils';
+import { NoOp, Debug } from '../utils';
 
 export interface DeskWithContext<T = any, TContext extends Record<string, any> = {}>
   extends DeskCore<T> {

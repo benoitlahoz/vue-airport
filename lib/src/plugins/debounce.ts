@@ -1,4 +1,4 @@
-import type { CheckInPlugin } from '../composables/types';
+import type { CheckInPlugin } from '../composables';
 
 export interface DebounceOptions {
   /** Debounce delay in milliseconds for check-in operations */
@@ -33,11 +33,7 @@ export interface DebounceOptions {
 export const createDebouncePlugin = <T = unknown>(
   options: DebounceOptions = {}
 ): CheckInPlugin<T> => {
-  const {
-    checkInDelay = 300,
-    checkOutDelay = 300,
-    maxWait,
-  } = options;
+  const { checkInDelay = 300, checkOutDelay = 300, maxWait } = options;
 
   let checkInTimer: ReturnType<typeof setTimeout> | null = null;
   let checkOutTimer: ReturnType<typeof setTimeout> | null = null;

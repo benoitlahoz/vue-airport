@@ -4,10 +4,10 @@
  */
 
 import { shallowRef, computed, type ComputedRef, type ShallowRef } from 'vue';
-import { EventManager } from './event-manager';
-import { SortedRegistryCache } from './sorted-registry-cache';
-import type { CheckInPlugin } from './types';
-import { NoOp, Debug } from './utils';
+import { EventManager } from '../helpers/event-manager';
+import { SortedRegistryCache } from '../helpers/sorted-registry-cache';
+import type { CheckInPlugin } from '../types';
+import { NoOp, Debug } from '../utils';
 
 /**
  * Types of events emitted by the desk

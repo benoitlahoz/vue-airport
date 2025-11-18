@@ -1,6 +1,5 @@
 import { ref } from 'vue';
-import type { CheckInPlugin } from '../composables/types';
-import type { DeskCore } from '../composables/desk-core';
+import type { CheckInPlugin, DeskCore } from '../composables';
 
 /**
  * Plugin to manage an active item in the desk.

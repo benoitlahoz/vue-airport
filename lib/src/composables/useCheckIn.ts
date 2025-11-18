@@ -11,11 +11,9 @@ import {
   type DeskEventCallback,
   type CheckInItem,
   type DeskCoreOptions,
-} from './desk-core';
-
-import { provideDesk, type DeskWithContext } from './desk-injection';
-
-import { checkInToDesk, type CheckInOptions, type CheckInResult } from './desk-child';
+} from './desk/desk-core';
+import { provideDesk, type DeskWithContext } from './desk/desk-injection';
+import { checkInToDesk, type CheckInOptions, type CheckInResult } from './desk/desk-child';
 
 // Re-export types
 export type { DeskEventType, DeskEventCallback, CheckInItem, CheckInOptions, DeskCore };
