@@ -4,14 +4,13 @@ import { type TabItemData, TABS_DESK_KEY, TabItem } from '.';
 
 /**
  * Tabs Example - Dynamic Tab Management
- * 
+ *
  * Demonstrates:
  * - Creating a desk with shared context
  * - Dynamic tab creation and deletion
  * - Auto check-in of child components
  * - Context sharing between components
  */
-
 
 // Reactive reference to store the active tab ID
 const activeTabId = ref<string | number>('tab-1');
@@ -24,12 +23,14 @@ createDesk(TABS_DESK_KEY, {
 });
 
 // State to manage all tabs
-const tabsData = ref<Array<{
-  id: string;
-  label: string;
-  content: string;
-  icon?: string;
-}>>([
+const tabsData = ref<
+  Array<{
+    id: string;
+    label: string;
+    content: string;
+    icon?: string;
+  }>
+>([
   {
     id: 'tab-1',
     label: 'Home',
@@ -72,7 +73,7 @@ const closeTab = (id: string | number) => {
   // Keep at least one tab open
   if (tabsData.value.length <= 1) return;
 
-  const index = tabsData.value.findIndex(t => t.id === id);
+  const index = tabsData.value.findIndex((t) => t.id === id);
   if (index !== -1) {
     tabsData.value.splice(index, 1);
   }
@@ -88,15 +89,15 @@ const closeTab = (id: string | number) => {
 
 // Computed property for the active tab's content
 const activeTabContent = computed(() => {
-  const tab = tabsData.value.find(t => t.id === activeTabId.value);
+  const tab = tabsData.value.find((t) => t.id === activeTabId.value);
   return tab?.content || '';
 });
 </script>
 
 <template>
   <div>
-    <div class="tabs-header">
-      <div class="tabs-list">
+    <div class="flex gap-4 items-center mb-4 border-b border-gray-200 dark:border-gray-800 pb-2">
+      <div class="flex gap-1 flex-1 overflow-x-auto">
         <TabItem
           v-for="tab in tabsData"
           :id="tab.id"
@@ -110,18 +111,17 @@ const activeTabContent = computed(() => {
           @close="closeTab"
         />
       </div>
-      <UButton size="sm" icon="i-heroicons-plus" @click="addTab">
-        New Tab
-      </UButton>
+      <UButton size="sm" icon="i-heroicons-plus" @click="addTab"> New Tab </UButton>
     </div>
 
-    <div class="tabs-content">
+    <div class="p-6 min-h-[150px] bg-white dark:bg-gray-800 rounded-md mb-4">
       <p>{{ activeTabContent }}</p>
     </div>
 
-    <div class="debug-info">
-      <strong>Debug:</strong> {{ tabsData.length }} tab(s),
-      Active: {{ activeTabId }}
+    <div
+      class="p-3 bg-gray-50 dark:bg-gray-900 rounded-md text-sm text-gray-600 dark:text-gray-400"
+    >
+      <strong>Debug:</strong> {{ tabsData.length }} tab(s), Active: {{ activeTabId }}
     </div>
   </div>
 </template>

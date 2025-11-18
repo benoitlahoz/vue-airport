@@ -4,12 +4,10 @@ import { type TabItemData, TABS_DESK_KEY } from '.';
 
 /**
  * Tab Item Component
- * 
+ *
  * Individual tab component that automatically checks in to the desk
  * and watches prop changes to keep the registry synchronized.
  */
-
-
 
 const props = defineProps<{
   id: string | number;
@@ -40,51 +38,24 @@ useCheckIn<TabItemData>().checkIn(TABS_DESK_KEY, {
 </script>
 
 <template>
-  <button
-    class="tab"
-    :class="{ active: props.isActive }"
-    @click="emit('select', props.id)"
-  >
-    <UIcon v-if="props.icon" :name="props.icon" class="tab-icon" />
-    <span>{{ props.label }}</span>
+  <div class="relative flex items-center gap-1 h-12">
+    <UButton
+      :leading-icon="props.icon"
+      color="neutral"
+      variant="ghost"
+      class="rounded-t-md rounded-b-none whitespace-nowrap"
+      @click="emit('select', props.id)"
+    >
+      {{ props.label }}
+    </UButton>
     <UButton
       v-if="props.canClose"
       size="xs"
       color="neutral"
       variant="ghost"
       icon="i-heroicons-x-mark"
-      @click.stop="emit('close', props.id)"
+      @click="emit('close', props.id)"
     />
-  </button>
+    <div v-if="props.isActive" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary z-10" />
+  </div>
 </template>
-
-<style scoped>
-.tab {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  background: transparent;
-  border-radius: 0.375rem 0.375rem 0 0;
-  cursor: pointer;
-  color: var(--ui-text-secondary);
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.tab:hover {
-  background: var(--ui-bg-secondary);
-  color: var(--ui-text-primary);
-}
-
-.tab.active {
-  background: var(--ui-bg-primary);
-  color: var(--ui-text-primary);
-  border-bottom: 2px solid var(--ui-primary);
-}
-
-.tab-icon {
-  font-size: 1rem;
-}
-</style>
