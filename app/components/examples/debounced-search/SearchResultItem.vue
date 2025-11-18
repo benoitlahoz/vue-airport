@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { checkInToDesk } from '#vue-checkin/composables/desk-child';
+import { checkInToDesk } from '#vue-checkin/composables';
 import { type SearchResult, SEARCH_DESK_KEY } from '.';
 
 interface Props extends SearchResult {
