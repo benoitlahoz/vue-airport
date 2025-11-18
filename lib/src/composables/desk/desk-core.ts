@@ -6,7 +6,11 @@
 import { shallowRef, computed, type ComputedRef, type ShallowRef } from 'vue';
 import { EventManager } from '../helpers/event-manager';
 import { SortedRegistryCache } from '../helpers/sorted-registry-cache';
-import { emitDevToolsEvent, updateDevToolsRegistry } from '../helpers/devtools';
+import {
+  emitDevToolsEvent,
+  updateDevToolsRegistry,
+  registerDeskWithDevTools,
+} from '../helpers/devtools';
 import type { CheckInPlugin } from '../types';
 import { NoOp, Debug } from '../utils';
 
@@ -99,9 +103,12 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
   const debug = options?.debug ? Debug : NoOp;
   const deskId = options?.deskId || `desk-${Math.random().toString(36).substr(2, 9)}`;
 
-  // ==========================================
-  // HYBRID REGISTRY REPRESENTATION
-  // ==========================================
+  // Register desk with DevTools
+  registerDeskWithDevTools(deskId, {
+    deskId,
+    debug: options?.debug,
+    createdAt: new Date().toLocaleString(),
+  });
 
   /**
    * Primary storage: Map (fast lookups, O(1) operations)
