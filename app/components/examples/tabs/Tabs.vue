@@ -114,8 +114,10 @@ const activeTabContent = computed(() => {
       <UButton size="sm" icon="i-heroicons-plus" @click="addTab"> New Tab </UButton>
     </div>
 
-    <div class="p-6 min-h-[150px] bg-white dark:bg-gray-800 rounded-md mb-4">
-      <p>{{ activeTabContent }}</p>
+    <div class="relative overflow-hidden p-6 min-h-[150px] bg-white dark:bg-gray-800 rounded-md mb-4">
+      <Transition name="slide-fade" mode="out-in">
+        <p :key="activeTabId">{{ activeTabContent }}</p>
+      </Transition>
     </div>
 
     <div
@@ -127,40 +129,21 @@ const activeTabContent = computed(() => {
 </template>
 
 <style scoped>
-.description {
-  color: var(--ui-text-secondary);
-  margin-bottom: 1.5rem;
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
 }
 
-.tabs-header {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--ui-border-primary);
-  padding-bottom: 0.5rem;
+.slide-fade-leave-active {
+  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
 }
 
-.tabs-list {
-  display: flex;
-  gap: 0.25rem;
-  flex: 1;
-  overflow-x: auto;
+.slide-fade-enter-from {
+  transform: translateX(20px);
+  opacity: 0;
 }
 
-.tabs-content {
-  padding: 1.5rem;
-  min-height: 150px;
-  background: var(--ui-bg-primary);
-  border-radius: 0.375rem;
-  margin-bottom: 1rem;
-}
-
-.debug-info {
-  padding: 0.75rem;
-  background: var(--ui-bg-secondary);
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  color: var(--ui-text-secondary);
+.slide-fade-leave-to {
+  transform: translateX(-20px);
+  opacity: 0;
 }
 </style>
