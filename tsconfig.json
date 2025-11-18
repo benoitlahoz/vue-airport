@@ -2,7 +2,14 @@
   "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     "paths": {
-      "#vue-airport/*": ["./lib/src/*"]
+      "#vue-airport": ["./packages/core/src"],
+      "#vue-airport/*": ["./packages/core/src/*"],
+      "@vue-airport/plugins": ["./packages/plugins/src"],
+      "@vue-airport/plugins/*": ["./packages/plugins/src/*"],
+      "vue-airport": ["./packages/core/src"],
+      "vue-airport/*": ["./packages/core/src/*"],
+      "vue-airport-devtools": ["./packages/devtools/src"],
+      "vue-airport-devtools/*": ["./packages/devtools/src/*"]
     }
   }
 }

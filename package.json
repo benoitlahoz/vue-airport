@@ -1,20 +1,19 @@
 {
-  "name": "vue-airport-docs",
+  "name": "vue-airport-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Documentation for vue-airport library",
+  "description": "Vue Airport - Monorepo for core, plugins and documentation",
   "author": "Benoit Lahoz",
   "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "nuxt dev --extends docus",
-    "build": "nuxt build --extends docus",
-    "clean": "rimraf .nuxt",
-    "lib:install": "cd lib && yarn",
-    "lib:build": "cd lib && yarn build",
-    "lib:clean": "cd lib && yarn clean",
-    "devtools:install": "cd devtools && yarn",
-    "devtools:build": "node_modules/.bin/vite build --config devtools/vite.config.ts",
-    "devtools:clean": "cd devtools && yarn clean"
+    "build": "turbo run build",
+    "build:docs": "nuxt build --extends docus",
+    "clean": "turbo run clean && rimraf .nuxt",
+    "test": "turbo run test"
   },
   "dependencies": {
     "@nuxt/content": "3.8.2",
@@ -24,12 +23,12 @@
     "docus": "latest",
     "eslint": "^9.0.0",
     "nuxt": "^4.1.2",
-    "typescript": "^5.6.3",
-    "vue-airport-devtools": "file:./devtools"
+    "typescript": "^5.6.3"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
-    "rimraf": "^6.1.0"
+    "rimraf": "^6.1.0",
+    "turbo": "^2.3.3"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

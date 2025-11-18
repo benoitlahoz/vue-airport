@@ -44,7 +44,7 @@
   },
   "peerDependencies": {
     "vue": "^3.4.0",
-    "vue-airport": "file:../lib",
+    "vue-airport": "workspace:*",
     "vite": "^6.0.0 || ^7.0.0",
     "@nuxt/kit": "^3.0.0"
   },
