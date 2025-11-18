@@ -6,11 +6,7 @@
 import { shallowRef, computed, type ComputedRef, type ShallowRef } from 'vue';
 import { EventManager } from '../helpers/event-manager';
 import { SortedRegistryCache } from '../helpers/sorted-registry-cache';
-import {
-  emitDevToolsEvent,
-  updateDevToolsRegistry,
-  registerDeskWithDevTools,
-} from '../helpers/devtools';
+import { DevTools, NoOpDevTools } from '../helpers/devtools';
 import type { CheckInPlugin } from '../types';
 import { NoOp, Debug } from '../utils';
 
@@ -44,11 +40,16 @@ export interface DeskCoreOptions<T = any> {
   onBeforeCheckOut?: (id: string | number) => boolean | undefined;
   onCheckOut?: (id: string | number) => void;
   debug?: boolean;
+  devTools?: boolean;
   plugins?: CheckInPlugin<T>[];
   deskId?: string; // For DevTools integration
 }
 
 export interface DeskCore<T = any> {
+  /**
+   * DevTools integration instance (either real or no-op)
+   */
+  devTools: typeof DevTools | typeof NoOpDevTools;
   /**
    * Internal Map registry - DO NOT use directly in templates.
    * Use get(), getAll(), or computed helpers instead.
@@ -101,10 +102,11 @@ const DebugPrefix = '[DeskCore]';
  */
 export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<T> => {
   const debug = options?.debug ? Debug : NoOp;
+  const devTools = options?.devTools ? DevTools : NoOpDevTools;
   const deskId = options?.deskId || `desk-${Math.random().toString(36).substr(2, 9)}`;
 
   // Register desk with DevTools with plugin information
-  registerDeskWithDevTools(deskId, {
+  devTools.registerDesk(deskId, {
     deskId,
     debug: options?.debug,
     createdAt: new Date().toLocaleString(),
@@ -201,7 +203,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     emit('check-in', { id, data });
 
     // DevTools integration
-    emitDevToolsEvent({
+    devTools.emit({
       type: 'check-in',
       timestamp: Date.now(),
       deskId,
@@ -210,7 +212,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       meta: meta as Record<string, unknown>,
       registrySize: registryMap.size,
     });
-    updateDevToolsRegistry(deskId, registryMap);
+    devTools.updateRegistry(deskId, registryMap);
 
     // Call plugin hooks and track execution
     if (options?.plugins) {
@@ -220,7 +222,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
           plugin.onCheckIn(id, data);
           const duration = performance.now() - startTime;
 
-          emitDevToolsEvent({
+          devTools.emit({
             type: 'plugin-execute',
             timestamp: Date.now(),
             deskId,
@@ -286,14 +288,14 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     emit('check-out', { id });
 
     // DevTools integration
-    emitDevToolsEvent({
+    devTools.emit({
       type: 'check-out',
       timestamp: Date.now(),
       deskId,
       childId: id,
       registrySize: registryMap.size,
     });
-    updateDevToolsRegistry(deskId, registryMap);
+    devTools.updateRegistry(deskId, registryMap);
 
     // Call plugin hooks and track execution
     if (options?.plugins) {
@@ -303,7 +305,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
           plugin.onCheckOut(id);
           const duration = performance.now() - startTime;
 
-          emitDevToolsEvent({
+          devTools.emit({
             type: 'plugin-execute',
             timestamp: Date.now(),
             deskId,
@@ -410,7 +412,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
             plugin.onUpdate(id, existing.data);
             const duration = performance.now() - startTime;
 
-            emitDevToolsEvent({
+            devTools.emit({
               type: 'plugin-execute',
               timestamp: Date.now(),
               deskId,
@@ -427,7 +429,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       emit('update', { id, data: existing.data });
 
       // DevTools integration
-      emitDevToolsEvent({
+      devTools.emit({
         type: 'update',
         timestamp: Date.now(),
         deskId,
@@ -436,7 +438,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
         previousData: previousData as Record<string, unknown>,
         registrySize: registryMap.size,
       });
-      updateDevToolsRegistry(deskId, registryMap);
+      devTools.updateRegistry(deskId, registryMap);
 
       if (options?.debug) {
         debug(`${DebugPrefix} update diff:`, {
@@ -467,13 +469,13 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     emit('clear', {});
 
     // DevTools integration
-    emitDevToolsEvent({
+    devTools.emit({
       type: 'clear',
       timestamp: Date.now(),
       deskId,
       registrySize: count,
     });
-    updateDevToolsRegistry(deskId, registryMap);
+    devTools.updateRegistry(deskId, registryMap);
 
     // Cleanup plugins
     pluginCleanups.forEach((cleanup) => cleanup());
@@ -500,6 +502,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
   };
 
   const desk: DeskCore<T> = {
+    devTools,
     registryMap,
     registryList,
     sortedRegistry,
@@ -519,6 +522,9 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     emit,
   };
 
+  // Add deskId as internal property for plugin access
+  (desk as any).__deskId = deskId;
+
   if (options?.plugins) {
     options.plugins.forEach((plugin) => {
       debug(`${DebugPrefix} Installing plugin:`, plugin.name);
@@ -530,7 +536,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
         const duration = performance.now() - startTime;
 
         // Track plugin execution in DevTools
-        emitDevToolsEvent({
+        devTools.emit({
           type: 'plugin-execute',
           timestamp: Date.now(),
           deskId,
@@ -543,10 +549,6 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
           pluginCleanups.push(cleanup);
         }
       }
-
-      // Note: Plugin lifecycle hooks (onCheckIn, onCheckOut, onUpdate) are now
-      // called directly in the respective methods (checkIn, checkOut, update)
-      // to ensure proper tracking in DevTools timeline
 
       // 2. Add custom methods
       if (plugin.methods) {

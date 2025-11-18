@@ -33,7 +33,7 @@ declare global {
 /**
  * Emit event to DevTools (noop if not available)
  */
-export function emitDevToolsEvent(event: DevToolsEvent): void {
+const emitDevToolsEvent = (event: DevToolsEvent): void => {
   if (typeof window !== 'undefined' && window[HOOK_KEY]) {
     try {
       window[HOOK_KEY].emit(event);
@@ -44,12 +44,12 @@ export function emitDevToolsEvent(event: DevToolsEvent): void {
       }
     }
   }
-}
+};
 
 /**
  * Register desk with DevTools
  */
-export function registerDeskWithDevTools(deskId: string, metadata: Record<string, unknown>): void {
+const registerDeskWithDevTools = (deskId: string, metadata: Record<string, unknown>): void => {
   if (typeof window !== 'undefined' && window[HOOK_KEY]) {
     try {
       window[HOOK_KEY].registerDesk(deskId, metadata);
@@ -59,12 +59,12 @@ export function registerDeskWithDevTools(deskId: string, metadata: Record<string
       }
     }
   }
-}
+};
 
 /**
  * Update registry state in DevTools
  */
-export function updateDevToolsRegistry(deskId: string, registry: Map<string | number, any>): void {
+const updateDevToolsRegistry = (deskId: string, registry: Map<string | number, any>): void => {
   if (typeof window !== 'undefined' && window[HOOK_KEY]) {
     try {
       window[HOOK_KEY].updateRegistry(deskId, registry);
@@ -74,11 +74,33 @@ export function updateDevToolsRegistry(deskId: string, registry: Map<string | nu
       }
     }
   }
-}
+};
 
 /**
  * Check if DevTools are available
  */
-export function hasDevTools(): boolean {
+const hasDevTools = (): boolean => {
   return typeof window !== 'undefined' && !!window[HOOK_KEY];
-}
+};
+
+export const DevTools = {
+  emit: emitDevToolsEvent,
+  registerDesk: registerDeskWithDevTools,
+  updateRegistry: updateDevToolsRegistry,
+  isAvailable: hasDevTools,
+};
+
+export const NoOpDevTools = {
+  emit(_event: DevToolsEvent): void {
+    // No-op
+  },
+  registerDesk(_deskId: string, _metadata: Record<string, unknown>): void {
+    // No-op
+  },
+  updateRegistry(_deskId: string, _registry: Map<string | number, any>): void {
+    // No-op
+  },
+  isAvailable(): boolean {
+    return false;
+  },
+};
