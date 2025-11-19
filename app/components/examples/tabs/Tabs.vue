@@ -104,7 +104,7 @@ const activeTabContent = computed(() => {
 
 <template>
   <div>
-    <div class="flex gap-4 items-center mb-4 border-b border-gray-200 dark:border-gray-800 pb-2">
+    <div class="flex gap-4 items-center mb-1 border-b border-gray-200 dark:border-gray-800 pb-2">
       <div class="flex gap-1 flex-1 overflow-x-auto">
         <!-- Note: no props, just the id -->
         <TabItem v-for="tab in tabsData" :id="tab.id" :key="tab.id" />
