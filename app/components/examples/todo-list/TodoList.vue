@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useTemplateRef, nextTick } from 'vue';
 import { useCheckIn } from '#vue-airport/composables/useCheckIn';
 import TodoItem from './TodoItem.vue';
 import { type TodoItemContext, type TodoItemData as TodoItemData, TODO_DESK_KEY } from '.';
+import { Button } from '@/components/ui/button';
 
 /**
  * Local state for managing todos
@@ -11,14 +13,21 @@ const itemsData = ref<Array<TodoItemData & { id: string | number }>>([
   {
     id: 1,
     label: 'Learn Vue Airport',
-    done: false,
+    done: true,
   },
   {
     id: 2,
+    label: 'Create plugins',
+    done: false,
+  },
+  {
+    id: 3,
     label: 'Build awesome apps',
     done: false,
   },
 ]);
+
+const listRef = useTemplateRef<HTMLUListElement>('listRef');
 
 /**
  * Toggle the done state of a todo item
@@ -67,6 +76,12 @@ const addItem = () => {
     label: `Task ${id}`,
     done: false,
   });
+  nextTick(() => {
+    listRef.value?.scrollTo({
+      top: listRef.value.scrollHeight,
+      behavior: 'smooth',
+    });
+  });
 };
 
 /**
@@ -82,23 +97,24 @@ const clearAll = () => {
   <div>
     <div class="flex gap-3 items-center mb-6 flex-wrap">
       <div class="flex-1 flex gap-3">
-        <UButton icon="i-heroicons-plus" @click="addItem"> Add Task </UButton>
-        <UButton
+        <Button @click="addItem">
+          <UIcon name="i-heroicons-plus" class="w-4 h-4" /> Add Task
+        </Button>
+        <Button
           color="error"
-          variant="soft"
-          icon="i-heroicons-trash"
+          variant="destructive"
           :disabled="desk.size.value === 0"
           @click="clearAll"
         >
-          Clear All
-        </UButton>
+          <UIcon name="i-heroicons-trash" class="w-4 h-4" /> Clear All
+        </Button>
       </div>
       <UBadge color="primary" variant="subtle"> {{ desk.size.value }} item(s) </UBadge>
     </div>
 
     <div
       v-if="itemsData.length === 0"
-      class="p-8 flex flex-col items-center justify-center min-h-[150px] bg-gray-300 dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg"
+      class="flex flex-col items-center justify-center h-[150px] min-h-[150px] max-h-[150px] border-2 border-dashed rounded-lg"
     >
       <p>No tasks.</p>
       <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
@@ -108,7 +124,8 @@ const clearAll = () => {
 
     <ul
       v-else
-      class="list-none min-h-[150px] bg-gray-300 dark:bg-gray-700 p-2 m-0 rounded-lg flex flex-col gap-2"
+      ref="listRef"
+      class="list-none min-h-[150px] max-h-[300px] p-0 m-0 flex flex-col gap-2 overflow-y-auto"
     >
       <TodoItem v-for="todo in itemsData" :id="todo.id" :key="todo.id" />
     </ul>

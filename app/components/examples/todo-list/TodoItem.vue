@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useCheckIn } from '#vue-airport/composables/useCheckIn';
 import { type TodoItemContext, type TodoItemData, TODO_DESK_KEY } from '.';
+import { Button } from '@/components/ui/button';
 
 const props = defineProps<{
   id: string | number;
@@ -39,7 +40,7 @@ const onDelete = () => {
 
 <template>
   <li
-    class="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-500 rounded-md transition-all duration-200 bg-muted hover:bg-gray-50 dark:hover:bg-gray-800"
+    class="group flex items-center gap-3 p-3 border border-gray-300/50 dark:border-gray-500/50 rounded-md transition-all duration-200 hover:bg-accent/40"
   >
     <UCheckbox :model-value="itemData?.done ?? false" @update:model-value="onDone" />
     <span
@@ -48,6 +49,8 @@ const onDelete = () => {
     >
       {{ itemData?.label }}
     </span>
-    <UButton size="xs" color="error" variant="ghost" icon="i-heroicons-x-mark" @click="onDelete" />
+    <Button size="icon" variant="destructive" class="opacity-0 group-hover:opacity-100 transition-opacity duration-200" @click="onDelete">
+      <UIcon name="i-heroicons-trash" class="w-4 h-4" />
+    </Button>
   </li>
 </template>
