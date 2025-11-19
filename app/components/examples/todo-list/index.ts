@@ -1,12 +1,18 @@
 import type { InjectionKey } from 'vue';
 import type { DeskCore } from '#vue-airport/composables/useCheckIn';
 
-export interface TodoItem {
+export interface TodoItemData {
   label: string;
   done: boolean;
 }
 
-export const TODO_DESK_KEY: InjectionKey<DeskCore<TodoItem>> = Symbol('todoDesk');
+export interface TodoItemContext {
+  toggleDone: (id: string | number) => void;
+  removeItem: (id: string | number) => void;
+}
+
+export const TODO_DESK_KEY: InjectionKey<DeskCore<TodoItemData> & TodoItemContext> =
+  Symbol('todoDesk');
 
 export { default as TodoList } from './TodoList.vue';
-export { default as TodoItem } from './TodoItem.vue';
+export { default as TodoItemData } from './TodoItem.vue';

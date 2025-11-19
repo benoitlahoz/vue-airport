@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useCheckIn } from '#vue-airport/composables/useCheckIn';
+import { useCheckIn, getItemData } from '#vue-airport/composables/useCheckIn';
 import { type TabItemData, type TabItemContext, TABS_DESK_KEY } from '.';
 
 /**
  * Tab Item Component
  *
- * Individual tab component that automatically checks in to the desk.
+ * Individual tab component that reads from the desk.
  */
 
 const props = defineProps<{
@@ -22,21 +22,7 @@ const emit = defineEmits<{
 const { checkIn } = useCheckIn<TabItemData, TabItemContext>();
 const { desk } = checkIn(TABS_DESK_KEY, {
   id: props.id,
-  autoCheckIn: true,
-  watchData: true,
-  debug: false,
-  data: (desk) => {
-    // The desk is now passed as a parameter to the data function
-    const tabData = desk.tabsData.value.find(
-      (t: TabItemData & { id: string | number }) => t.id === props.id
-    );
-    return {
-      label: tabData?.label ?? '',
-      // Content is unused here, but we want to check if it is correctly updated and displayed in the devtools
-      content: tabData?.content ?? '',
-      icon: tabData?.icon ?? undefined,
-    };
-  },
+  autoCheckIn: false,
 });
 
 const isActive = computed(() => {
@@ -57,13 +43,12 @@ const canClose = computed(() => {
   }
 });
 
-// Récupérer les données depuis le contexte tabsData
-const tabData = computed(() => {
-  return desk?.tabsData?.value.find((t) => t.id === props.id);
-});
-
-// Ou alternativement, récupérer depuis les données enregistrées du desk :
-// const registeredData = computed(() => desk?.get(props.id as any)?.data);
+// Helper computed qui utilise registryList pour la réactivité
+const tabData = computed(() =>
+  props.id !== undefined
+    ? getItemData<TabItemData, TabItemContext>(desk!, props.id).value
+    : undefined
+);
 
 const onSelect = () => {
   if (desk && typeof desk.selectTab === 'function') {

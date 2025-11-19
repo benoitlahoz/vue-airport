@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useCheckIn } from '#vue-airport/composables/useCheckIn';
 import TodoItem from './TodoItem.vue';
-import { type TodoItem as TodoItemData, TODO_DESK_KEY } from '.';
+import { type TodoItemContext, type TodoItemData as TodoItemData, TODO_DESK_KEY } from '.';
 
 /**
  * Create a desk to manage todo items
  * The desk acts as a central registry where child TodoItem components check in
  */
-const { createDesk } = useCheckIn<TodoItemData>();
+const { createDesk } = useCheckIn<TodoItemData, TodoItemContext>();
 const { desk } = createDesk(TODO_DESK_KEY, {
   devTools: true,
   debug: false,
@@ -17,120 +17,71 @@ const { desk } = createDesk(TODO_DESK_KEY, {
   onCheckOut: (id) => {
     console.log(`Item removed: ${id}`);
   },
+  context: {
+    toggleDone: (id: string | number) => {
+      const item = desk.get(id);
+      if (item) {
+        desk.update(id, { done: !item.data.done });
+      }
+    },
+    removeItem: (id: string | number) => {
+      desk.checkOut(id);
+    },
+  },
 });
 
 /**
- * Local state for managing todos
- * Each todo will automatically check in to the desk when mounted
- */
-const todos = ref<
-  Array<{
-    id: number;
-    label: string;
-    done: boolean;
-  }>
->([]);
-
-/**
- * Add a new todo item
- * The TodoItem component will auto check-in when mounted
+ * Add a new todo item directly to the desk
  */
 const addItem = () => {
   const id = Date.now();
-  todos.value.push({
-    id,
+  desk.checkIn(id, {
     label: `Task ${id}`,
     done: false,
   });
 };
 
 /**
- * Toggle the done state of a todo item
- */
-const toggleItem = (id: string | number) => {
-  const todo = todos.value.find((t) => t.id === id);
-  if (todo) {
-    todo.done = !todo.done;
-  }
-};
-
-/**
- * Remove a todo item from the list
- * Will trigger auto check-out when component unmounts
- */
-const removeItem = (id: string | number) => {
-  const index = todos.value.findIndex((t) => t.id === id);
-  if (index !== -1) {
-    todos.value.splice(index, 1);
-  }
-};
-
-/**
  * Clear all todos and reset the desk
  */
 const clearAll = () => {
-  todos.value = [];
   desk.clear();
 };
 </script>
 
 <template>
   <div>
-    <div class="controls">
-      <UButton icon="i-heroicons-plus" @click="addItem"> Add Task </UButton>
-      <UButton
-        color="error"
-        variant="soft"
-        icon="i-heroicons-trash"
-        :disabled="desk.size.value === 0"
-        @click="clearAll"
-      >
-        Clear All
-      </UButton>
+    <div class="flex gap-3 items-center mb-6 flex-wrap">
+      <div class="flex-1 flex gap-3">
+        <UButton icon="i-heroicons-plus" @click="addItem"> Add Task </UButton>
+        <UButton
+          color="error"
+          variant="soft"
+          icon="i-heroicons-trash"
+          :disabled="desk.size.value === 0"
+          @click="clearAll"
+        >
+          Clear All
+        </UButton>
+      </div>
       <UBadge color="primary" variant="subtle"> {{ desk.size.value }} item(s) </UBadge>
     </div>
 
-    <div v-if="todos.length === 0" class="empty-state">
-      <p>No tasks. Click "Add Task" to get started.</p>
+    <div
+      v-if="desk.size.value === 0"
+      class="p-8 flex flex-col items-center justify-center min-h-[150px] bg-gray-300 dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg"
+    >
+      <p>No tasks.</p>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+        Click "Add Task" to create your first item.
+      </p>
     </div>
 
-    <ul v-else class="item-list">
-      <TodoItem
-        v-for="todo in todos"
-        :id="todo.id"
-        :key="todo.id"
-        :label="todo.label"
-        :done="todo.done"
-        @toggle="toggleItem"
-        @remove="removeItem"
-      />
+    <ul
+      v-else
+      class="list-none min-h-[150px] bg-gray-300 dark:bg-gray-700 p-2 m-0 rounded-lg flex flex-col gap-2"
+    >
+      <TodoItem v-for="item in desk.registryList.value" :id="item.id" :key="item.id" />
     </ul>
   </div>
 </template>
-
-<style scoped>
-.controls {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.empty-state {
-  padding: 2rem;
-  text-align: center;
-  color: var(--ui-text-secondary);
-  border: 2px dashed var(--ui-border-primary);
-  border-radius: 0.5rem;
-}
-
-.item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-</style>

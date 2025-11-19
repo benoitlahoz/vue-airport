@@ -1,76 +1,43 @@
 <script setup lang="ts">
-import { useCheckIn } from '#vue-airport/composables/useCheckIn';
-import { type TodoItem, TODO_DESK_KEY } from '.';
+import { useCheckIn, getItemData } from '#vue-airport/composables/useCheckIn';
+import { type TodoItemContext, type TodoItemData, TODO_DESK_KEY } from '.';
 
 const props = defineProps<{
   id: string | number;
-  label: string;
-  done: boolean;
-}>();
-
-const emit = defineEmits<{
-  toggle: [id: string | number];
-  remove: [id: string | number];
 }>();
 
 /**
- * Auto check-in with data watching enabled
- * The component will:
- * 1. Check in automatically when mounted
- * 2. Watch props changes and update the desk
- * 3. Check out automatically when unmounted
+ * Check in to the desk to access context methods
  */
-const { checkIn } = useCheckIn<TodoItem>();
-checkIn(TODO_DESK_KEY, {
+const { checkIn } = useCheckIn<TodoItemData, TodoItemContext>();
+const { desk } = checkIn(TODO_DESK_KEY, {
   id: props.id,
-  autoCheckIn: true,
-  watchData: true,
-  data: () => ({
-    label: props.label,
-    done: props.done,
-  }),
+  autoCheckIn: false,
 });
+
+// Computed helper to get the item data from the desk
+const itemData = getItemData<TodoItemData, TodoItemContext>(desk!, props.id);
+
+const onDone = () => {
+  desk?.toggleDone(props.id);
+};
+
+const onDelete = () => {
+  desk?.removeItem(props.id);
+};
 </script>
 
 <template>
-  <li class="item">
-    <UCheckbox :model-value="props.done" @update:model-value="emit('toggle', props.id)" />
-    <span :class="{ done: props.done }">
-      {{ props.label }}
+  <li
+    class="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-500 rounded-md transition-all duration-200 bg-muted hover:bg-gray-50 dark:hover:bg-gray-800"
+  >
+    <UCheckbox @update:model-value="onDone" />
+    <span
+      class="flex-1 transition-all duration-200"
+      :class="itemData?.done ? 'line-through opacity-60' : ''"
+    >
+      {{ itemData?.label }}
     </span>
-    <UButton
-      size="xs"
-      color="error"
-      variant="ghost"
-      icon="i-heroicons-x-mark"
-      @click="emit('remove', props.id)"
-    />
+    <UButton size="xs" color="error" variant="ghost" icon="i-heroicons-x-mark" @click="onDelete" />
   </li>
 </template>
-
-<style scoped>
-.item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: var(--ui-bg-primary);
-  border: 1px solid var(--ui-border-primary);
-  border-radius: 0.375rem;
-  transition: all 0.2s;
-}
-
-.item:hover {
-  background: var(--ui-bg-secondary);
-}
-
-.item span {
-  flex: 1;
-  transition: all 0.2s;
-}
-
-.item span.done {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-</style>

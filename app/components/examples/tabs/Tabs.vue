@@ -9,121 +9,97 @@ import { type TabItemData, type TabItemContext, TABS_DESK_KEY, TabItem } from '.
  * Demonstrates:
  * - Creating a desk with shared context
  * - Dynamic tab creation and deletion
- * - Auto check-in of child components
+ * - Desk as single source of truth
  * - Context sharing between components
  */
 
 // Reactive reference to store the active tab ID
 const activeTabId = ref<string | number>('tab-1');
 
-// State to manage all tabs
-const tabsData = ref<
-  Array<{
-    id: string;
-    label: string;
-    content: string;
-    icon?: string;
-  }>
->([
-  {
-    id: 'tab-1',
-    label: 'Home',
-    content: 'Welcome to the tabs demo!',
-    icon: 'i-heroicons-home',
-  },
-  {
-    id: 'tab-2',
-    label: 'Settings',
-    content: 'Application configuration',
-    icon: 'i-heroicons-cog-6-tooth',
-  },
-  {
-    id: 'tab-3',
-    label: 'Profile',
-    content: 'User information',
-    icon: 'i-heroicons-user',
-  },
-]);
-
-// Function to change the active tab
-const selectTab = (id: string | number) => {
-  activeTabId.value = id;
-};
-
-// Function to dynamically add a new tab
-const addTab = () => {
-  const id = `tab-${Date.now()}`;
-  tabsData.value.push({
-    id,
-    label: `Tab ${tabsData.value.length + 1}`,
-    content: `Content of tab ${tabsData.value.length + 1}`,
-    icon: 'i-heroicons-document-text',
-  });
-  selectTab(id);
-};
-
-// Function to close a tab
-const closeTab = (id: string | number) => {
-  // Keep at least one tab open
-  if (tabsData.value.length <= 1) return;
-
-  const index = tabsData.value.findIndex((t) => t.id === id);
-  if (index !== -1) {
-    tabsData.value.splice(index, 1);
-  }
-
-  // If the active tab is closed, select the first available tab
-  if (activeTabId.value === id && tabsData.value.length > 0) {
-    const firstTab = tabsData.value[0];
-    if (firstTab) {
-      activeTabId.value = firstTab.id;
-    }
-  }
-};
-
 // Create a desk with context to share the active tab state and helpers
 const { createDesk } = useCheckIn<TabItemData, TabItemContext>();
-createDesk(TABS_DESK_KEY, {
+const { desk } = createDesk(TABS_DESK_KEY, {
   devTools: true,
   debug: false,
   context: {
     activeTab: activeTabId,
-    selectTab,
-    closeTab,
-    tabsCount: computed(() => tabsData.value.length),
-    tabsData,
+    selectTab: (id: string | number) => {
+      activeTabId.value = id;
+    },
+    closeTab: (id: string | number) => {
+      // Keep at least one tab open
+      if (desk.size.value <= 1) return;
+
+      desk.checkOut(id);
+
+      // If the active tab is closed, select the first available tab
+      if (activeTabId.value === id && desk.registryList.value.length > 0) {
+        const firstTab = desk.registryList.value[0];
+        if (firstTab) {
+          activeTabId.value = firstTab.id;
+        }
+      }
+    },
+    tabsCount: computed(() => desk.size.value),
   },
 });
 
+// Initialize tabs directly in the desk
+desk.checkIn('tab-1', {
+  label: 'Home',
+  content: 'Welcome to the tabs demo!',
+  icon: 'i-heroicons-home',
+});
+
+desk.checkIn('tab-2', {
+  label: 'Settings',
+  content: 'Application configuration',
+  icon: 'i-heroicons-cog-6-tooth',
+});
+
+desk.checkIn('tab-3', {
+  label: 'Profile',
+  content: 'User information',
+  icon: 'i-heroicons-user',
+});
+
+// Function to dynamically add a new tab
+const addTab = () => {
+  const id = `tab-${Date.now()}`;
+  desk.checkIn(id, {
+    label: `Tab ${desk.size.value + 1}`,
+    content: `Content of tab ${desk.size.value + 1}`,
+    icon: 'i-heroicons-document-text',
+  });
+  activeTabId.value = id;
+};
+
 // Computed property for the active tab's content
 const activeTabContent = computed(() => {
-  const tab = tabsData.value.find((t) => t.id === activeTabId.value);
-  return tab?.content || '';
+  return desk.registryList.value.find((t) => t.id === activeTabId.value)?.data.content || '';
 });
 </script>
 
 <template>
   <div>
-    <div class="flex gap-4 items-center mb-1 border-b border-gray-200 dark:border-gray-800 pb-2">
+    <div class="flex gap-4 items-center">
       <div class="flex gap-1 flex-1 overflow-x-auto">
         <!-- Note: no props, just the id -->
-        <TabItem v-for="tab in tabsData" :id="tab.id" :key="tab.id" />
+        <TabItem v-for="tab in desk.registryList.value" :id="tab.id" :key="tab.id" />
       </div>
-      <UButton size="sm" icon="i-heroicons-plus" @click="addTab"> New Tab </UButton>
+      <UButton size="sm" icon="i-heroicons-plus" @click="addTab" />
     </div>
 
     <div
-      class="relative overflow-hidden p-6 min-h-[150px] bg-white dark:bg-gray-800 rounded-md mb-4"
+      class="relative overflow-hidden p-6 min-h-[150px] bg-gray-300 dark:bg-gray-700 rounded-bl-md rounded-br-md mb-2"
     >
       <Transition name="slide-fade" mode="out-in">
         <p :key="activeTabId">{{ activeTabContent }}</p>
       </Transition>
     </div>
 
-    <div
-      class="p-3 bg-gray-50 dark:bg-gray-900 rounded-md text-sm text-gray-600 dark:text-gray-400"
-    >
-      <strong>Debug:</strong> {{ tabsData.length }} tab(s), Active: {{ activeTabId }}
+    <div class="p-2 border border-gray-300 dark:border-gray-500 rounded-md text-xs">
+      {{ desk.size.value }} tab(s), Active: {{ activeTabId }}
     </div>
   </div>
 </template>
