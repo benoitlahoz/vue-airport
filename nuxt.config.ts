@@ -2,6 +2,7 @@
 import { fileURLToPath } from 'node:url';
 
 export default defineNuxtConfig({
+  extends: ['docus'],
   site: {
     name: 'VueAirport',
     description: 'Documentation for VueAirport composable and features',
