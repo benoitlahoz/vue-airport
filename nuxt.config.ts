@@ -11,6 +11,8 @@ export default defineNuxtConfig({
     baseURL: '/vue-airport/',
   },
   alias: {
+    '@/lib': fileURLToPath(new URL('./app/lib', import.meta.url)),
+    '@/components': fileURLToPath(new URL('./app/components', import.meta.url)),
     '#vue-airport': fileURLToPath(new URL('./packages/core/src', import.meta.url)),
     '#vue-airport/plugins': fileURLToPath(new URL('./packages/plugins-base/src', import.meta.url)),
     'vue-airport': fileURLToPath(new URL('./packages/core/src', import.meta.url)),
@@ -25,6 +27,8 @@ export default defineNuxtConfig({
   vite: {
     resolve: {
       alias: {
+        '@/lib': fileURLToPath(new URL('./app/lib', import.meta.url)),
+        '@/components': fileURLToPath(new URL('./app/components', import.meta.url)),
         '#vue-airport': fileURLToPath(new URL('./packages/core/src', import.meta.url)),
         '#vue-airport/plugins': fileURLToPath(
           new URL('./packages/plugins-base/src', import.meta.url)
