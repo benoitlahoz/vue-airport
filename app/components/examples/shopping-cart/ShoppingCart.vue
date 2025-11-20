@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useCheckIn } from '#vue-airport/composables/useCheckIn';
-import ProductCard from './ProductCard.vue';
-import { type CartItem, type CartContext, CART_DESK_KEY } from '.';
+import { ProductCard, type CartItem, type CartContext, CART_DESK_KEY } from '.';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
