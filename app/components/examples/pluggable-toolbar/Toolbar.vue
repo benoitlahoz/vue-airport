@@ -3,7 +3,7 @@ import { PluggableToolbar, PluggableToolbarZone, PluggableToolItem, SaveToolItem
 </script>
 
 <template>
-  <div class="w-full h-12 border border-border rounded-md bg-muted overflow-hidden">
+  <div class="w-full h-12 border border-border rounded-md bg-muted overflow-hidden p-2">
     <PluggableToolbar item-class="aspect-square max-h-full h-full overflow-hidden">
       <!-- Define zones with their layout -->
       <PluggableToolbarZone name="left" class="justify-start min-w-0" />

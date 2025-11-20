@@ -32,8 +32,8 @@ const handleSave = () => {
 
 <template>
   <PluggableToolItem id="save" :zone="props.zone">
-    <Button size="sm" class="h-full aspect-square p-0" @click="handleSave">
-      {{ toolData.icon }} {{ toolData.label }}
+    <Button size="sm" class="w-full h-full p-0" @click="handleSave">
+      {{ toolData.icon }}
     </Button>
   </PluggableToolItem>
 </template>
