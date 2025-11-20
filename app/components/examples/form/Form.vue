@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { useCheckIn } from '#vue-airport';
+import { useCheckIn, type DeskWithContext } from '#vue-airport';
 import { createValidationPlugin, type ValidationError } from '@vue-airport/plugins-base';
-import FormField from './FormField.vue';
-import { type FieldData, FORM_DESK_KEY } from '.';
+import { type FieldData, FORM_DESK_KEY, type FormContext, FormField } from '.';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { FieldSeparator, FieldGroup } from '@/components/ui/field';
 
 /**
  * Form Example - Validation Plugin
@@ -26,7 +28,7 @@ const validationPlugin = createValidationPlugin<FieldData>({
     // Validate email format
     if (data.type === 'email' && data.value) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(data.value)) {
+      if (!emailRegex.test(String(data.value))) {
         return 'Invalid email';
       }
     }
@@ -43,44 +45,15 @@ const validationPlugin = createValidationPlugin<FieldData>({
   maxErrors: 100, // Keep up to 100 validation errors
 });
 
-// Create a desk with validation plugin
-const { createDesk } = useCheckIn<FieldData>();
-const { desk } = createDesk(FORM_DESK_KEY, {
-  devTools: true,
-  debug: false,
-  plugins: [validationPlugin],
-});
-
-// Extend desk type to include validation plugin methods
-type DeskWithValidation = typeof desk & {
-  getValidationErrors?: () => ValidationError[];
-  getLastValidationError?: () => ValidationError | null;
-  getValidationErrorsById?: (id: string | number) => ValidationError[];
-  clearValidationErrors?: () => void;
-  getValidationErrorsByType?: (type: ValidationError['type']) => ValidationError[];
-  validationErrorCount?: number;
-  hasValidationErrors?: boolean;
-  count?: number;
-};
-
-const validatedDesk = desk as DeskWithValidation;
-
 // Form fields state
-const fieldsData = ref<
-  Array<{
-    id: string;
-    label: string;
-    value: string;
-    type: 'text' | 'email' | 'number';
-    required: boolean;
-  }>
->([
+const fieldData = ref<Array<FieldData>>([
   {
     id: 'name',
     label: 'Name',
     value: '',
     type: 'text',
     required: true,
+    touched: false,
   },
   {
     id: 'email',
@@ -88,6 +61,7 @@ const fieldsData = ref<
     value: '',
     type: 'email',
     required: true,
+    touched: false,
   },
   {
     id: 'age',
@@ -95,32 +69,44 @@ const fieldsData = ref<
     value: '',
     type: 'number',
     required: false,
+    touched: false,
   },
 ]);
 
-// Track which fields have been touched
-const touchedFields = ref<Set<string>>(new Set());
+type DeskWithValidation = DeskWithContext<FieldData, FormContext> & {
+  getValidationErrors?: () => ValidationError[];
+  clearValidationErrors?: () => void;
+  count?: number;
+};
+
+// Create a desk with validation plugin
+const { createDesk } = useCheckIn<FieldData, FormContext>();
+const { desk } = createDesk(FORM_DESK_KEY, {
+  devTools: true,
+  debug: false,
+  plugins: [validationPlugin],
+  context: {
+    fieldData,
+    errorById: (id: string) => {
+      const allErrors = (desk as any)?.getValidationErrors?.() || [];
+      return allErrors.find((e: ValidationError) => e.id === id);
+    },
+  },
+});
+
+const validatedDesk = desk as DeskWithValidation;
 
 // Computed properties for validation
-const validationErrors = computed(() => validatedDesk.getValidationErrors?.() || []);
-
-// Get current errors by field ID - only show errors for touched fields
-const errors = computed(() => {
-  const errorMap: Record<string, string> = {};
-  validationErrors.value.forEach((error: ValidationError) => {
-    if (touchedFields.value.has(String(error.id)) && !errorMap[error.id]) {
-      errorMap[error.id] = error.message;
-    }
-  });
-  return errorMap;
+const validationErrors = computed(() => {
+  return validatedDesk.getValidationErrors?.() || [];
 });
 
 // Check if form is valid (all fields filled and no validation errors)
 const isFormValid = computed(() => {
   // Check if all required fields have values
-  const allRequiredFilled = fieldsData.value
+  const allRequiredFilled = fieldData.value
     .filter((f) => f.required)
-    .every((f) => f.value.trim() !== '');
+    .every((f) => String(f.value).trim() !== '');
 
   // Check if there are NO validation errors at all
   const noValidationErrors = validationErrors.value.length === 0;
@@ -128,23 +114,12 @@ const isFormValid = computed(() => {
   return allRequiredFilled && noValidationErrors;
 });
 
-// Function to update field value
-const updateFieldValue = (id: string, value: string) => {
-  // Mark field as touched
-  touchedFields.value.add(id);
-
-  const field = fieldsData.value.find((f) => f.id === id);
-  if (field) {
-    field.value = value;
-  }
-};
-
 // Function to submit the form
 const submitForm = () => {
   if (isFormValid.value) {
-    const formData = fieldsData.value.reduce(
+    const formData = fieldData.value.reduce(
       (acc, field) => {
-        acc[field.id] = field.value;
+        acc[field.id] = String(field.value);
         return acc;
       },
       {} as Record<string, string>
@@ -164,12 +139,10 @@ const submitForm = () => {
 
 // Function to reset the form
 const resetForm = () => {
-  fieldsData.value.forEach((field) => {
+  fieldData.value.forEach((field) => {
     field.value = '';
+    field.touched = false;
   });
-
-  // Clear touched fields
-  touchedFields.value.clear();
 
   // Clear validation errors when resetting
   validatedDesk.clearValidationErrors?.();
@@ -179,38 +152,30 @@ const resetForm = () => {
 <template>
   <div>
     <form class="flex flex-col gap-6" @submit.prevent="submitForm">
-      <FormField
-        v-for="field in fieldsData"
-        :id="field.id"
-        :key="field.id"
-        :label="field.label"
-        :value="field.value"
-        :type="field.type"
-        :required="field.required"
-        :error="errors[field.id]"
-        @update:value="updateFieldValue(field.id, $event)"
-      />
-
-      <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <UButton type="submit" icon="i-heroicons-check" :disabled="!isFormValid"> Submit </UButton>
-        <UButton type="button" variant="soft" icon="i-heroicons-arrow-path" @click="resetForm">
+      <FieldGroup>
+        <FormField v-for="field in fieldData" :id="field.id" :key="field.id" />
+        <FieldSeparator />
+      </FieldGroup>
+      <div class="flex gap-3">
+        <Button :disabled="!isFormValid">
+          <UIcon name="i-heroicons-check" class="w-4 h-4" />
+          Submit
+        </Button>
+        <Button variant="outline" @click="resetForm">
+          <UIcon name="i-heroicons-arrow-path" class="w-4 h-4" />
           Reset
-        </UButton>
+        </Button>
       </div>
 
-      <div class="flex items-center gap-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-md">
-        <UBadge :color="isFormValid ? 'success' : 'error'">
-          {{ isFormValid ? '✓ Valid form' : '✗ Invalid form' }}
-        </UBadge>
-        <span
-          v-if="Object.keys(errors).length > 0"
-          class="text-sm text-gray-600 dark:text-gray-400"
+      <div class="flex items-center gap-4 p-4 bg-card border border-border rounded-md">
+        <Badge
+          :variant="isFormValid ? 'default' : 'destructive'"
+          :class="{ 'px-3 py-1 text-sm': true, 'bg-green-500': isFormValid }"
         >
-          {{ Object.keys(errors).length }} error(s)
-        </span>
+          {{ isFormValid ? '✓ Valid form' : '✗ Invalid form' }}
+        </Badge>
+        <span class="text-sm text-muted"> {{ validationErrors.length }} error(s) </span>
       </div>
     </form>
   </div>
 </template>
-
-<style scoped></style>
