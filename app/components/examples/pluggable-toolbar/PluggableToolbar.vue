@@ -33,6 +33,7 @@ const gatesNames = computed(() => {
     if (typeof vnode.type === 'symbol') return;
 
     const componentType = vnode.type as any;
+
     const isGate = componentType?.__isToolbarGate === true;
 
     if (isGate) {
@@ -47,10 +48,17 @@ const gatesNames = computed(() => {
 const { createDesk } = useCheckIn<ToolItemData, SlotsToolbarContext>();
 createDesk(SLOTS_TOOLBAR_DESK_KEY, {
   devTools: true,
+  debug: true,
   context: {
     toolItems: ref<Array<ToolItemData>>([]),
     gates: gatesNames.value,
     itemClass: computed(() => props.itemClass),
+  },
+  // FIXME: data is undefined here
+  onBeforeCheckIn(_id, data) {
+    console.log('Data', data);
+    // FIXME: If we return true child is checked in, if we return false child is not but appears.
+    return true;
   },
 });
 
@@ -72,12 +80,12 @@ const extractGate = (vnode: VNode): string | undefined => {
   // If it's a component, look into its default slot or its children
   const componentType = vnode.type as any;
 
-  // Si c'est un PluggableToolItem, il a directement la prop gate
+  // If it's a PluggableToolItem it directly has the gate prop
   if (componentType?.__isToolbarItem === true) {
     return vnode.props?.gate as string | undefined;
   }
 
-  return undefined;
+  return;
 };
 
 // Function to extract the gate name from a PluggableToolbarGate VNode
@@ -101,7 +109,7 @@ const isToolbarGate = (vnode: VNode): boolean => {
     return false;
   }
 
-  // Check the __isToolbarGate property of the component
+  // Check the __isToolbarGate option of the component
   const componentType = vnode.type as any;
   const isGate = componentType?.__isToolbarGate === true;
 
@@ -139,7 +147,6 @@ const itemVNodes = computed(() => slotSeparation.value.itemVNodes);
 // Organize items by gate
 const itemsByGate = computed(() => {
   const gates: Record<string, VNode[]> = {};
-  const noGate: VNode[] = [];
 
   // Initialize gates from gate VNodes
   gateVNodes.value.forEach((gateVNode) => {
@@ -161,19 +168,23 @@ const itemsByGate = computed(() => {
       }
       // If the gate does not exist, do not display the item (invalid gate)
     } else {
-      // The item has no gate, add it to noGates
-      noGate.push(vnode);
+      const componentType = vnode.type as any;
+      const isItem = componentType?.__isToolbarItem === true;
+      if (!isItem) {
+        console.warn('An unknown node was inserted in PluggableToolbar slot');
+        return;
+      }
     }
   });
 
-  return { gates, noGate };
+  return gates;
 });
 
 // Create VNodes of gates with their items using function slots
 const renderedGates = computed(() => {
   return gateVNodes.value.map((gateVNode) => {
     const gateName = extractGateName(gateVNode);
-    const items = itemsByGate.value.gates[gateName || ''] || [];
+    const items = itemsByGate.value[gateName || ''] || [];
 
     // Create a new gate VNode with a function slot for better performance
     return h(gateVNode.type as any, gateVNode.props || {}, {
@@ -184,16 +195,8 @@ const renderedGates = computed(() => {
 </script>
 
 <template>
-  <div
-    data-slot="pluggable-toolbar"
-    :class="cn('flex h-full w-full items-center gap-2', props.class)"
-  >
+  <div data-slot="pluggable-toolbar" :class="cn('flex h-full w-full items-center', props.class)">
     <!-- Render gates with their items -->
     <component :is="gateVNode" v-for="(gateVNode, index) in renderedGates" :key="index" />
-
-    <!-- Render items without a gate or with an unknown gate -->
-    <div v-if="itemsByGate.noGate.length > 0" class="flex items-center gap-1">
-      <component :is="item" v-for="(item, index) in itemsByGate.noGate" :key="`nogate-${index}`" />
-    </div>
   </div>
 </template>

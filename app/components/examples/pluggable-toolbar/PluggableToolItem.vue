@@ -14,6 +14,7 @@ const props = defineProps<PluggableToolItemProps>();
 const { checkIn } = useCheckIn<ToolItemData, SlotsToolbarContext>();
 const { desk } = checkIn(SLOTS_TOOLBAR_DESK_KEY, {
   id: props.id,
+  // FIXME: Even with false child appears -> see watchCondition.
   autoCheckIn: true, // Auto check-in when condition in `watchCondition` is met
   watchData: true,
   watchCondition: (desk) => {
@@ -36,6 +37,6 @@ defineOptions({
 
 <template>
   <div data-slot="pluggable-tool-item" :class="containerClass">
-    <slot :desk="desk" />
+    <slot :desk="desk" :classes="desk?.itemClass.value" />
   </div>
 </template>
