@@ -12,6 +12,10 @@ import { PluggableToolbar, PluggableToolItem, SaveToolItem } from '.';
       <PluggableToolItem id="center-item" zone="center">
         <div>Fooooooooo</div>
       </PluggableToolItem>
+      <!-- Should not be rendered because zone is not allowed -->
+      <PluggableToolItem id="center-item" zone="non-zone">
+        <div>Baaaaar</div>
+      </PluggableToolItem>
     </PluggableToolbar>
   </div>
 </template>

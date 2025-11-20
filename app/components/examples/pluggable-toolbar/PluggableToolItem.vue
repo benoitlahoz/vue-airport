@@ -20,6 +20,13 @@ const { desk } = checkIn(SLOTS_TOOLBAR_DESK_KEY, {
   watchData: true,
 });
 
+// Vérifier si la zone est autorisée par le desk
+const isZoneAllowed = computed(() => {
+  if (!props.zone) return true; // Pas de zone = toujours autorisé
+  if (!desk) return false; // Pas de desk = pas autorisé
+  return desk.zones.includes(props.zone);
+});
+
 // Classe du conteneur externe : itemClass du desk définit les dimensions (ex: aspect-square)
 const containerClass = computed(() =>
   cn('flex h-full shrink-0 items-center justify-center', desk?.itemClass.value, props.class)
@@ -32,7 +39,7 @@ const contentClass = computed(
 </script>
 
 <template>
-  <div data-slot="pluggable-tool-item" :class="containerClass">
+  <div v-if="isZoneAllowed" data-slot="pluggable-tool-item" :class="containerClass">
     <div :class="contentClass">
       <slot :desk="desk" />
     </div>
