@@ -2,6 +2,8 @@
 import { useCheckIn } from '#vue-airport/composables/useCheckIn';
 import ProductCard from './ProductCard.vue';
 import { type CartItem, type CartContext, CART_DESK_KEY } from '.';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 /**
  * Shopping Cart Example - E-commerce Cart
@@ -12,16 +14,8 @@ import { type CartItem, type CartContext, CART_DESK_KEY } from '.';
  * - Dynamic cart total calculation
  */
 
-// Function to update product quantity
-const updateQuantity = (id: string, quantity: number) => {
-  const product = products.value.find((p) => p.id === id);
-  if (product) {
-    product.quantity = Math.max(1, quantity);
-  }
-};
-
 // Available products catalog
-const products = ref([
+const products = ref<CartItem[]>([
   {
     id: 'product-1',
     name: 'Laptop Pro',
@@ -73,7 +67,6 @@ const { desk } = createDesk(CART_DESK_KEY, {
   debug: false,
   context: {
     products,
-    updateQuantity,
   },
   onCheckIn: (_id, data) => {
     console.log(`Product added to cart: ${data.name}`);
@@ -106,7 +99,6 @@ const removeFromCart = (id: string | number) => {
 // Function to update cart item quantity
 const updateCartQuantity = (id: string | number, newQty: number) => {
   desk.update(id, { quantity: newQty });
-  updateQuantity(id as string, newQty);
 };
 
 // Function to clear the entire cart
@@ -149,11 +141,15 @@ const checkout = () => {
 
       <!-- Shopping cart -->
       <div
-        class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-900 h-fit sticky top-4"
+        class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-card h-fit sticky top-4"
       >
         <div class="flex justify-between items-center mb-4">
-          <UBadge color="primary" variant="subtle"> {{ desk.size }} type(s) </UBadge>
-          <UBadge color="primary" variant="subtle"> {{ cartCount }} item(s) </UBadge>
+          <Badge variant="outline" class="bg-primary/20 border-primary px-4 py-1">
+            {{ desk.size }} type(s)
+          </Badge>
+          <Badge variant="outline" class="bg-primary/20 border-primary px-4 py-1">
+            {{ cartCount }} item(s)
+          </Badge>
         </div>
 
         <div
@@ -191,33 +187,31 @@ const checkout = () => {
 
               <div class="flex justify-between items-center">
                 <div class="flex items-center gap-2">
-                  <UButton
-                    size="xs"
-                    color="primary"
-                    variant="soft"
-                    icon="i-heroicons-minus"
+                  <Button
+                    size="icon"
                     :disabled="item.data.quantity <= 1"
+                    class="w-6 h-6 bg-primary/10 hover:bg-primary/20 text-primary"
                     @click="updateCartQuantity(item.id, item.data.quantity - 1)"
-                  />
+                  >
+                    <UIcon name="i-heroicons-minus" class="w-4 h-4" />
+                  </Button>
                   <span class="min-w-8 text-center font-semibold">{{ item.data.quantity }}</span>
-                  <UButton
-                    size="xs"
-                    color="primary"
-                    variant="soft"
-                    icon="i-heroicons-plus"
+                  <Button
+                    size="icon"
+                    class="w-6 h-6 bg-primary/10 hover:bg-primary/20 text-primary"
                     @click="updateCartQuantity(item.id, item.data.quantity + 1)"
-                  />
+                  >
+                    <UIcon name="i-heroicons-plus" class="w-4 h-4" />
+                  </Button>
                 </div>
 
-                <UButton
-                  size="xs"
-                  color="error"
-                  variant="ghost"
-                  icon="i-heroicons-trash"
+                <Button
+                  class="text-xs h-6 bg-error/10 hover:bg-error/20 text-error"
                   @click="removeFromCart(item.id)"
                 >
+                  <UIcon name="i-heroicons-trash" class="w-3 h-3" />
                   Remove
-                </UButton>
+                </Button>
               </div>
             </div>
           </div>
@@ -230,12 +224,14 @@ const checkout = () => {
           </div>
 
           <div class="flex flex-col gap-2">
-            <UButton color="primary" icon="i-heroicons-check" block @click="checkout">
+            <Button @click="checkout">
+              <UIcon name="i-heroicons-check" class="w-4 h-4 mr-2" />
               Checkout
-            </UButton>
-            <UButton color="error" variant="soft" icon="i-heroicons-trash" block @click="clearCart">
+            </Button>
+            <Button variant="destructive" @click="clearCart">
+              <UIcon name="i-heroicons-trash" class="w-4 h-4 mr-2" />
               Clear Cart
-            </UButton>
+            </Button>
           </div>
         </div>
       </div>

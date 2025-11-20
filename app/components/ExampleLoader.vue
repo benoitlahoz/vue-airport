@@ -8,7 +8,7 @@ defineProps<{
 
 <template>
   <div class="h-4" />
-  <div class="py-4 px-6 bg-card">
+  <div class="py-4 px-6 bg-card rounded-lg">
     <component :is="component" />
   </div>
 </template>

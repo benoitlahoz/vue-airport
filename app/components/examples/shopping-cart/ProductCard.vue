@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useCheckIn } from '#vue-airport/composables/useCheckIn';
 import { type CartItem, type CartContext, CART_DESK_KEY } from '.';
+import { Button } from '@/components/ui/button';
 
 /**
  * Product Card Component
- *
  * Automatically checks in and retrieves product data from desk context.
  */
 
@@ -21,6 +21,7 @@ const { desk } = checkIn(CART_DESK_KEY, {
   data: (desk) => {
     const product = desk.products.value.find((p) => p.id === props.id);
     return {
+      id: props.id,
       name: product?.name ?? '',
       price: product?.price ?? 0,
       quantity: product?.quantity ?? 1,
@@ -47,11 +48,11 @@ const addToCart = () => {
     if (currentItem) {
       const newQty = currentItem.data.quantity + 1;
       desk.update(props.id, { quantity: newQty });
-      desk.updateQuantity(props.id, newQty);
     }
   } else {
     // Add new item to cart by checking in
     desk?.checkIn(props.id, {
+      id: props.id,
       name: productData.value.name,
       price: productData.value.price,
       quantity: productData.value.quantity,
@@ -59,44 +60,13 @@ const addToCart = () => {
     });
   }
 };
-
-// Function to remove product from cart
-const removeFromCart = () => {
-  if (confirm('Do you really want to remove this product from the cart?')) {
-    desk?.checkOut(props.id);
-  }
-};
-
-// Function to increment quantity
-const increment = () => {
-  if (!productData.value) return;
-  const newQuantity = productData.value.quantity + 1;
-  desk?.updateQuantity(props.id, newQuantity);
-
-  // Update the cart with new quantity if item is in cart
-  if (desk?.has(props.id)) {
-    desk.update(props.id, { quantity: newQuantity });
-  }
-};
-
-// Function to decrement quantity
-const decrement = () => {
-  if (!productData.value) return;
-  const newQuantity = Math.max(1, productData.value.quantity - 1);
-  desk?.updateQuantity(props.id, newQuantity);
-
-  // Update the cart with new quantity if item is in cart
-  if (desk?.has(props.id)) {
-    desk.update(props.id, { quantity: newQuantity });
-  }
-};
 </script>
 
 <template>
   <div
-    class="aspect-square border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-900 flex flex-col gap-2 transition-all duration-200 hover:border-primary hover:shadow-md"
+    class="aspect-square border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-card flex flex-col gap-2 transition-all duration-200 hover:border-primary hover:shadow-md"
   >
-    <div class="flex justify-center items-center h-12 text-3xl text-primary opacity-70">
+    <div class="flex justify-center items-center h-24 text-6xl text-primary opacity-70">
       <UIcon :name="productData?.imageUrl || 'i-heroicons-cube'" />
     </div>
 
@@ -107,52 +77,10 @@ const decrement = () => {
 
     <div class="flex flex-col gap-1.5">
       <!-- Add to Cart button when not in cart -->
-      <UButton
-        v-if="!isInCart"
-        size="xs"
-        color="primary"
-        icon="i-heroicons-shopping-cart"
-        block
-        @click="addToCart"
-      >
+      <Button v-if="!isInCart" size="sm" @click="addToCart">
+        <UIcon name="i-heroicons-shopping-cart" class="w-4 h-4 mr-2" />
         Add to Cart
-      </UButton>
-
-      <!-- Quantity controls when in cart -->
-      <div v-if="isInCart" class="flex items-center gap-1 justify-center">
-        <UButton
-          size="xs"
-          color="primary"
-          variant="soft"
-          icon="i-heroicons-minus"
-          :disabled="(productData?.quantity ?? 1) <= 1"
-          @click="decrement"
-        />
-        <span class="min-w-6 text-center text-sm font-semibold">{{ productData?.quantity }}</span>
-        <UButton
-          size="xs"
-          color="primary"
-          variant="soft"
-          icon="i-heroicons-plus"
-          @click="increment"
-        />
-      </div>
-
-      <UButton
-        v-if="isInCart"
-        size="xs"
-        color="error"
-        variant="ghost"
-        icon="i-heroicons-trash"
-        @click="removeFromCart"
-      >
-        Remove
-      </UButton>
-
-      <UBadge v-if="isInCart" color="success" variant="subtle">
-        <UIcon name="i-heroicons-check" />
-        In Cart
-      </UBadge>
+      </Button>
     </div>
   </div>
 </template>

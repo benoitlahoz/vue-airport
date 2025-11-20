@@ -2,13 +2,6 @@ import type { InjectionKey, Ref } from 'vue';
 import type { DeskCore } from '#vue-airport/composables/useCheckIn';
 
 export interface CartItem {
-  name: string;
-  price: number;
-  quantity: number;
-  imageUrl?: string;
-}
-
-export interface Product {
   id: string;
   name: string;
   price: number;
@@ -17,8 +10,7 @@ export interface Product {
 }
 
 export interface CartContext {
-  products: Ref<Product[]>;
-  updateQuantity: (id: string, quantity: number) => void;
+  products: Ref<CartItem[]>;
 }
 
 export const CART_DESK_KEY: InjectionKey<DeskCore<CartItem> & CartContext> = Symbol('cartDesk');
