@@ -38,6 +38,9 @@ import {
         </div>
       </PluggableToolItem>
 
+      <!-- Toggle actif via composant dédié -->
+      <ToggleStarToolItem gate="center" />
+
       <!-- Should not be rendered because gate is not allowed -->
       <PluggableToolItem id="non-gate-item" gate="non-gate">
         <div>Not bound to gate</div>

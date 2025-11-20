@@ -1,3 +1,9 @@
+// Desk typé avec le plugin activeItem
+export type DeskWithActive = DeskCore<ToolItemData> &
+  SlotsToolbarContext & {
+    activeId?: Ref<string | null>;
+    setActive?: (id: string | null) => void;
+  };
 import type { InjectionKey, Ref, ComputedRef } from 'vue';
 import type { DeskCore } from '#vue-airport';
 
@@ -5,6 +11,7 @@ export interface ToolItemData {
   id: string;
   label: string;
   icon: string;
+  gate?: string;
 }
 
 export interface SlotsToolbarContext {

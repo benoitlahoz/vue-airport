@@ -1,3 +1,5 @@
+import type { Ref } from 'vue';
+
 <script setup lang="ts">
 /**
  * Slots Toolbar Example
@@ -11,6 +13,7 @@ import { useSlots, type HTMLAttributes, type VNode, Fragment, h } from 'vue';
 import { useCheckIn } from '#vue-airport';
 import { cn } from '@/lib/utils';
 import { SLOTS_TOOLBAR_DESK_KEY, type SlotsToolbarContext, type ToolItemData } from '.';
+import { createActiveItemPlugin } from '@vue-airport/plugins-base';
 
 export interface SlotsToolbarProps {
   class?: HTMLAttributes['class'];
@@ -49,15 +52,14 @@ const { createDesk } = useCheckIn<ToolItemData, SlotsToolbarContext>();
 createDesk(SLOTS_TOOLBAR_DESK_KEY, {
   devTools: true,
   debug: true,
+  plugins: [createActiveItemPlugin<ToolItemData>()],
   context: {
     toolItems: ref<Array<ToolItemData>>([]),
     gates: gatesNames.value,
     itemClass: computed(() => props.itemClass),
   },
-  // FIXME: data is undefined here
   onBeforeCheckIn(_id, data) {
     console.log('Data', data);
-    // FIXME: If we return true child is checked in, if we return false child is not but appears.
     return true;
   },
 });

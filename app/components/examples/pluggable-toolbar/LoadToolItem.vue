@@ -2,27 +2,19 @@
 import { PluggableToolItem } from '.';
 import { Button } from '@/components/ui/button';
 
-/**
- * Save Tool Item
- *
- * Example of a toolbar component that wraps PluggableToolItem
- * and defines its own gate, id, and data (plugin pattern)
- */
-
-export interface SaveToolItemProps {
+export interface LoadToolItemProps {
   gate?: string;
+  label?: string;
+  icon?: string;
 }
 
-const props = withDefaults(defineProps<SaveToolItemProps>(), {
+const props = withDefaults(defineProps<LoadToolItemProps>(), {
   gate: 'left',
-});
-
-// Définir les données du plugin en interne
-const toolData = {
-  id: 'load',
   label: 'Load',
   icon: 'material-symbols:download',
-};
+});
+
+const toolId = 'load';
 
 const handleLoad = () => {
   console.log('Load action triggered');
@@ -31,9 +23,14 @@ const handleLoad = () => {
 </script>
 
 <template>
-  <PluggableToolItem :id="toolData.id" :gate="props.gate">
+  <PluggableToolItem
+    :id="toolId"
+    :gate="props.gate"
+    :data="() => ({ id: toolId, label: props.label, icon: props.icon, gate: props.gate })"
+    :watch-data="true"
+  >
     <Button variant="outline" size="sm" class="w-full h-full p-0" @click="handleLoad">
-      <UIcon :name="toolData.icon" />
+      <UIcon :name="props.icon" />
     </Button>
   </PluggableToolItem>
 </template>
