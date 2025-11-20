@@ -4,14 +4,10 @@ import { Button } from '@/components/ui/button';
 
 export interface LoadToolItemProps {
   gate?: string;
-  label?: string;
-  icon?: string;
 }
 
 const props = withDefaults(defineProps<LoadToolItemProps>(), {
   gate: 'left',
-  label: 'Load',
-  icon: 'material-symbols:download',
 });
 
 const toolId = 'load';
@@ -26,11 +22,11 @@ const handleLoad = () => {
   <PluggableToolItem
     :id="toolId"
     :gate="props.gate"
-    :data="() => ({ id: toolId, label: props.label, icon: props.icon, gate: props.gate })"
+    :data="() => ({ id: toolId, gate: props.gate })"
     :watch-data="true"
   >
     <Button variant="outline" size="sm" class="w-full h-full p-0" @click="handleLoad">
-      <UIcon :name="props.icon" />
+      <UIcon name="material-symbols:download" />
     </Button>
   </PluggableToolItem>
 </template>
