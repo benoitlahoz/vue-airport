@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { useCheckIn, type CheckInItem } from '#vue-airport';
+import { ref } from 'vue';
+import { useCheckIn } from 'vue-airport';
 import { createActiveItemPlugin, createHistoryPlugin } from '@vue-airport/plugins-base';
 import PluginListItem from './PluginListItem.vue';
-import { type PluginItemData, PLUGIN_DESK_KEY } from '.';
+import {
+  type DeskWithPlugins,
+  type PluginItemContext,
+  type PluginItemData,
+  PLUGIN_DESK_KEY,
+} from '.';
 
 /**
  * Plugin Example - Active Item and History
@@ -14,36 +20,8 @@ import { type PluginItemData, PLUGIN_DESK_KEY } from '.';
  * - Plugin type extensions
  */
 
-// Create plugins for active item tracking and history management
-const activeItemPlugin = createActiveItemPlugin<PluginItemData>();
-const historyPlugin = createHistoryPlugin<PluginItemData>({ maxHistory: 20 });
-
-// Create a desk with plugins enabled
-const { createDesk } = useCheckIn<PluginItemData>();
-const { desk } = createDesk(PLUGIN_DESK_KEY, {
-  devTools: true,
-  debug: false,
-  plugins: [activeItemPlugin, historyPlugin],
-});
-
-// Extended type definition to include plugin methods
-type DeskWithPlugins = typeof desk & {
-  activeId?: Ref<string | number | null>;
-  getActive?: () => CheckInItem<PluginItemData> | null;
-  getHistory?: () => Array<{ action: string; id: string | number; timestamp: number }>;
-  setActive?: (id: string | number | null) => void;
-};
-
-const deskWithPlugins = desk as DeskWithPlugins;
-
 // State to manage list items
-const itemsData = ref<
-  Array<{
-    id: string;
-    name: string;
-    description: string;
-  }>
->([
+const itemsData = ref<Array<PluginItemData>>([
   {
     id: 'item-1',
     name: 'First Item',
@@ -61,6 +39,43 @@ const itemsData = ref<
   },
 ]);
 
+// Create plugins for active item tracking and history management
+const activeItemPlugin = createActiveItemPlugin<PluginItemData>();
+const historyPlugin = createHistoryPlugin<PluginItemData>({ maxHistory: 20 });
+
+// Create a desk with plugins enabled
+const { createDesk } = useCheckIn<PluginItemData, PluginItemContext>();
+const { desk } = createDesk(PLUGIN_DESK_KEY, {
+  devTools: true,
+  debug: false,
+  plugins: [activeItemPlugin, historyPlugin],
+  context: {
+    pluginItems: itemsData,
+  },
+  onCheckOut(id) {
+    // Remove item from local state on check-out
+    const index = itemsData.value.findIndex((item) => item.id === id);
+    if (index !== -1) {
+      // Deactivate the item if it was active
+      if (deskWithPlugins.activeId?.value === id) {
+        deskWithPlugins.setActive?.(null);
+      }
+      itemsData.value.splice(index, 1);
+    }
+
+    // Set active to the nearest item if any
+    if (itemsData.value.length > 0) {
+      const newIndex = Math.min(index, itemsData.value.length - 1);
+      const id = itemsData.value[newIndex]?.id;
+      if (id) {
+        deskWithPlugins.setActive?.(id);
+      }
+    }
+  },
+});
+
+const deskWithPlugins = desk as DeskWithPlugins;
+
 // Computed properties for active item and history
 const activeId = computed(() => deskWithPlugins.activeId?.value);
 const activeItem = computed(() => deskWithPlugins.getActive?.());
@@ -77,24 +92,6 @@ const addItem = () => {
 
   // Automatically activate the new item
   deskWithPlugins.setActive?.(id);
-};
-
-// Function to select an item
-const selectItem = (id: string | number) => {
-  deskWithPlugins.setActive?.(id);
-};
-
-// Function to remove an item
-const removeItem = (id: string | number) => {
-  // First deactivate if this is the active item
-  if (activeId.value === id) {
-    deskWithPlugins.setActive?.(null);
-  }
-
-  const index = itemsData.value.findIndex((item) => item.id === id);
-  if (index !== -1) {
-    itemsData.value.splice(index, 1);
-  }
 };
 
 // Helper to format action type for display
@@ -131,16 +128,7 @@ onMounted(() => {
       >
         <h3 class="m-0 mb-4 text-base font-semibold">Items ({{ itemsData.length }})</h3>
         <ul class="list-none p-0 m-0 flex flex-col gap-2">
-          <PluginListItem
-            v-for="item in itemsData"
-            :id="item.id"
-            :key="item.id"
-            :name="item.name"
-            :description="item.description"
-            :is-active="item.id === activeId"
-            @select="selectItem"
-            @remove="removeItem"
-          />
+          <PluginListItem v-for="item in itemsData" :id="item.id" :key="item.id" />
         </ul>
       </div>
 

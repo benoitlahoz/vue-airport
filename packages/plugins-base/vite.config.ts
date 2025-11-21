@@ -11,13 +11,18 @@ export default defineConfig({
       fileName: (format) => `vue-airport-plugins.${format === 'es' ? 'mjs' : 'cjs'}`,
     },
     rollupOptions: {
-      external: ['vue', '@vue-airport/core'],
+      external: ['vue', 'vue-airport'],
       output: {
         globals: {
           vue: 'Vue',
-          '@vue-airport/core': 'VueAirport',
+          'vue-airport': 'VueAirport',
         },
       },
+    },
+  },
+  resolve: {
+    alias: {
+      'vue-airport': resolve(__dirname, '../core/src/index.ts'),
     },
   },
   plugins: [

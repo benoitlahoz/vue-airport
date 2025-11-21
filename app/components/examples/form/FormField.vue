@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useCheckIn } from '#vue-airport/composables/useCheckIn';
+import { useCheckIn } from '#vue-airport';
 import { type FieldData, FORM_DESK_KEY, type FormContext } from '.';
 import { Input } from '@/components/ui/input';
 import { Field, FieldDescription, FieldLegend, FieldSet } from '@/components/ui/field';
@@ -45,6 +45,7 @@ const errorMessage = computed<string | undefined>(() => {
   }
   return undefined;
 });
+
 // Function to update both the field value and hte local value
 const updateFieldValue = (value: string | number) => {
   const stringValue = String(value);
