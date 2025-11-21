@@ -45,6 +45,7 @@ const errorMessage = computed<string | undefined>(() => {
   }
   return undefined;
 });
+
 // Function to update both the field value and hte local value
 const updateFieldValue = (value: string | number) => {
   const stringValue = String(value);

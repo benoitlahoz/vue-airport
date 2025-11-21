@@ -93,9 +93,9 @@ const results = computed(() => {
 
 // Create debounce plugin with 500ms delay
 const debouncePlugin = createDebouncePlugin<SearchResult>({
-  checkInDelay: 500,
+  checkInDelay: 5000,
   checkOutDelay: 300,
-  maxWait: 2000, // Force execution after 2s max
+  maxWait: 10000, // Force execution after 10s max
 });
 
 // Create a desk with debounce plugin
@@ -122,24 +122,47 @@ const { desk } = createDesk(SEARCH_DESK_KEY, {
   },
 });
 
-
-const pendingCheckIns = (desk as any).pendingCheckInsCount;
+const pendingCheckIns = computed(() => {
+  // Sum of plugin debounce pending and local queue (if blockCheckIn)
+  const pluginPending = (desk as any).pendingCheckInsCount || 0;
+  const localPending = blockCheckIn.value ? pendingCheckInQueue.value.length : 0;
+  return pluginPending + localPending;
+});
 const hasPendingDebounce = (desk as any).hasPendingDebounce;
 const itemCount = computed(() => desk.size);
 
-// Les boutons Flush/Cancel sont activés si le plugin a du pending OU si neverEndingPromise est actif
+// Les boutons Flush/Cancel sont activés si le plugin a du pending OU si neverEndingPromise est actif OU si la file locale n'est pas vide
 const hasPending = computed(() => {
-  return hasPendingDebounce || !!neverEndingPromise;
+  return (
+    hasPendingDebounce ||
+    !!neverEndingPromise ||
+    (blockCheckIn.value && pendingCheckInQueue.value.length > 0)
+  );
 });
 
 // Simulate a never-ending async operation for flush/cancel demo
 let neverEndingPromise: Promise<void> | null = null;
 let neverEndingResolve: (() => void) | null = null;
 
-// Simulate search with debounced results
+// Store the filtered search results (base) immediately
+const filteredResults = ref<
+  Array<{ id: string; title: string; description: string; icon: string }>
+>([]);
+
+// Option: block check-in until flush is clicked
+const blockCheckIn = ref(false); // UI toggle
+const pendingCheckInQueue = ref<Array<{ id: string; data: any }>>([]);
+
+// Simulate search with debounced check-in, with optional block
 const performSearch = async (query: string) => {
   if (query.trim() === '') {
+    // Flush/cancel any pending debounce before clearing
+    if (typeof (desk as any).cancelDebounce === 'function') {
+      (desk as any).cancelDebounce(desk);
+    }
     desk.clear();
+    filteredResults.value = [];
+    pendingCheckInQueue.value = [];
     addEventLog('Search cleared in performSearch', eventLog);
     return;
   }
@@ -160,22 +183,32 @@ const performSearch = async (query: string) => {
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
-  const results = mockDatabase.filter(
+  // Filter the mock database immediately for UI feedback
+  const found = mockDatabase.filter(
     (item) =>
       item.title.toLowerCase().includes(query.toLowerCase()) ||
       item.description.toLowerCase().includes(query.toLowerCase())
   );
+  filteredResults.value = found;
 
-  // Clear previous results in the desk
-  desk.clear();
+  // Ne pas clear le desk ici !
+  pendingCheckInQueue.value = [];
 
-  // Add each result via desk.checkIn (results appear immediately while check-in will be debounced)
-  for (const result of results) {
-    desk.checkIn(result.id, result);
+  // Si blockCheckIn est activé, on stocke dans la file locale, sinon on checkIn (le plugin applique le délai)
+  if (blockCheckIn.value) {
+    for (const result of found) {
+      pendingCheckInQueue.value.push({ id: result.id, data: result });
+    }
+    addEventLog(`Queued ${found.length} check-in(s) (blockCheckIn ON)`, eventLog);
+  } else {
+    for (const result of found) {
+      desk.checkIn(result.id, result);
+    }
+    addEventLog(`checkIn called for ${found.length} result(s) (blockCheckIn OFF)`, eventLog);
   }
   isSearching.value = false;
 
-  addEventLog(`Found ${results.length} results`, eventLog);
+  addEventLog(`Found ${found.length} results`, eventLog);
 };
 
 // Simulate a 500ms delay from the database
@@ -201,8 +234,17 @@ watch(searchQuery, (newQuery) => {
   }, 500);
 });
 
-// Manually flush debounced events
+// Manually flush debounced events and pending queue
 const flushNow = () => {
+  // If blockCheckIn is enabled, flush the local queue to the desk
+  if (blockCheckIn.value && pendingCheckInQueue.value.length > 0) {
+    for (const item of pendingCheckInQueue.value) {
+      desk.checkIn(item.id, item.data);
+    }
+    addEventLog(`Flushed ${pendingCheckInQueue.value.length} queued check-in(s) to desk`, eventLog);
+    pendingCheckInQueue.value = [];
+  }
+  // Always flush debounce plugin
   if (typeof (desk as any).flushDebounce === 'function') {
     (desk as any).flushDebounce(desk);
   }
@@ -236,6 +278,7 @@ const resetSearch = () => {
   }
   searchQuery.value = '';
   desk.clear();
+  pendingCheckInQueue.value = [];
   cancelPending();
   isSearching.value = false;
   eventLog.value = [];
@@ -255,14 +298,14 @@ const resetSearch = () => {
         class="mb-4"
       />
 
-      <div class="flex gap-3 flex-wrap">
+      <div class="flex gap-3 flex-wrap items-center">
         <UButton
           icon="i-heroicons-arrow-path"
           color="primary"
           :disabled="!hasPending"
           @click="flushNow"
         >
-          Flush Now ({{ pendingCheckIns }})
+          Flush Now ({{ pendingCheckIns.value }})
         </UButton>
         <UButton
           icon="i-heroicons-x-mark"
@@ -273,7 +316,39 @@ const resetSearch = () => {
           Cancel Pending
         </UButton>
         <UButton icon="i-heroicons-trash" color="error" @click="resetSearch"> Clear All </UButton>
+        <!-- Toggle for blockCheckIn -->
+        <label class="ml-4 flex items-center gap-2">
+          <input v-model="blockCheckIn" type="checkbox" />
+          <span class="text-sm">Block check-in until Flush</span>
+        </label>
       </div>
+    </div>
+
+    <!-- Immediate search results (filtered base, not checked-in) -->
+    <!-- This section shows what the user would get from the API/database, before debounce plugin check-in -->
+    <div class="mb-8">
+      <h3 class="font-semibold mb-2">Immediate Results (filtered, not checked-in)</h3>
+      <ul>
+        <li v-for="item in filteredResults" :key="item.id">
+          <!-- Show title and description for clarity -->
+          <span class="font-mono">{{ item.title }}</span>
+          <span class="text-gray-500">- {{ item.description }}</span>
+        </li>
+        <li v-if="filteredResults.length === 0" class="text-gray-400">No results</li>
+      </ul>
+    </div>
+
+    <!-- Checked-in results (debounced by plugin) -->
+    <!-- This section shows only items that have been checked-in (after debounce or flush) -->
+    <div class="mb-8">
+      <h3 class="font-semibold mb-2">Checked-in Results (debounced by plugin)</h3>
+      <ul>
+        <li v-for="item in results" :key="item.id">
+          <span class="font-mono">{{ item.title }}</span>
+          <span class="text-gray-500">- {{ item.description }}</span>
+        </li>
+        <li v-if="results.length === 0" class="text-gray-400">No checked-in results</li>
+      </ul>
     </div>
 
     <!-- Stats -->
@@ -282,7 +357,7 @@ const resetSearch = () => {
         class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 text-center"
       >
         <div class="text-sm text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
-          Results Found
+          Results Found (checked-in)
         </div>
         <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">
           {{ results.length }}
@@ -310,7 +385,7 @@ const resetSearch = () => {
               : 'text-gray-900 dark:text-gray-100'
           "
         >
-          {{ pendingCheckIns }}
+          {{ pendingCheckIns.value }}
         </div>
       </div>
       <div
