@@ -2,8 +2,10 @@
 import { ref } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import { createActiveItemPlugin, createHistoryPlugin } from '@vue-airport/plugins-base';
-import PluginListItem from './PluginStackListItem.vue';
 import {
+  PluginStackListItem,
+  PluginStackActiveItemPanel,
+  PluginStackHistoryPanel,
   type DeskWithPlugins,
   type PluginItemContext,
   type PluginItemData,
@@ -133,15 +135,15 @@ onMounted(() => {
       <div class="p-4 bg-card border border-muted rounded-md">
         <h3 class="m-0 mb-4 text-base font-semibold">Items ({{ itemsData.length }})</h3>
         <ul class="list-none p-0 m-0 flex flex-col gap-2 max-h-[400px] overflow-y-auto">
-          <PluginListItem v-for="item in itemsData" :id="item.id" :key="item.id" />
+          <PluginStackListItem v-for="item in itemsData" :id="item.id" :key="item.id" />
         </ul>
       </div>
 
       <!-- Active item details -->
-      <PluginActiveItemPanel />
+      <PluginStackActiveItemPanel />
 
       <!-- History panel -->
-      <PluginHistoryPanel />
+      <PluginStackHistoryPanel />
     </div>
   </div>
 </template>
