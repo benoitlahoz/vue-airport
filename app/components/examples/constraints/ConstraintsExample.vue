@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useCheckIn, getRegistry } from 'vue-airport';
 import { createConstraintsPlugin } from '@vue-airport/plugins-validation';
 import { Button } from '@/components/ui/button';
@@ -40,30 +40,26 @@ const newRole = ref<'admin' | 'user'>('user');
 const error = ref<string | null>(null);
 
 // Desk pattern
-
-const members = ref<Member[]>([...initialMembers]);
 const { createDesk } = useCheckIn<Member>();
 const { desk } = createDesk(DESK_CONSTRAINTS_KEY, {
   plugins: [createConstraintsPlugin<Member>(constraints)],
-  context: { members },
   devTools: true,
   debug: false,
 });
 
 const registry = getRegistry<Member>(desk);
 
+const constraintErrors = computed(() =>
+  (desk as any).getConstraintErrors ? (desk as any).getConstraintErrors() : []
+);
+
 function addMember() {
   error.value = null;
   const id = Date.now();
   const member: Member = { id, name: newName.value.trim(), role: newRole.value };
-  try {
-    desk.checkIn(id, member);
-    members.value.push(member);
-    newName.value = '';
-    newRole.value = 'user';
-  } catch (e: any) {
-    error.value = e.message;
-  }
+  desk.checkIn(id, member);
+  newName.value = '';
+  newRole.value = 'user';
 }
 
 function removeMember(id: number) {
@@ -82,8 +78,12 @@ function removeMember(id: number) {
       </select>
       <Button :disabled="!newName" @click="addMember">Add Member</Button>
     </div>
-    <div v-if="error" class="error">
-      <Badge color="red">{{ error }}</Badge>
+    <div v-if="constraintErrors.length" class="error">
+      <Badge color="red">
+        <template v-for="err in constraintErrors">
+          <div v-for="msg in err.errors" :key="msg">{{ msg }}</div>
+        </template>
+      </Badge>
     </div>
     <ul>
       <li v-for="item in registry" :key="item.id" class="flex items-center gap-2">

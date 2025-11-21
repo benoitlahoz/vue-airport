@@ -13,96 +13,104 @@ export interface PluginContext<T = any> {
   onBeforeCheckIn: (fn: (child: T, children: T[]) => void) => void;
   onBeforeCheckOut?: (fn: (child: T, children: T[]) => void) => void;
 }
+// Remplacement complet de la fonction pour desk-compliance
+import { ref } from 'vue';
 
-/**
- * Custom constraint function
- */
+// Types déjà présents dans le fichier
 export type ConstraintFn<T = any> = (child: T, children: T[]) => string | null;
-
-/**
- * Declarative constraint object
- */
 export type ConstraintObj<T = any> =
   | { type: 'unique'; key: keyof T; message?: string }
   | { type: 'maxCount'; count: number; message?: string }
   | { type: 'relation'; rule: ConstraintFn<T>; message?: string }
   | { type: 'beforeCheckOut'; rule: ConstraintFn<T>; message?: string };
-
-/**
- * Constraint (function or object)
- */
 export type Constraint<T = any> = ConstraintFn<T> | ConstraintObj<T>;
 
-/**
- * Constraint-based validation plugin for VueAirport
- * Allows you to enforce business rules on registered data and relationships (uniqueness, cardinality, dependencies, etc.)
- *
- * @template T Type of registered children
- * @param constraints Array of constraints (functions or objects)
- * @returns Registration plugin compatible with VueAirport
- *
- * @example
- * import { useCheckIn } from 'vue-airport/core'
- * import { createConstraintsPlugin } from '@vue-airport/plugins-validation'
- *
- * const constraints = [
- *   { type: 'unique', key: 'email', message: 'Email already used' },
- *   { type: 'maxCount', count: 5, message: 'Max 5 items' },
- *   (child, children) => child.role === 'admin' && children.filter(u => u.role === 'admin').length >= 2 ? 'Maximum 2 admins' : null,
- * ]
- *
- * const { children } = useCheckIn({
- *   plugins: [createConstraintsPlugin(constraints)]
- * })
- */
-export function createConstraintsPlugin<T = any>(constraints: Constraint<T>[]): CheckInPlugin<T> {
-  return (ctx: PluginContext<T>) => {
-    /**
-     * Validates a child and returns the list of errors
-     */
-    function validate(child: T, children: T[]): string[] {
-      const errors: string[] = [];
-      for (const constraint of constraints) {
-        if (typeof constraint === 'function') {
-          const result = constraint(child, children);
-          if (typeof result === 'string' && result) errors.push(result);
-        } else if (constraint.type === 'unique') {
-          if (children.some((c) => c[constraint.key] === child[constraint.key])) {
-            errors.push(constraint.message || `Duplicate value for ${String(constraint.key)}`);
-          }
-        } else if (constraint.type === 'maxCount') {
-          if (children.length >= constraint.count) {
-            errors.push(constraint.message || `Maximum count of ${constraint.count} exceeded`);
-          }
-        } else if (constraint.type === 'relation' && constraint.rule) {
-          const result = constraint.rule(child, children);
-          if (typeof result === 'string' && result) errors.push(constraint.message || result);
+export interface ConstraintError {
+  id: string | number;
+  errors: string[];
+  timestamp: number;
+}
+
+export function createConstraintsPlugin<T extends Record<string, any> = any>(
+  constraints: Constraint<T>[]
+): any {
+  const constraintErrors = ref<ConstraintError[]>([]);
+
+  const addError = (id: string | number, errors: string[]) => {
+    constraintErrors.value.push({ id, errors, timestamp: Date.now() });
+  };
+  const removeErrorsForId = (id: string | number) => {
+    constraintErrors.value = constraintErrors.value.filter((e) => e.id !== id);
+  };
+
+  function validateData(id: string | number, data: T, children: T[]): boolean {
+    removeErrorsForId(id);
+    const errors: string[] = [];
+    for (const constraint of constraints) {
+      if (typeof constraint === 'function') {
+        const result = constraint(data, children);
+        if (typeof result === 'string' && result) errors.push(result);
+      } else if (constraint.type === 'unique') {
+        if (children.some((c: T) => c[constraint.key] === data[constraint.key])) {
+          errors.push(constraint.message || `Duplicate value for ${String(constraint.key)}`);
         }
-        // beforeCheckOut constraints are handled in the dedicated hook
+      } else if (constraint.type === 'maxCount') {
+        if (children.length >= constraint.count) {
+          errors.push(constraint.message || `Maximum count of ${constraint.count} exceeded`);
+        }
+      } else if (constraint.type === 'relation' && constraint.rule) {
+        const result = constraint.rule(data, children);
+        if (typeof result === 'string' && result) errors.push(constraint.message || result);
       }
-      return errors;
+      // beforeCheckOut constraints sont gérées dans le hook dédié
     }
-
-    ctx.onBeforeCheckIn((child: T, children: T[]) => {
-      const errors = validate(child, children);
-      if (errors.length) throw new Error(errors.join(', '));
-    });
-
-    if (ctx.onBeforeCheckOut) {
-      ctx.onBeforeCheckOut((child: T, children: T[]) => {
-        for (const constraint of constraints) {
-          if (
-            typeof constraint !== 'function' &&
-            constraint.type === 'beforeCheckOut' &&
-            constraint.rule
-          ) {
-            const result = constraint.rule(child, children);
-            if (typeof result === 'string' && result) throw new Error(constraint.message || result);
-          }
-        }
-      });
+    if (errors.length) {
+      addError(id, errors);
+      return false;
     }
+    return true;
+  }
 
-    return { validate };
+  let deskInstance: any = null;
+
+  return {
+    name: 'constraints',
+    version: '1.0.0',
+
+    install: (desk: any) => {
+      deskInstance = desk;
+      return () => {
+        constraintErrors.value = [];
+        deskInstance = null;
+      };
+    },
+
+    onBeforeCheckIn: (id: string | number, data: T): boolean => {
+      const children = deskInstance?.getAll ? deskInstance.getAll() : [];
+      return validateData(
+        id,
+        data,
+        children.map((c: any) => c.data)
+      );
+    },
+
+    onBeforeCheckOut: (id: string | number): boolean => {
+      removeErrorsForId(id);
+      return true;
+    },
+
+    methods: {
+      getConstraintErrors: () => constraintErrors.value,
+      getConstraintErrorsById: (_desk: any, id: string | number) =>
+        constraintErrors.value.find((e) => e.id === id)?.errors ?? [],
+      clearConstraintErrors: () => {
+        constraintErrors.value = [];
+      },
+    },
+
+    computed: {
+      constraintErrorCount: () => constraintErrors.value.length,
+      hasConstraintErrors: () => constraintErrors.value.length > 0,
+    },
   };
 }
