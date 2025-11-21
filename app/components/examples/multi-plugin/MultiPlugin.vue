@@ -39,9 +39,11 @@ const itemsData = ref<Array<PluginItemData>>([
   },
 ]);
 
+const maxHistory = ref(30);
+
 // Create plugins for active item tracking and history management
 const activeItemPlugin = createActiveItemPlugin<PluginItemData>();
-const historyPlugin = createHistoryPlugin<PluginItemData>({ maxHistory: 20 });
+const historyPlugin = createHistoryPlugin<PluginItemData>({ maxHistory: maxHistory.value });
 
 // Create a desk with plugins enabled
 const { createDesk } = useCheckIn<PluginItemData, PluginItemContext>();
@@ -51,6 +53,7 @@ const { desk } = createDesk(PLUGIN_DESK_KEY, {
   plugins: [activeItemPlugin, historyPlugin],
   context: {
     pluginItems: itemsData,
+    maxHistory,
   },
   onCheckOut(id) {
     // Remove item from local state on check-out

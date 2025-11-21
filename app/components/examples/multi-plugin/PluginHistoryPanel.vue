@@ -14,6 +14,9 @@ const { desk } = checkIn(PLUGIN_DESK_KEY);
 const deskWithPlugins = desk as DeskWithPlugins;
 
 const history = computed(() => deskWithPlugins?.getHistory?.() || []);
+const maxHistory = computed(() => {
+  return deskWithPlugins?.maxHistory?.value || 20;
+});
 
 // Helper to format action type for display
 const formatAction = (action: string) => {
@@ -28,7 +31,9 @@ const formatAction = (action: string) => {
 
 <template>
   <div class="md:col-span-2 p-4 bg-card border border-muted rounded-md">
-    <h3 class="m-0 mb-4 text-base font-semibold">Operation History ({{ history.length }} / 20)</h3>
+    <h3 class="m-0 mb-4 text-base font-semibold">
+      Operation History ({{ history.length }} / {{ maxHistory }})
+    </h3>
     <p class="mt-0 mb-4 text-sm text-muted">
       Tracks all check-ins, check-outs, and updates. Most recent operations appear first.
     </p>

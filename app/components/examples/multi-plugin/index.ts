@@ -10,6 +10,7 @@ export interface PluginItemData {
 // Extended type definition to include plugin methods
 export interface DeskWithPlugins {
   activeId?: Ref<string | number | null>;
+  maxHistory?: Ref<number>;
   getActive?: () => CheckInItem<PluginItemData> | null;
   getHistory?: () => Array<{ action: string; id: string | number; timestamp: number }>;
   setActive?: (id: string | number | null) => void;
@@ -17,6 +18,7 @@ export interface DeskWithPlugins {
 
 export interface PluginItemContext {
   pluginItems: Ref<PluginItemData[]>;
+  maxHistory: Ref<number>;
 }
 
 export const PLUGIN_DESK_KEY: InjectionKey<DeskCore<PluginItemData> & PluginItemContext> =
