@@ -57,7 +57,7 @@ const remove = () => {
 
 <template>
   <li
-    class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+    class="flex items-center justify-between p-3 border border-muted rounded-md cursor-pointer transition-all duration-200 hover:bg-accent dark:hover:bg-accent-dark"
     :class="{
       'bg-primary-50 dark:bg-primary-900/20 border-primary-500': isActive,
     }"

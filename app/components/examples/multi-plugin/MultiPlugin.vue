@@ -76,9 +76,7 @@ const { desk } = createDesk(PLUGIN_DESK_KEY, {
 
 const deskWithPlugins = desk as DeskWithPlugins;
 
-// Computed properties for active item and history
-const activeId = computed(() => deskWithPlugins.activeId?.value);
-const activeItem = computed(() => deskWithPlugins.getActive?.());
+// Computed property for history
 const history = computed(() => deskWithPlugins.getHistory?.() || []);
 
 // Function to add a new item
@@ -92,16 +90,6 @@ const addItem = () => {
 
   // Automatically activate the new item
   deskWithPlugins.setActive?.(id);
-};
-
-// Helper to format action type for display
-const formatAction = (action: string) => {
-  const actionMap: Record<string, string> = {
-    'check-in': 'Registered',
-    'check-out': 'Unregistered',
-    update: 'Updated',
-  };
-  return actionMap[action] || action;
 };
 
 // Activate the first item on component mount
@@ -123,9 +111,7 @@ onMounted(() => {
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <!-- Items list -->
-      <div
-        class="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md"
-      >
+      <div class="p-4 bg-card border border-muted rounded-md">
         <h3 class="m-0 mb-4 text-base font-semibold">Items ({{ itemsData.length }})</h3>
         <ul class="list-none p-0 m-0 flex flex-col gap-2">
           <PluginListItem v-for="item in itemsData" :id="item.id" :key="item.id" />
@@ -133,62 +119,10 @@ onMounted(() => {
       </div>
 
       <!-- Active item details -->
-      <div
-        class="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md"
-      >
-        <h3 class="m-0 mb-4 text-base font-semibold">Active Item</h3>
-        <div v-if="activeItem" class="space-y-2">
-          <p class="my-2"><strong>ID:</strong> {{ activeId }}</p>
-          <p class="my-2"><strong>Name:</strong> {{ activeItem.data.name }}</p>
-          <p class="my-2"><strong>Description:</strong> {{ activeItem.data.description }}</p>
-          <p class="my-2 text-sm text-gray-600 dark:text-gray-400">
-            <strong>Timestamp:</strong>
-            {{ new Date(activeItem.timestamp || 0).toLocaleString() }}
-          </p>
-        </div>
-        <div v-else class="py-8 text-center text-gray-600 dark:text-gray-400">No item selected</div>
-      </div>
+      <PluginActiveItemPanel />
 
       <!-- History panel -->
-      <div
-        class="md:col-span-2 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md"
-      >
-        <h3 class="m-0 mb-4 text-base font-semibold">
-          Operation History ({{ history.length }} / 20)
-        </h3>
-        <p class="mt-0 mb-4 text-sm text-gray-600 dark:text-gray-400">
-          Tracks all check-ins, check-outs, and updates. Most recent operations appear first.
-        </p>
-        <ul class="list-none p-0 m-0 flex flex-col gap-2 max-h-[200px] overflow-y-auto">
-          <li
-            v-for="(entry, index) in history.slice().reverse()"
-            :key="index"
-            class="flex items-center gap-3 p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm"
-          >
-            <UIcon
-              :name="
-                entry.action === 'check-in'
-                  ? 'i-heroicons-plus-circle'
-                  : entry.action === 'check-out'
-                    ? 'i-heroicons-minus-circle'
-                    : 'i-heroicons-arrow-path'
-              "
-              :class="
-                entry.action === 'check-in'
-                  ? 'text-green-500'
-                  : entry.action === 'check-out'
-                    ? 'text-red-500'
-                    : 'text-blue-500'
-              "
-            />
-            <span class="font-medium min-w-[100px]">{{ formatAction(entry.action) }}</span>
-            <span class="flex-1 font-mono">{{ entry.id }}</span>
-            <span class="text-gray-600 dark:text-gray-400 text-xs">
-              {{ new Date(entry.timestamp).toLocaleTimeString() }}
-            </span>
-          </li>
-        </ul>
-      </div>
+      <PluginHistoryPanel />
     </div>
   </div>
 </template>
