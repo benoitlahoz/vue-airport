@@ -5,4 +5,4 @@ export * from './multi-plugin';
 export * from './form';
 export * from './auto-check-in';
 export * from './debounced-search';
-export * from './analytics-dashboard';
+export * from '../../../.private/backup/analytics-dashboard';

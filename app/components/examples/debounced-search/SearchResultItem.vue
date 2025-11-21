@@ -1,74 +1,40 @@
 <script setup lang="ts">
-import { checkInToDesk } from '#vue-airport/composables';
-import { type SearchResult, SEARCH_DESK_KEY } from '.';
+import { useCheckIn } from '#vue-airport';
+import { type SearchContext, type SearchResult, SEARCH_DESK_KEY } from '.';
 
-interface Props extends SearchResult {
-  id: string;
-}
+const props = defineProps<{ id: string }>();
 
-const props = defineProps<Props>();
-
-const emit = defineEmits<{
-  remove: [id: string];
-}>();
-
-// Auto check-in to the search desk
-const { checkOut, updateSelf } = checkInToDesk(SEARCH_DESK_KEY, {
+// Check in to the desk (autoCheckIn: false, comme ProductCard)
+const { checkIn } = useCheckIn<SearchResult, SearchContext>();
+const { desk } = checkIn(SEARCH_DESK_KEY, {
   id: props.id,
-  data: {
-    title: props.title,
-    description: props.description,
-    category: props.category,
+  autoCheckIn: false, // This is handled by debounce plugin
+  watchData: false,
+  data: (desk) => {
+    const field = desk.searchResults?.value?.find((r) => r.id === props.id);
+    return {
+      id: props.id,
+      title: field?.title || '',
+      description: field?.description || '',
+      icon: field?.icon || '',
+    };
   },
 });
 
-// Update when props change
-watch(
-  () => [props.title, props.description, props.category],
-  () => {
-    updateSelf({
-      title: props.title,
-      description: props.description,
-      category: props.category,
-    });
-  }
-);
-
-// Check out on unmount
-onUnmounted(() => {
-  checkOut();
-});
+// const data = computed(() => desk?.searchResults.value?.find((r) => r.id === props.id));
+const data = computed(() => desk?.searchResults.value?.find((r) => r.id === props.id));
 
 const handleRemove = () => {
-  emit('remove', props.id);
-};
-
-// Get category color
-const getCategoryColor = (
-  category: string
-): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' => {
-  const colors: Record<
-    string,
-    'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
-  > = {
-    Vue: 'primary',
-    TypeScript: 'info',
-    JavaScript: 'warning',
-    CSS: 'secondary',
-    'Node.js': 'success',
-  };
-  return colors[category] || 'neutral';
+  desk?.checkOut(props.id);
 };
 </script>
 
 <template>
   <div
-    class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-md hover:-translate-y-0.5"
+    class="bg-card border border-gray-200 dark:border-gray-700 rounded-lg p-5 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-md hover:-translate-y-0.5"
   >
     <div class="flex justify-between items-center mb-3">
-      <UBadge :color="getCategoryColor(category)" size="xs">
-        {{ category }}
-      </UBadge>
+      <UIcon :name="data!.icon" class="w-6 h-6" />
       <UButton
         icon="i-heroicons-x-mark"
         size="xs"
@@ -78,8 +44,8 @@ const getCategoryColor = (
       />
     </div>
 
-    <h4 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">{{ title }}</h4>
-    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{{ description }}</p>
+    <h4 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">{{ data?.title }}</h4>
+    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{{ data?.description }}</p>
   </div>
 </template>
 

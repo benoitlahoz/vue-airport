@@ -1,4 +1,5 @@
-import type { CheckInPlugin } from 'vue-airport';
+import { ref, computed } from 'vue';
+import type { CheckInPlugin, DeskWithContext } from 'vue-airport';
 
 export interface DebounceOptions {
   /** Debounce delay in milliseconds for check-in operations */
@@ -39,6 +40,8 @@ export const createDebouncePlugin = <T = unknown>(
   let checkOutTimer: ReturnType<typeof setTimeout> | null = null;
   const pendingCheckInEvents = new Map<string | number, T>();
   const pendingCheckOutEvents = new Set<string | number>();
+  const pendingCheckInsCountRef = ref(0);
+  const pendingCheckOutsCountRef = ref(0);
   let firstCheckInTime: number | null = null;
   let firstCheckOutTime: number | null = null;
   let userCheckInCallback: ((id: string | number, data: T) => void) | null = null;
@@ -69,6 +72,7 @@ export const createDebouncePlugin = <T = unknown>(
     const events = Array.from(pendingCheckInEvents.entries());
     const count = events.length;
     pendingCheckInEvents.clear();
+    pendingCheckInsCountRef.value = 0;
     firstCheckInTime = null;
     clearCheckInTimer();
 
@@ -101,6 +105,7 @@ export const createDebouncePlugin = <T = unknown>(
     const ids = Array.from(pendingCheckOutEvents);
     const count = ids.length;
     pendingCheckOutEvents.clear();
+    pendingCheckOutsCountRef.value = 0;
     firstCheckOutTime = null;
     clearCheckOutTimer();
 
@@ -133,7 +138,7 @@ export const createDebouncePlugin = <T = unknown>(
     name: 'debounce',
     version: '1.0.0',
 
-    install: (desk) => {
+    install: (desk: DeskWithContext) => {
       deskInstance = desk;
       return () => {
         clearCheckInTimer();
@@ -165,6 +170,7 @@ export const createDebouncePlugin = <T = unknown>(
 
       // Store the event (will override previous value for same id)
       pendingCheckInEvents.set(id, data);
+      pendingCheckInsCountRef.value = pendingCheckInEvents.size;
 
       // Clear existing timer
       clearCheckInTimer();
@@ -191,6 +197,7 @@ export const createDebouncePlugin = <T = unknown>(
 
       // Store the event
       pendingCheckOutEvents.add(id);
+      pendingCheckOutsCountRef.value = pendingCheckOutEvents.size;
 
       // Clear existing timer
       clearCheckOutTimer();
@@ -289,19 +296,20 @@ export const createDebouncePlugin = <T = unknown>(
 
     computed: {
       /**
-       * Get the number of pending debounced check-in events
+       * Ref réactif du nombre de check-in en attente
        */
-      pendingCheckInsCount: () => pendingCheckInEvents.size,
+      pendingCheckInsCount: () => pendingCheckInsCountRef,
 
       /**
-       * Get the number of pending debounced check-out events
+       * Ref réactif du nombre de check-out en attente
        */
-      pendingCheckOutsCount: () => pendingCheckOutEvents.size,
+      pendingCheckOutsCount: () => pendingCheckOutsCountRef,
 
       /**
-       * Check if there are any pending event notifications
+       * Ref réactif booléen s'il y a des pendings
        */
-      hasPendingDebounce: () => pendingCheckInEvents.size > 0 || pendingCheckOutEvents.size > 0,
+      hasPendingDebounce: () =>
+        computed(() => pendingCheckInsCountRef.value > 0 || pendingCheckOutsCountRef.value > 0),
     },
   };
 };

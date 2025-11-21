@@ -1,10 +1,15 @@
-import type { InjectionKey } from 'vue';
+import type { InjectionKey, Ref } from 'vue';
 import type { DeskCore } from '#vue-airport/composables/useCheckIn';
 
 export interface SearchResult {
+  id: string;
   title: string;
   description: string;
-  category: string;
+  icon: string;
+}
+
+export interface SearchContext {
+  searchResults: Ref<SearchResult[]>;
 }
 
 export const SEARCH_DESK_KEY: InjectionKey<DeskCore<SearchResult>> = Symbol('searchDesk');
