@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const uniqueInScopeHandler: ConstraintHandler = (constraint, data, children) => {
   if (constraint.type !== ConstraintType.UniqueInScope) return null;
@@ -14,8 +14,3 @@ export const uniqueInScopeHandler: ConstraintHandler = (constraint, data, childr
   }
   return null;
 };
-
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
-
-// ...existing code...

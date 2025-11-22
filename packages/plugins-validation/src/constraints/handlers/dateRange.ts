@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const dateRangeHandler: ConstraintHandler = (constraint, data) => {
   if (constraint.type !== ConstraintType.DateRange) return null;
@@ -20,6 +20,3 @@ export const dateRangeHandler: ConstraintHandler = (constraint, data) => {
   }
   return null;
 };
-// ...existing code...
-
-// ...existing code...

@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const compareHandler: ConstraintHandler = (constraint, data) => {
   if (constraint.type !== ConstraintType.Compare) return null;

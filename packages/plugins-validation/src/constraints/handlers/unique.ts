@@ -1,8 +1,6 @@
-import type { ConstraintObj } from '../index';
+import type { ConstraintHandler } from '..';
 
-import type { ConstraintHandler } from '../index';
-
-import { ConstraintType } from '../index';
+import { ConstraintType } from '..';
 export const uniqueHandler: ConstraintHandler = (constraint, data, children) => {
   if (constraint.type !== ConstraintType.Unique) return null;
   const key = constraint.key;

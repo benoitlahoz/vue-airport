@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const dependencyHandler: ConstraintHandler = (constraint, data) => {
   if (constraint.type !== ConstraintType.Dependency) return null;

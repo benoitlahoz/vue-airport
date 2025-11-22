@@ -1,8 +1,5 @@
-// ...existing code...
-
-// ...existing code...
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const relationCountHandler: ConstraintHandler = (constraint, _data, children) => {
   if (constraint.type !== ConstraintType.RelationCount) return null;

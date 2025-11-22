@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const formatHandler: ConstraintHandler = (constraint, data) => {
   if (constraint.type !== ConstraintType.Format) return null;

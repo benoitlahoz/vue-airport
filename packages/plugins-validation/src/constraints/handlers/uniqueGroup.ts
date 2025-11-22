@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const uniqueGroupHandler: ConstraintHandler = (constraint, data, children) => {
   if (constraint.type !== ConstraintType.UniqueGroup) return null;

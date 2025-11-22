@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const customHandler: ConstraintHandler = async (constraint, data, children) => {
   if (constraint.type !== ConstraintType.Custom) return null;

@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const conditionalRequiredHandler: ConstraintHandler = (constraint, data) => {
   if (constraint.type !== ConstraintType.ConditionalRequired) return null;
@@ -17,5 +17,3 @@ export const conditionalRequiredHandler: ConstraintHandler = (constraint, data) 
   }
   return null;
 };
-
-// ...existing code...

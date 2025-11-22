@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const minLengthHandler: ConstraintHandler = (constraint, data) => {
   if (constraint.type !== ConstraintType.MinLength) return null;

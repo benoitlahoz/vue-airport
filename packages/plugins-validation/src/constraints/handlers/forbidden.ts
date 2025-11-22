@@ -1,8 +1,6 @@
-// ...existing code...
+import type { ConstraintHandler } from '..';
 
-import type { ConstraintHandler } from '../index';
-
-import { ConstraintType } from '../index';
+import { ConstraintType } from '..';
 export const forbiddenHandler: ConstraintHandler = (constraint, data) => {
   if (constraint.type !== ConstraintType.Forbidden) return null;
   const key = constraint.key;

@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const immutableHandler: ConstraintHandler = (constraint, data, _children, deskInstance) => {
   if (constraint.type !== ConstraintType.Immutable) return null;

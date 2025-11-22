@@ -1,6 +1,6 @@
-import type { ConstraintHandler } from '../index';
+import type { ConstraintHandler } from '..';
 
-import { ConstraintType } from '../index';
+import { ConstraintType } from '..';
 export const requiredHandler: ConstraintHandler = (constraint, data) => {
   if (constraint.type !== ConstraintType.Required) return null;
   const key = constraint.key;

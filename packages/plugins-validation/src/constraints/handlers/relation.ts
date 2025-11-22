@@ -1,5 +1,5 @@
-import type { ConstraintHandler } from '../index';
-import { ConstraintType } from '../index';
+import type { ConstraintHandler } from '..';
+import { ConstraintType } from '..';
 
 export const relationHandler: ConstraintHandler = (constraint, data, children) => {
   if (constraint.type !== ConstraintType.Relation) return null;
@@ -10,5 +10,3 @@ export const relationHandler: ConstraintHandler = (constraint, data, children) =
   }
   return null;
 };
-
-// ...existing code...

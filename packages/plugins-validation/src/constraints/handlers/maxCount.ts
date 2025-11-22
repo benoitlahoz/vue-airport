@@ -1,8 +1,6 @@
-import type { ConstraintObj } from '../index';
+import type { ConstraintHandler } from '..';
 
-import type { ConstraintHandler } from '../index';
-
-import { ConstraintType } from '../index';
+import { ConstraintType } from '..';
 export const maxCountHandler: ConstraintHandler = (constraint, _data, children) => {
   if (constraint.type !== ConstraintType.MaxCount) return null;
   const count = constraint.count;
