@@ -39,13 +39,21 @@ export interface DeskCoreOptions<T = any> {
     id: string | number,
     data: T
   ) => boolean | undefined | Promise<boolean | undefined>;
-  onCheckIn?: (id: string | number, data: T) => void | Promise<void>;
-  onBeforeCheckOut?: (id: string | number) => boolean | undefined | Promise<boolean | undefined>;
-  onCheckOut?: (id: string | number) => void | Promise<void>;
+  onCheckIn?: (id: string | number, data: T, desk: DeskCore<T>) => void | Promise<void>;
+  onBeforeCheckOut?: (
+    id: string | number,
+    desk: DeskCore<T>
+  ) => boolean | undefined | Promise<boolean | undefined>;
+  onCheckOut?: (id: string | number, desk: DeskCore<T>) => void | Promise<void>;
   debug?: boolean;
   devTools?: boolean;
   plugins?: CheckInPlugin<T>[];
   deskId?: string; // For DevTools integration
+
+  /**
+   * Contexte dynamique à attacher au desk, accessible dans les hooks et plugins
+   */
+  context?: any;
 }
 
 export interface DeskCore<T = any> {
@@ -93,6 +101,11 @@ export interface DeskCore<T = any> {
   off: (event: DeskEventType, callback: DeskEventCallback<T>) => void;
   emit: (event: DeskEventType, payload: { id?: string | number; data?: T }) => void;
   destroy: () => void;
+
+  /**
+   * Contexte dynamique attaché au desk, accessible dans les hooks et plugins
+   */
+  context?: any;
 }
 
 const DebugPrefix = '[DeskCore]';
@@ -178,7 +191,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     if (options?.plugins) {
       for (const plugin of options.plugins) {
         if (plugin.onBeforeCheckIn) {
-          const result = await plugin.onBeforeCheckIn(id, data);
+          const result = await plugin.onBeforeCheckIn(id, data, desk);
           if (result === false) {
             debug(`${DebugPrefix} checkIn cancelled by plugin:`, plugin.name);
             return false;
@@ -229,7 +242,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       for (const plugin of options.plugins) {
         if (plugin.onCheckIn) {
           const startTime = performance.now();
-          await plugin.onCheckIn(id, data);
+          await plugin.onCheckIn(id, data, desk);
           const duration = performance.now() - startTime;
 
           devTools.emit({
@@ -247,7 +260,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
 
     // Lifecycle: after
     if (options?.onCheckIn) {
-      await options.onCheckIn(id, data);
+      await options.onCheckIn(id, data, desk);
     }
 
     if (options?.debug) {
@@ -270,7 +283,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     if (options?.plugins) {
       for (const plugin of options.plugins) {
         if (plugin.onBeforeCheckOut) {
-          const result = await plugin.onBeforeCheckOut(id);
+          const result = await plugin.onBeforeCheckOut(id, desk);
           if (result === false) {
             debug(`${DebugPrefix} checkOut cancelled by plugin:`, plugin.name);
             return false;
@@ -280,7 +293,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     }
 
     if (options?.onBeforeCheckOut) {
-      const result = await options.onBeforeCheckOut(id);
+      const result = await options.onBeforeCheckOut(id, desk);
       if (result === false) {
         debug(`${DebugPrefix} checkOut cancelled by onBeforeCheckOut`, id);
         return false;
@@ -314,7 +327,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
       for (const plugin of options.plugins) {
         if (plugin.onCheckOut) {
           const startTime = performance.now();
-          await plugin.onCheckOut(id);
+          await plugin.onCheckOut(id, desk);
           const duration = performance.now() - startTime;
 
           devTools.emit({
@@ -332,7 +345,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
 
     // Lifecycle: after
     if (options?.onCheckOut) {
-      await options.onCheckOut(id);
+      await options.onCheckOut(id, desk);
     }
 
     if (options?.debug) {
@@ -397,7 +410,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     if (options?.plugins) {
       for (const plugin of options.plugins) {
         if (plugin.onBeforeUpdate) {
-          const result = await plugin.onBeforeUpdate(id, data);
+          const result = await plugin.onBeforeUpdate(id, data, desk);
           if (result === false) {
             debug(`${DebugPrefix} update cancelled by plugin:`, plugin.name);
             return false;
@@ -423,7 +436,7 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
         for (const plugin of options.plugins) {
           if (plugin.onUpdate) {
             const startTime = performance.now();
-            await plugin.onUpdate(id, existing.data);
+            await plugin.onUpdate(id, existing.data, desk);
             const duration = performance.now() - startTime;
 
             devTools.emit({
@@ -573,7 +586,9 @@ export const createDeskCore = <T = any>(options?: DeskCoreOptions<T>): DeskCore<
     off,
     emit,
     destroy,
-  };
+    // Ajout dynamique du contexte
+    context: options?.context,
+  } as DeskCore<T> & { context?: any };
 
   // Add deskId as internal property for plugin access
   (desk as any).__deskId = deskId;
