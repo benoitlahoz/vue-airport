@@ -5,6 +5,7 @@ import {
   createConstraintsPlugin,
   ConstraintType,
   type Constraint,
+  type ConstraintError,
 } from '@vue-airport/plugins-validation';
 import {
   ConstraintsMemberItem,
@@ -152,6 +153,15 @@ const items = computed(() => {
   return (desk as any).members.value || [];
 });
 
+const errors = computed(() => [
+  ...errorHistory.value,
+  // To get the beforeCheckOut errors: could be improved to get all errors from the desk
+  ...(desk as any)
+    .getConstraintErrors()
+    .map((e: ConstraintError) => e.errors)
+    .flat(),
+]);
+
 onMounted(async () => {
   await addMember('Alice', 'admin');
   await addMember('Bob', 'user');
@@ -210,8 +220,8 @@ onMounted(async () => {
         <div class="p-4 bg-card border border-muted rounded-md flex-1">
           <h3 class="m-0 mb-2 text-base font-semibold">Errors</h3>
           <ul class="text-sm list-none text-destructive">
-            <li v-if="!errorHistory.length" class="text-muted">No errors</li>
-            <li v-for="(err, idx) in errorHistory" :key="idx">{{ err }}</li>
+            <li v-if="!errors.length" class="text-muted">No errors</li>
+            <li v-for="(err, idx) in errors" :key="idx">{{ err }}</li>
           </ul>
         </div>
         <div class="p-4 bg-card border border-muted rounded-md">

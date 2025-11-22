@@ -21,13 +21,14 @@ const { desk } = checkIn(DESK_CONSTRAINTS_KEY, {
   },
 });
 
-const item = computed(() => desk?.get(props.id)?.data);
+const item = computed(() => desk!.get(props.id)?.data);
 const roleColor = computed(
-  () => desk?.roleClasses?.[item.value?.role || 'user'] || 'bg-gray-200 text-gray-800'
+  () => desk!.roleClasses?.[item.value?.role || 'user'] || 'bg-gray-200 text-gray-800'
 );
 
-const remove = () => {
-  desk?.checkOut(props.id);
+const remove = async () => {
+  const result = await desk!.checkOut(props.id);
+  console.log('Result of checkOut:', result);
 };
 </script>
 
