@@ -1,22 +1,6 @@
-/**
- * Minimal type for a registration plugin (CheckInPlugin)
- * Replace with core import if available
- */
-export type CheckInPlugin<T = any> = (ctx: PluginContext<T>) => {
-  validate: (child: T, children: T[]) => string[];
-};
-
-/**
- * Minimal context for plugin integration (should be typed with core if available)
- */
-export interface PluginContext<T = any> {
-  onBeforeCheckIn: (fn: (child: T, children: T[]) => void) => void;
-  onBeforeCheckOut?: (fn: (child: T, children: T[]) => void) => void;
-}
-// Remplacement complet de la fonction pour desk-compliance
 import { ref } from 'vue';
+import type { CheckInPlugin } from 'vue-airport';
 
-// Types déjà présents dans le fichier
 export type ConstraintFn<T = any> = (child: T, children: T[]) => string | null;
 export type ConstraintObj<T = any> =
   | { type: 'unique'; key: keyof T; message?: string }
@@ -33,14 +17,32 @@ export interface ConstraintError {
 
 export function createConstraintsPlugin<T extends Record<string, any> = any>(
   constraints: Constraint<T>[]
-): any {
+): CheckInPlugin<T> {
   const constraintErrors = ref<ConstraintError[]>([]);
 
-  const addError = (id: string | number, errors: string[]) => {
+  const addErrors = (id: string | number, errors: string[]) => {
     constraintErrors.value.push({ id, errors, timestamp: Date.now() });
   };
   const removeErrorsForId = (id: string | number) => {
     constraintErrors.value = constraintErrors.value.filter((e) => e.id !== id);
+  };
+
+  const emitToDevTools = (action: string, id: string | number, errors: string[]) => {
+    if (deskInstance && deskInstance.devTools && deskInstance.__deskId) {
+      deskInstance.devTools.emit({
+        type: 'plugin-execute',
+        timestamp: Date.now(),
+        deskId: deskInstance.__deskId,
+        childId: id,
+        pluginName: 'constraints',
+        data: {
+          action,
+          errorCount: errors.length,
+          hasErrors: errors.length > 0,
+          errors,
+        },
+      });
+    }
   };
 
   function validateData(id: string | number, data: T, children: T[]): boolean {
@@ -62,12 +64,15 @@ export function createConstraintsPlugin<T extends Record<string, any> = any>(
         const result = constraint.rule(data, children);
         if (typeof result === 'string' && result) errors.push(constraint.message || result);
       }
-      // beforeCheckOut constraints sont gérées dans le hook dédié
+
+      // beforeCheckOut constraints are validated in the dedicated hook
     }
     if (errors.length) {
-      addError(id, errors);
+      addErrors(id, errors);
+      emitToDevTools('validate-check-in', id, errors);
       return false;
     }
+    emitToDevTools('validate-check-in', id, []);
     return true;
   }
 
@@ -95,7 +100,31 @@ export function createConstraintsPlugin<T extends Record<string, any> = any>(
     },
 
     onBeforeCheckOut: (id: string | number): boolean => {
+      const children = deskInstance?.getAll ? deskInstance.getAll() : [];
+      const item = children.find((c: any) => c.id === id)?.data;
+      const errors: string[] = [];
+      for (const constraint of constraints) {
+        if (
+          typeof constraint !== 'function' &&
+          constraint.type === 'beforeCheckOut' &&
+          constraint.rule
+        ) {
+          const result = constraint.rule(
+            item,
+            children.map((c: any) => c.data)
+          );
+          if (typeof result === 'string' && result) {
+            errors.push(constraint.message || result);
+          }
+        }
+      }
       removeErrorsForId(id);
+      if (errors.length) {
+        addErrors(id, errors);
+        emitToDevTools('validate-check-out', id, errors);
+        return false;
+      }
+      emitToDevTools('validate-check-out', id, []);
       return true;
     },
 

@@ -28,6 +28,20 @@ const constraints = [
     member.role === 'admin' && members.filter((m) => m.role === 'admin').length >= 2
       ? 'Maximum 2 admins allowed'
       : null,
+  // Nouvelle contrainte beforeCheckOut : empêcher la suppression du dernier admin
+  {
+    type: 'beforeCheckOut',
+    rule: (member: Member, members: Member[]) => {
+      if (member.role === 'admin') {
+        const adminCount = members.filter((m) => m.role === 'admin').length;
+        if (adminCount <= 1) {
+          return 'Impossible de supprimer le dernier administrateur.';
+        }
+      }
+      return null;
+    },
+    message: 'Impossible de supprimer le dernier administrateur.',
+  },
 ];
 
 const initialMembers: Member[] = [
@@ -53,18 +67,18 @@ const constraintErrors = computed(() =>
   (desk as any).getConstraintErrors ? (desk as any).getConstraintErrors() : []
 );
 
-function addMember() {
+const addMember = () => {
   error.value = null;
   const id = Date.now();
   const member: Member = { id, name: newName.value.trim(), role: newRole.value };
   desk.checkIn(id, member);
   newName.value = '';
   newRole.value = 'user';
-}
+};
 
-function removeMember(id: number) {
+const removeMember = (id: number) => {
   desk.checkOut(id);
-}
+};
 </script>
 
 <template>

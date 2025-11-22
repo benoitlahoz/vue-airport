@@ -1,13 +1,8 @@
 <script setup lang="ts">
+import type { MemberData } from '.';
 import { Badge } from '@/components/ui/badge';
 
-interface Member {
-  id: number;
-  name: string;
-  role: 'admin' | 'user';
-}
-
-const props = defineProps<{ member: Member }>();
+const props = defineProps<{ member: MemberData }>();
 </script>
 
 <template>
