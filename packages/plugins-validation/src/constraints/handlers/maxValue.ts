@@ -1,14 +1,10 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const maxValueHandler: ConstraintHandler = (constraint, data) => {
-  if (constraint.type !== ConstraintType.MaxValue) return null;
-  const key = constraint.key;
-  const max = constraint.max;
+  const key = (constraint as { key: string | number }).key;
+  const max = (constraint as { max: number }).max;
   if (typeof data[key] === 'number' && data[key] > max) {
     return constraint.message || `Field ${String(key)} must be at most ${max}.`;
   }
   return null;
 };
-
-// ...existing code...

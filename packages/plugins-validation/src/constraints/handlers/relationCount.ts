@@ -1,12 +1,10 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const relationCountHandler: ConstraintHandler = (constraint, _data, children) => {
-  if (constraint.type !== ConstraintType.RelationCount) return null;
-  const key = constraint.key;
-  const value = constraint.value;
-  const min = constraint.min;
-  const max = constraint.max;
+  const key = (constraint as { key: string | number }).key;
+  const value = (constraint as { value: any }).value;
+  const min = (constraint as { min?: number }).min;
+  const max = (constraint as { max?: number }).max;
   const count = children.filter((child: any) => child[key] === value).length;
   if (typeof min === 'number' && count < min) {
     return constraint.message || `Minimum ${min} for ${String(key)}=${value}.`;

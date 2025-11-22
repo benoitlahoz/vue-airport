@@ -1,9 +1,7 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const immutableHandler: ConstraintHandler = (constraint, data, _children, deskInstance) => {
-  if (constraint.type !== ConstraintType.Immutable) return null;
-  const key = constraint.key;
+  const key = (constraint as { key: string | number }).key;
   let original: any = undefined;
   if (deskInstance && deskInstance.getById) {
     const found = deskInstance.getById(data.id);

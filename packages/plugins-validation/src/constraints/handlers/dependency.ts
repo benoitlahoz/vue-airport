@@ -1,11 +1,9 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const dependencyHandler: ConstraintHandler = (constraint, data) => {
-  if (constraint.type !== ConstraintType.Dependency) return null;
-  const key = constraint.key;
-  const value = constraint.value;
-  const required = constraint.required;
+  const key = (constraint as { key: string | number }).key;
+  const value = (constraint as { value: any }).value;
+  const required = (constraint as { required: string | number }).required;
   if (
     data[key] === value &&
     (data[required] === undefined || data[required] === null || data[required] === '')

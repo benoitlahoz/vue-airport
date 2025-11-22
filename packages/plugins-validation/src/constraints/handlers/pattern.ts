@@ -1,10 +1,8 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const patternHandler: ConstraintHandler = (constraint, data) => {
-  if (constraint.type !== ConstraintType.Pattern) return null;
-  const key = constraint.key;
-  const regex = constraint.regex;
+  const key = (constraint as { key: string | number }).key;
+  const regex = (constraint as { regex: RegExp }).regex;
   if (typeof data[key] === 'string' && !regex.test(data[key])) {
     return constraint.message || `Field ${String(key)} does not match pattern.`;
   }

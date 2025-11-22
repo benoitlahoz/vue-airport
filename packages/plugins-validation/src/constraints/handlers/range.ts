@@ -1,11 +1,9 @@
 import type { ConstraintHandler } from '..';
 
-import { ConstraintType } from '..';
 export const rangeHandler: ConstraintHandler = (constraint, data) => {
-  if (constraint.type !== ConstraintType.Range) return null;
-  const key = constraint.key;
-  const min = constraint.min;
-  const max = constraint.max;
+  const key = (constraint as { key: string | number }).key;
+  const min = (constraint as { min: number }).min;
+  const max = (constraint as { max: number }).max;
   const value = data[key];
   if (typeof value === 'number' && (value < min || value > max)) {
     return constraint.message || `Value for ${String(key)} must be between ${min} and ${max}.`;

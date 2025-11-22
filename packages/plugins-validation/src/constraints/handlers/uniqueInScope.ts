@@ -1,10 +1,8 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const uniqueInScopeHandler: ConstraintHandler = (constraint, data, children) => {
-  if (constraint.type !== ConstraintType.UniqueInScope) return null;
-  const key = constraint.key;
-  const scopeKey = constraint.scopeKey;
+  const key = (constraint as { key: string | number }).key;
+  const scopeKey = (constraint as { scopeKey: string | number }).scopeKey;
   if (
     children.some((child: any) => child[key] === data[key] && child[scopeKey] === data[scopeKey])
   ) {

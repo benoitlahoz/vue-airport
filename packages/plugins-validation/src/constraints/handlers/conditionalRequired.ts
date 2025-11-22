@@ -1,11 +1,9 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const conditionalRequiredHandler: ConstraintHandler = (constraint, data) => {
-  if (constraint.type !== ConstraintType.ConditionalRequired) return null;
-  const key = constraint.key;
-  const conditionKey = constraint.conditionKey;
-  const conditionValue = constraint.conditionValue;
+  const key = (constraint as { key: string | number }).key;
+  const conditionKey = (constraint as { conditionKey: string | number }).conditionKey;
+  const conditionValue = (constraint as { conditionValue: any }).conditionValue;
   if (
     data[conditionKey] === conditionValue &&
     (data[key] === undefined || data[key] === null || data[key] === '')

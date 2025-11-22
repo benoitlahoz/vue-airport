@@ -1,10 +1,8 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const formatHandler: ConstraintHandler = (constraint, data) => {
-  if (constraint.type !== ConstraintType.Format) return null;
-  const key = constraint.key;
-  const format = constraint.format;
+  const key = (constraint as { key: string | number }).key;
+  const format = (constraint as { format: string }).format;
   const value = data[key];
   let valid = true;
   switch (format) {

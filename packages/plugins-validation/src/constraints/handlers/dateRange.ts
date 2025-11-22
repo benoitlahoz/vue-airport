@@ -1,11 +1,9 @@
 import type { ConstraintHandler } from '..';
-import { ConstraintType } from '..';
 
 export const dateRangeHandler: ConstraintHandler = (constraint, data) => {
-  if (constraint.type !== ConstraintType.DateRange) return null;
-  const key = constraint.key;
-  const min = constraint.min;
-  const max = constraint.max;
+  const key = (constraint as { key: string | number }).key;
+  const min = (constraint as { min: string | number | Date }).min;
+  const max = (constraint as { max: string | number | Date }).max;
   const rawValue = data[key];
   const value = new Date(
     typeof rawValue === 'string' || typeof rawValue === 'number' ? rawValue : String(rawValue)
