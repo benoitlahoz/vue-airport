@@ -93,6 +93,8 @@ const constraints: Constraint<MemberData>[] = [
       if (member.role === 'admin') {
         const adminCount = members.filter((m) => m.role === 'admin').length;
         if (adminCount <= 1) {
+          // Clear previous errors to avoid stacking
+          (desk as any).clearConstraintErrors();
           return 'Cannot remove the last admin.';
         }
       }
@@ -104,10 +106,9 @@ const constraints: Constraint<MemberData>[] = [
 
 const newName = ref('');
 const newRole = ref<MemberData['role']>('user');
-const errorHistory = ref<string[]>([]);
 
 const addMember = async (name: string, role: MemberData['role']) => {
-  errorHistory.value = [];
+  (desk as any).clearConstraintErrors();
   const id = Math.floor(((Date.now() % 100000) + Math.random() * 100000) % 100000) + 1;
   // Download a random user image for avatar
   const gender = Math.random() < 0.5 ? 'men' : 'women';
@@ -121,11 +122,6 @@ const addMember = async (name: string, role: MemberData['role']) => {
   const isValid = await desk.checkIn(id, member);
   if (isValid) {
     (desk as any).members.value.push(member);
-  } else {
-    const errors = (desk as any).getConstraintErrorsById
-      ? (desk as any).getConstraintErrorsById(id)
-      : [];
-    errorHistory.value = errors;
   }
   newName.value = '';
   newRole.value = 'user';
@@ -156,14 +152,12 @@ const items = computed(() => {
   return (desk as any).members.value || [];
 });
 
-const errors = computed(() => [
-  ...errorHistory.value,
-  // To get the beforeCheckOut errors: could be improved to get all errors from the desk
-  ...(desk as any)
+const errors = computed(() => {
+  return (desk as any)
     .getConstraintErrors()
-    .map((e: ConstraintError) => e.errors)
-    .flat(),
-]);
+    .map((err: ConstraintError) => err.errors)
+    .flat();
+});
 
 onMounted(async () => {
   await addMember('Alice', 'admin');
