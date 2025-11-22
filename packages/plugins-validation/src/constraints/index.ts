@@ -64,8 +64,8 @@ export interface ConstraintError {
 
 export type ConstraintFn<T = any> = (child: T, children: T[]) => string | null;
 
-export type ConstraintHandler<T = any> = (
-  constraint: ConstraintObj<T>,
+export type ConstraintHandler<T = any, C extends ConstraintObj<T> = ConstraintObj<T>> = (
+  constraint: C,
   data: T,
   children: T[],
   deskInstance?: any
