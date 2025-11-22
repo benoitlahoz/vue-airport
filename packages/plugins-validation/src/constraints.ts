@@ -442,7 +442,7 @@ export function createConstraintsPlugin<T extends Record<string, any> = any>(
       const item = children.find((c: any) => c.id === id)?.data;
       const errors: string[] = [];
       for (const constraint of constraints) {
-        if (typeof constraint !== 'function' && isBeforeCheckOut(constraint)) {
+        if (typeof constraint !== 'function' && constraint.type === ConstraintType.BeforeCheckOut) {
           if (constraint.rule) {
             const result = constraint.rule(
               item,
