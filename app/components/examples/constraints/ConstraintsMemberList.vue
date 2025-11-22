@@ -137,10 +137,10 @@ const { desk } = createDesk(DESK_CONSTRAINTS_KEY, {
   debug: false,
   context: {
     members: ref([]),
-    rolesColors: {
-      admin: 'red',
-      user: 'blue',
-      guest: 'green',
+    roleClasses: {
+      admin: 'bg-yellow-800/10 border border-yellow-800 text-yellow-800',
+      user: 'bg-blue-800/10 border border-blue-800 text-blue-800',
+      guest: 'bg-green-800/10 border border-green-800 text-green-800',
     },
   },
   onCheckOut(id) {
@@ -163,7 +163,12 @@ onMounted(async () => {
   <div>
     <div class="flex gap-3 mb-6 flex-wrap justify-between items-center">
       <div class="flex gap-2 items-center">
-        <Input v-model="newName" placeholder="Name" class="input input-bordered" />
+        <Input
+          v-model="newName"
+          placeholder="Name"
+          class="input input-bordered"
+          @keyup.enter="() => addMember(newName, newRole)"
+        />
         <Select v-model="newRole">
           <SelectTrigger class="input input-bordered">
             <SelectValue placeholder="Choose a role" />

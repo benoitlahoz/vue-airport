@@ -12,7 +12,7 @@ export interface MemberData {
 
 export interface MemberListContext {
   members: Ref<MemberData[]>;
-  rolesColors: Record<MemberData['role'], string>;
+  roleClasses: Record<MemberData['role'], string>;
 }
 
 export const DESK_CONSTRAINTS_KEY: InjectionKey<Ref<MemberData> & MemberListContext> =
