@@ -14,7 +14,7 @@ const { checkIn } = useCheckIn<MemberData, MemberListContext>();
 const { desk } = checkIn(DESK_CONSTRAINTS_KEY, {
   id: props.id,
   autoCheckIn: false,
-  watchData: true,
+  watchData: false,
   data: (desk) => {
     const item = desk.get(props.id);
     return item?.data as any;
