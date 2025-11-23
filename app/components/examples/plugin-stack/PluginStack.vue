@@ -6,7 +6,7 @@ import {
   PluginStackListItem,
   PluginStackActiveItemPanel,
   PluginStackHistoryPanel,
-  type DeskWithPlugins,
+  type DeskWithPluginsStack,
   type PluginItemContext,
   type PluginItemData,
   PLUGIN_DESK_KEY,
@@ -63,8 +63,9 @@ const { desk } = createDesk(PLUGIN_DESK_KEY, {
     const index = itemsData.value.findIndex((item) => item.id === id);
     if (index !== -1) {
       // Deactivate the item if it was active
-      if (deskWithPlugins.activeId?.value === id) {
-        deskWithPlugins.setActive?.(null);
+      const activeId = (desk as DeskWithPluginsStack).getActive()?.id;
+      if (activeId === id) {
+        (desk as DeskWithPluginsStack).setActive(null);
       }
       itemsData.value.splice(index, 1);
     }
@@ -74,7 +75,7 @@ const { desk } = createDesk(PLUGIN_DESK_KEY, {
       const newIndex = Math.min(index, itemsData.value.length - 1);
       const id = itemsData.value[newIndex]?.id;
       if (id) {
-        deskWithPlugins.setActive?.(id);
+        (desk as DeskWithPluginsStack).setActive(id);
 
         // Scroll to the new active item
         const el = document.querySelector(`[data-slot="plugin-list-item-${id}"]`);
@@ -85,8 +86,6 @@ const { desk } = createDesk(PLUGIN_DESK_KEY, {
     }
   },
 });
-
-const deskWithPlugins = desk as DeskWithPlugins;
 
 // Function to add a new item
 const addItem = () => {
@@ -99,7 +98,7 @@ const addItem = () => {
 
   nextTick(() => {
     // Automatically activate the new item
-    deskWithPlugins.setActive?.(id);
+    (desk as DeskWithPluginsStack).setActive(id);
 
     // Scroll to the new item in the list
     const el = document.querySelector(`[data-slot="plugin-list-item-${id}"]`);
@@ -113,7 +112,9 @@ const addItem = () => {
 onMounted(() => {
   const firstItem = itemsData.value[0];
   if (firstItem) {
-    deskWithPlugins.setActive?.(firstItem.id);
+    // FIXME: Pas checkedIn au onMounted
+    // console.log(desk.getAll()[0]);
+    (desk as DeskWithPluginsStack).setActive(firstItem.id);
   }
 });
 </script>

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
   PLUGIN_DESK_KEY,
-  type DeskWithPlugins,
+  type DeskWithPluginsStack,
   type PluginItemContext,
   type PluginItemData,
 } from '.';
@@ -11,12 +11,10 @@ import {
 // Access the desk to retrieve history data
 const { checkIn } = useCheckIn<PluginItemData, PluginItemContext>();
 const { desk } = checkIn(PLUGIN_DESK_KEY);
-const deskWithPlugins = desk as DeskWithPlugins;
+const deskWithPlugins = desk as typeof desk & DeskWithPluginsStack;
 
-const history = computed(() => deskWithPlugins?.getHistory?.() || []);
-const maxHistory = computed(() => {
-  return deskWithPlugins?.maxHistory?.value || 20;
-});
+const history = computed(() => deskWithPlugins.getHistory() || []);
+const maxHistory = deskWithPlugins.maxHistory || 0;
 
 // Helper to format action type for display
 const formatAction = (action: string) => {

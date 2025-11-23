@@ -7,7 +7,7 @@ import { shallowRef, computed, type ComputedRef, type ShallowRef } from 'vue';
 import { EventManager } from '../helpers/event-manager';
 import { SortedRegistryCache } from '../helpers/sorted-registry-cache';
 import { DevTools, NoOpDevTools } from '../helpers/devtools';
-import type { CheckInPlugin } from '../types';
+import type { CheckInPlugin, CheckInPluginComputed, CheckInPluginMethods } from '../types';
 import { NoOp, Debug } from '../utils';
 
 /**
@@ -50,7 +50,7 @@ export interface DeskCoreOptions<
   onCheckOut?: (id: string | number, desk: DeskCore<T, TContext>) => void | Promise<void>;
   debug?: boolean;
   devTools?: boolean;
-  plugins?: CheckInPlugin<T>[];
+  plugins?: CheckInPlugin<T, CheckInPluginMethods<T>, CheckInPluginComputed<T>>[];
   deskId?: string; // For DevTools integration
   context?: TContext;
 }
@@ -620,7 +620,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       // 2. Add custom methods
       if (plugin.methods) {
         Object.entries(plugin.methods).forEach(([name, method]) => {
-          (desk as any)[name] = (...args: any[]) => method(desk as any, ...args);
+          (desk as any)[name] = (...args: any[]) => method(...args);
         });
       }
 
@@ -628,7 +628,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       if (plugin.computed) {
         Object.entries(plugin.computed).forEach(([name, getter]) => {
           Object.defineProperty(desk, name, {
-            get: () => getter(desk as any),
+            get: () => getter(),
             enumerable: true,
             configurable: true,
           });

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
   PLUGIN_DESK_KEY,
-  type DeskWithPlugins,
+  type DeskWithPluginsStack,
   type PluginItemContext,
   type PluginItemData,
 } from '.';
@@ -12,10 +12,10 @@ import {
 // Displays details of the currently active item from the desk.
 const { checkIn } = useCheckIn<PluginItemData, PluginItemContext>();
 const { desk } = checkIn(PLUGIN_DESK_KEY);
-const deskWithPlugins = desk as DeskWithPlugins;
+const deskWithPlugins = desk as typeof desk & DeskWithPluginsStack;
 
-const activeId = computed(() => deskWithPlugins.activeId?.value);
-const activeItem = computed(() => deskWithPlugins.getActive?.());
+const activeId = deskWithPlugins.activeId;
+const activeItem = computed(() => deskWithPlugins.getActive());
 </script>
 
 <template>
@@ -25,10 +25,6 @@ const activeItem = computed(() => deskWithPlugins.getActive?.());
       <p class="my-2"><strong>ID:</strong> {{ activeId }}</p>
       <p class="my-2"><strong>Name:</strong> {{ activeItem.data.name }}</p>
       <p class="my-2"><strong>Description:</strong> {{ activeItem.data.description }}</p>
-      <p class="my-2 text-sm text-muted">
-        <strong>Timestamp:</strong>
-        {{ new Date(activeItem.timestamp!).toLocaleString() }}
-      </p>
     </div>
     <div v-else class="py-8 text-center text-muted">No item selected</div>
   </div>

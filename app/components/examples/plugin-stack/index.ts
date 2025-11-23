@@ -1,5 +1,7 @@
 import type { InjectionKey, Ref } from 'vue';
-import type { CheckInItem, DeskCore } from '#vue-airport/composables/useCheckIn';
+import type { DeskWithContext } from '#vue-airport';
+import type { ActiveItemPluginExports } from '@vue-airport/plugins-base/activeItem';
+import type { HistoryPluginExports } from '@vue-airport/plugins-base/history';
 
 export interface PluginItemData {
   id: string;
@@ -7,21 +9,16 @@ export interface PluginItemData {
   description: string;
 }
 
-// Extended type definition to include plugin methods
-export interface DeskWithPlugins {
-  activeId?: Ref<string | number | null>;
-  maxHistory?: Ref<number>;
-  getActive?: () => CheckInItem<PluginItemData> | null;
-  getHistory?: () => Array<{ action: string; id: string | number; timestamp: number }>;
-  setActive?: (id: string | number | null) => void;
-}
-
 export interface PluginItemContext {
   pluginItems: Ref<PluginItemData[]>;
   maxHistory: Ref<number>;
 }
 
-export const PLUGIN_DESK_KEY: InjectionKey<DeskCore<PluginItemData> & PluginItemContext> =
+export type DeskWithPluginsStack = DeskWithContext<PluginItemData, PluginItemContext> &
+  ActiveItemPluginExports<PluginItemData> &
+  HistoryPluginExports<PluginItemData>;
+
+export const PLUGIN_DESK_KEY: InjectionKey<Ref<PluginItemData> & PluginItemContext> =
   Symbol('pluginDesk');
 
 export { default as PluginStack } from './PluginStack.vue';
