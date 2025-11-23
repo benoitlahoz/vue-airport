@@ -12,10 +12,6 @@ export {
 export { provideDesk, type DeskWithContext } from './desk/desk-injection';
 
 export { checkInToDesk, type CheckInOptions, type CheckInResult } from './desk/desk-child';
-// ==========================================
-// HELPERS
-// ==========================================
 
 export { generateId, memoizedId, clearIdCache, isCheckedIn, getRegistry } from './useCheckIn';
-
 export type { CheckInPlugin, CheckInPluginMethods, CheckInPluginComputed } from './types';

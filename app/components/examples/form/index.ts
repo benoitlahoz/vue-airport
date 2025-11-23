@@ -1,11 +1,7 @@
 import type { InjectionKey, Ref } from 'vue';
 import type { DeskCore } from '#vue-airport/composables/useCheckIn';
 import type { DeskWithContext } from '#vue-airport';
-import type {
-  ValidationError,
-  ValidationPluginComputed,
-  ValidationPluginMethods,
-} from '@vue-airport/plugins-validation';
+import type { ValidationError, ValidationPluginExports } from '@vue-airport/plugins-validation';
 
 export interface FieldData {
   id: string;
@@ -23,8 +19,7 @@ export interface FormContext {
 }
 
 export type DeskWithValidation = DeskWithContext<FieldData, FormContext> &
-  ValidationPluginMethods<FieldData> &
-  ValidationPluginComputed<FieldData>;
+  ValidationPluginExports<FieldData>;
 
 export const FORM_DESK_KEY: InjectionKey<DeskCore<FieldData> & FormContext> = Symbol('formDesk');
 

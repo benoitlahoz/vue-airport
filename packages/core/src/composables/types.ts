@@ -1,7 +1,7 @@
 import type { DeskCore } from './desk/desk-core';
 
-export type CheckInPluginMethod<T = any> = (...args: (T | any)[]) => any;
-export type CheckInPluginComputedProp<T = any> = (desk: DeskCore<T, {}>) => any;
+export type CheckInPluginMethod<T = any> = (...args: (T | any)[]) => any | T;
+export type CheckInPluginComputedProp<T = any> = () => any | T;
 
 export type CheckInPluginMethods<T = any> = Record<string, CheckInPluginMethod<T>>;
 export type CheckInPluginComputed<T = any> = Record<string, CheckInPluginComputedProp<T>>;

@@ -2,6 +2,8 @@ import { ref, computed } from 'vue';
 import type { Ref, ComputedRef } from 'vue';
 import type { CheckInPlugin, DeskCore } from 'vue-airport';
 
+export type DebouncePluginExports<T> = DebouncePluginMethods<T> & DebouncePluginComputed<T>;
+
 export interface DebouncePluginMethods<T> {
   /**
    * Immediately flush all pending debounced event notifications.

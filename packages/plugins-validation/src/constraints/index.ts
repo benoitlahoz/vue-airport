@@ -25,6 +25,8 @@ import { uniqueGroupHandler } from './handlers/uniqueGroup';
 import { dateRangeHandler } from './handlers/dateRange';
 import { dependencyHandler } from './handlers/dependency';
 
+export type ConstraintsPluginExports<T> = ConstraintsPluginMethods & ConstraintsPluginComputed<T>;
+
 export interface ConstraintsPluginMethods extends CheckInPluginMethods {
   /**
    * Get all constraint errors.

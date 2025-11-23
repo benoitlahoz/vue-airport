@@ -620,7 +620,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       // 2. Add custom methods
       if (plugin.methods) {
         Object.entries(plugin.methods).forEach(([name, method]) => {
-          (desk as any)[name] = (...args: any[]) => method(desk as any, ...args);
+          (desk as any)[name] = (...args: any[]) => method(...args);
         });
       }
 
@@ -628,7 +628,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       if (plugin.computed) {
         Object.entries(plugin.computed).forEach(([name, getter]) => {
           Object.defineProperty(desk, name, {
-            get: () => getter(desk as any),
+            get: () => getter(),
             enumerable: true,
             configurable: true,
           });

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn } from 'vue-airport';
 import {
-  type DeskWithPlugins,
+  type DeskWithPluginsStack,
   type PluginItemContext,
   type PluginItemData,
   PLUGIN_DESK_KEY,
@@ -27,32 +27,34 @@ const { desk } = checkIn(PLUGIN_DESK_KEY, {
   watchData: true,
   data: (desk) => {
     const item = desk.pluginItems?.value.find((i) => i.id === props.id);
+    const deskWithPlugins = desk as typeof desk & DeskWithPluginsStack;
 
     return {
       id: props.id,
       name: item?.name || '',
       description: item?.description || '',
-      isActive: (desk as DeskWithPlugins).activeId?.value === props.id,
+      isActive: deskWithPlugins.activeId?.value === props.id,
     };
   },
 });
 
-const deskWithPlugins = desk as typeof desk & DeskWithPlugins;
+const deskWithPlugins = desk as typeof desk & DeskWithPluginsStack;
 
 const data = computed(() => {
-  return deskWithPlugins?.pluginItems.value.find((item) => item.id === props.id);
+  return deskWithPlugins.pluginItems.value.find((item) => item.id === props.id);
 });
 
 const isActive = computed(() => {
-  return deskWithPlugins?.activeId?.value === props.id;
+  return deskWithPlugins.activeId?.value === props.id;
 });
 
 const setActive = () => {
-  deskWithPlugins.setActive?.(props.id);
+  console.log('Should set active to:', props.id, deskWithPlugins.setActive);
+  deskWithPlugins.setActive(props.id);
 };
 
 const remove = () => {
-  deskWithPlugins.checkOut?.(props.id);
+  deskWithPlugins.checkOut(props.id);
 };
 </script>
 

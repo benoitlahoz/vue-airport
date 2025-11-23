@@ -1,6 +1,8 @@
 import { ref } from 'vue';
 import type { CheckInPlugin, CheckInPluginComputed, CheckInPluginMethods } from 'vue-airport';
 
+export type ValidationPluginExports<T> = ValidationPluginMethods<T> & ValidationPluginComputed<T>;
+
 export interface ValidationPluginMethods<T> extends CheckInPluginMethods<T> {
   /**
    * Get all validation errors.

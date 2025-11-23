@@ -1,29 +1,28 @@
 import { ref } from 'vue';
-import type { CheckInPlugin, DeskCore } from 'vue-airport';
+import type { CheckInPlugin, CheckInPluginMethods, DeskCore } from 'vue-airport';
 
-export interface HistoryPluginMethods<T> {
+export type HistoryPluginExports<T> = HistoryPluginMethods<T>;
+
+export interface HistoryPluginMethods<T> extends CheckInPluginMethods<T> {
   /**
    * Get the history of operations.
    */
-  getHistory(desk: DeskCore<T>): HistoryEntry<T>[];
+  getHistory(): HistoryEntry<T>[];
 
   /**
    * Clear the history.
    */
-  clearHistory(desk: DeskCore<T>): void;
+  clearHistory(): void;
 
   /**
    * Get last N history entries.
    */
-  getLastHistory(desk: DeskCore<T>, count: number): HistoryEntry<T>[];
+  getLastHistory(count: number): HistoryEntry<T>[];
 
   /**
    * Get history filtered by action type.
    */
-  getHistoryByAction(
-    desk: DeskCore<T>,
-    action: 'check-in' | 'check-out' | 'update'
-  ): HistoryEntry<T>[];
+  getHistoryByAction(action: 'check-in' | 'check-out' | 'update'): HistoryEntry<T>[];
 }
 
 export interface HistoryPlugin<T> extends CheckInPlugin<T, HistoryPluginMethods<T>> {
@@ -71,17 +70,22 @@ export const createHistoryPlugin = <T = unknown>(options?: HistoryOptions): Hist
   const maxHistory = options?.maxHistory || 50;
   const history = ref<HistoryEntry<T>[]>([]);
 
+  let deskInstance: DeskCore<T> | null = null;
+
   return {
     name: 'history',
     version: '1.0.0',
 
     install: (desk: DeskCore<T>) => {
+      deskInstance = desk;
+
       // Add history to desk
       (desk as any).history = history;
 
       // Cleanup
       return () => {
         history.value = [];
+        deskInstance = null;
       };
     },
 
@@ -111,15 +115,15 @@ export const createHistoryPlugin = <T = unknown>(options?: HistoryOptions): Hist
       /**
        * Get the history of operations
        */
-      getHistory(desk: DeskCore<T>): HistoryEntry<T>[] {
-        return (desk as any).history?.value || [];
+      getHistory(): HistoryEntry<T>[] {
+        return (deskInstance as any)?.history?.value || [];
       },
 
       /**
        * Clear the history
        */
-      clearHistory(desk: DeskCore<T>) {
-        const deskWithHistory = desk as any;
+      clearHistory(): void {
+        const deskWithHistory = deskInstance as any;
         if (deskWithHistory.history) {
           deskWithHistory.history.value = [];
         }
@@ -128,19 +132,16 @@ export const createHistoryPlugin = <T = unknown>(options?: HistoryOptions): Hist
       /**
        * Get last N history entries
        */
-      getLastHistory(desk: DeskCore<T>, count: number): HistoryEntry<T>[] {
-        const history = (desk as any).history?.value || [];
+      getLastHistory(count: number): HistoryEntry<T>[] {
+        const history = (deskInstance as any).history?.value || [];
         return history.slice(-count);
       },
 
       /**
        * Get history filtered by action type
        */
-      getHistoryByAction(
-        desk: DeskCore<T>,
-        action: 'check-in' | 'check-out' | 'update'
-      ): HistoryEntry<T>[] {
-        const history = (desk as any).history?.value || [];
+      getHistoryByAction(action: 'check-in' | 'check-out' | 'update'): HistoryEntry<T>[] {
+        const history = (deskInstance as any).history?.value || [];
         return history.filter((entry: HistoryEntry<T>) => entry.action === action);
       },
     },
