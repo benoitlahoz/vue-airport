@@ -149,7 +149,11 @@ const { desk } = createDesk(DESK_CONSTRAINTS_KEY, {
 });
 
 const items = computed(() => {
-  return (desk as any).members.value || [];
+  const ctx = desk.getContext<MemberListContext>();
+  if (ctx && ctx.members) {
+    return ctx.members.value;
+  }
+  return [];
 });
 
 const errors = computed(() =>
