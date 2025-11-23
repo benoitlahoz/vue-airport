@@ -1,17 +1,26 @@
 import type { DeskCore, CheckInPlugin } from 'vue-airport';
 import type { Store } from 'pinia';
-// On attend que l'utilisateur fournisse les stores à la création du plugin
 
-export interface PiniaStoreConfig<T = unknown> {
+export interface PiniaPluginHandler<T = unknown> {
   store: Store;
-  onBeforeCheckIn?: (id: string | number, data: T, desk?: DeskCore<T>) => boolean;
-  onCheckIn?: (id: string | number, data: T, desk?: DeskCore<T>) => void;
-  onBeforeCheckOut?: (id: string | number, desk?: DeskCore<T>) => boolean;
-  onCheckOut?: (id: string | number, desk?: DeskCore<T>) => void;
+  onBeforeCheckIn?: (
+    id: string | number,
+    data: T,
+    desk?: DeskCore<T>
+  ) => Promise<boolean> | boolean;
+  onCheckIn?: (id: string | number, data: T, desk?: DeskCore<T>) => Promise<void> | void;
+  onBeforeCheckOut?: (id: string | number, desk?: DeskCore<T>) => Promise<boolean> | boolean;
+  onCheckOut?: (id: string | number, desk?: DeskCore<T>) => Promise<void> | void;
+  onBeforeUpdate?: (
+    id: string | number,
+    data: Partial<T>,
+    desk?: DeskCore<T>
+  ) => Promise<boolean> | boolean;
+  onUpdate?: (id: string | number, data: Partial<T>, desk?: DeskCore<T>) => Promise<void> | void;
 }
 
-export interface PiniaOptions<T = unknown> {
-  handlers: Array<PiniaStoreConfig<T>>;
+export interface PiniaPluginConfig<T = unknown> {
+  handlers: PiniaPluginHandler<T>[];
 }
 
 /**
@@ -26,7 +35,7 @@ export interface PiniaOptions<T = unknown> {
  * });
  * ```
  */
-export function createPiniaPlugin<T>(options: PiniaOptions<T>): CheckInPlugin<T> {
+export function createPiniaPlugin<T>(options: PiniaPluginConfig<T>): CheckInPlugin<T> {
   return {
     name: 'pinia',
     version: '1.0.0',
@@ -67,36 +76,64 @@ export function createPiniaPlugin<T>(options: PiniaOptions<T>): CheckInPlugin<T>
       };
     },
 
-    onBeforeCheckIn(id: string | number, data: T, desk?: DeskCore<T>) {
-      options.handlers.forEach((store: PiniaStoreConfig<T>) => {
-        if (store.onBeforeCheckIn) {
-          store.onBeforeCheckIn(id, data, desk);
+    async onBeforeCheckIn(id: string | number, data: T, desk?: DeskCore<T>) {
+      for (const handler of options.handlers) {
+        if (handler.onBeforeCheckIn) {
+          const result = await handler.onBeforeCheckIn(id, data, desk);
+          if (result === false) {
+            return false;
+          }
         }
-      });
+      }
+      return true;
     },
 
-    onCheckIn(id: string | number, data: T, desk?: DeskCore<T>) {
-      options.handlers.forEach((store: PiniaStoreConfig<T>) => {
-        if (store.onCheckIn) {
-          store.onCheckIn(id, data, desk);
+    async onCheckIn(id: string | number, data: T, desk?: DeskCore<T>) {
+      for (const handler of options.handlers) {
+        if (handler.onCheckIn) {
+          await handler.onCheckIn(id, data, desk);
         }
-      });
+      }
     },
 
-    onBeforeCheckOut(id: string | number, desk?: DeskCore<T>) {
-      options.handlers.forEach((store: PiniaStoreConfig<T>) => {
-        if (store.onBeforeCheckOut) {
-          store.onBeforeCheckOut(id, desk);
+    async onBeforeCheckOut(id: string | number, desk?: DeskCore<T>) {
+      for (const handler of options.handlers) {
+        if (handler.onBeforeCheckOut) {
+          const result = await handler.onBeforeCheckOut(id, desk);
+          if (result === false) {
+            return false;
+          }
         }
-      });
+      }
+      return true;
     },
 
-    onCheckOut(id: string | number, desk?: DeskCore<T>) {
-      options.handlers.forEach((store: PiniaStoreConfig<T>) => {
-        if (store.onCheckOut) {
-          store.onCheckOut(id, desk);
+    async onCheckOut(id: string | number, desk?: DeskCore<T>) {
+      for (const handler of options.handlers) {
+        if (handler.onCheckOut) {
+          await handler.onCheckOut(id, desk);
         }
-      });
+      }
+    },
+
+    async onBeforeUpdate(id: string | number, data: Partial<T>, desk?: DeskCore<T>) {
+      for (const handler of options.handlers) {
+        if (handler.onBeforeUpdate) {
+          const result = await handler.onBeforeUpdate(id, data, desk);
+          if (result === false) {
+            return false;
+          }
+        }
+      }
+      return true;
+    },
+
+    async onUpdate(id: string | number, data: Partial<T>, desk?: DeskCore<T>) {
+      for (const handler of options.handlers) {
+        if (handler.onUpdate) {
+          await handler.onUpdate(id, data, desk);
+        }
+      }
     },
   };
 }
