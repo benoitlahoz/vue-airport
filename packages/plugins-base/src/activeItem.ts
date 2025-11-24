@@ -127,8 +127,6 @@ export const createActiveItemPlugin = <T = unknown>(): ActiveItemPlugin<T> => {
         const startTime = performance.now();
         const deskId = deskWithActive.__deskId;
 
-        console.log('Will set active to:', id);
-
         if (id === null) {
           activeId.value = null;
           // Emit with undefined instead of null for type safety
