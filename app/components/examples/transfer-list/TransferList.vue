@@ -7,7 +7,7 @@ import { createTransformValuePlugin } from '@vue-airport/plugins-base';
 
 import { Separator } from '@/components/ui/separator';
 
-const MockCsv = `name,age,city\nJohn Doe,32,Paris\nJane Smith,28,Lyon\nAlice Cooper,40,Bordeaux`;
+const MockCsv = `name,age,city\nAlice Martin,28,Paris\nJulien Dubois,34,Lyon\nSophie Bernard,25,Marseille\nLucas Lefevre,41,Toulouse\nEmma Moreau,22,Nice\nHugo Laurent,36,Nantes\nChloé Petit,29,Strasbourg\nLouis Robert,31,Montpellier\nCamille Richard,27,Bordeaux\nLéa Simon,33,Lille\nNathan Rousseau,24,Rennes\nManon Garcia,38,Reims\nArthur Michel,26,Le Havre\nSarah Faure,30,Saint-Étienne\nTom Girard,35,Toulon\nInès Mercier,23,Grenoble\nMathis Dupont,40,Dijon\nJade Lambert,32,Angers\nPaul Fournier,28,Nîmes\nClara Chevalier,37,Aix-en-Provence\nNoah Gauthier,25,Brest\nEva Masson,39,Limoges\nRaphaël Perrin,27,Tours\nAnaïs Blanchard,34,Amiens\nEnzo Guerin,29,Metz\nMélanie Marchand,31,Besançon\nThéo Barbier,26,Orléans\nLaura Roy,33,Clermont-Ferrand\nMaxime Lemoine,24,Valence\nJulie Caron,38,Quimper\nAntoine Colin,30,La Rochelle\nElise Renaud,35,Chambéry\nVictor Leclerc,22,Avignon\nLucie Muller,41,Caen\nGabriel Gaillard,28,Perpignan\nMarine Adam,36,Boulogne-sur-Mer\nAlexandre Noel,25,Poitiers\nMargaux Charles,39,Calais\nBaptiste Aubert,27,Annecy\nCharlotte Da Silva,32,Colmar\nRomain Marty,29,Beauvais\nAmandine Lefort,31,Brive-la-Gaillarde\nQuentin Pires,26,Albi\nCélia Dupuis,33,Carcassonne\nSimon Renard,24,Châteauroux\nOcéane Pascal,38,Montluçon\nDylan Millet,30,Arles\nMorgane Gueret,35,Sète\nFlorian Dufour,23,Ajaccio\nEstelle Cousin,40,Gap`;
 const { rows } = ((csv: string) => {
   const lines = csv.split(/\r?\n/).filter(Boolean);
   const headers = lines[0]!.split(',');
@@ -65,7 +65,7 @@ const transferred = computed(() => ctx?.transferred.value || []);
     <Separator />
     <div class="w-full border border-border rounded-md">
       <table class="w-full border-collapse table-fixed">
-        <thead>
+        <thead class="sticky top-0">
           <tr>
             <th
               v-for="header in transferred"
@@ -76,18 +76,22 @@ const transferred = computed(() => ctx?.transferred.value || []);
             </th>
           </tr>
         </thead>
-        <tbody>
-          <tr v-for="row in ctx?.data" :key="row.id">
-            <td
-              v-for="header in transferred"
-              :key="`row-${row.id}-col-${header.id}`"
-              class="p-2 border-b"
-            >
-              {{ row[header.name] }}
-            </td>
-          </tr>
-        </tbody>
       </table>
+      <div class="max-h-128 overflow-auto">
+        <table class="w-full border-collapse table-fixed">
+          <tbody>
+            <tr v-for="row in ctx?.data" :key="row.id">
+              <td
+                v-for="header in transferred"
+                :key="`row-${row.id}-col-${header.id}`"
+                class="p-2 border-b text-center"
+              >
+                {{ row[header.name] }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
