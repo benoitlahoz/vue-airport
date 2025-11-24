@@ -44,12 +44,13 @@ export function createTransformValuePlugin<T>(
   initialTransforms: Transforms<T> = {}
 ): CheckInPlugin<T, TransformValuePluginMethods<T>> {
   const transforms: Transforms<T> = { ...initialTransforms };
-
+  console.log('Initial transforms loaded:', transforms);
   return {
     name: 'transform-value',
     version: '1.0.0',
 
     install: (_desk) => {
+      console.log('Installing transform-value plugin');
       return () => {
         // Cleanup if necessary
       };
@@ -75,7 +76,7 @@ export function createTransformValuePlugin<T>(
     /**
      * Apply transforms to the item in-place before check-in. Returns false if a strict transform fails, true otherwise.
      */
-    onBeforeCheckin(id, item) {
+    onBeforeCheckIn(id, item) {
       let hasStrictError = false;
       for (const key in transforms) {
         const config = transforms[key];
