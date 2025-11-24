@@ -37,10 +37,10 @@ const transforms = ref({
 });
 
 const plugins = [
+  createActiveItemPlugin<TransferListItem>(),
   createTransformValuePlugin<TransferListItem>({
     name: transforms.value.name,
   }),
-  createActiveItemPlugin<TransferListItem>(),
 ];
 
 const { createDesk } = useCheckIn<TransferListItem, TransferListContext>();
@@ -65,6 +65,7 @@ onClickOutside(mainContainer, () => {
 onMounted(() => {
   const ctx = desk.getContext<TransferListContext>();
   for (const item of ctx?.available.value || []) {
+    console.log('Will check-in item:', item);
     desk.checkIn(item.id, item);
   }
 });
