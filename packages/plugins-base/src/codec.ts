@@ -73,6 +73,7 @@ export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, 
     async onBeforeCheckIn(_id: string | number, item: I): Promise<boolean> {
       try {
         const result = this.methods.encode(item);
+        // TODO: Assign in encode and decode -> desk registry item (desk.update in encode and decode methods ?).
         Object.assign(item as any, result);
       } catch (e: unknown) {
         const error = e instanceof Error ? e : new Error('Unknown error during encoding');
@@ -87,6 +88,11 @@ export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, 
     },
 
     methods: {
+      /*
+      addCodec(codec: Codec<I, Ts>, before?: string): void {
+        // Not implemented: dynamic addition of codecs
+      },
+      */
       encode(input: I): CodecOutput<Ts, I> {
         try {
           if (!deskInstance) {
