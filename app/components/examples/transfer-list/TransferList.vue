@@ -17,6 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { resultTyped } from './useTransforms';
 
 const { fromCsv, toCsv, downloadCsv } = useCsv();
 const { rows } = fromCsv(CsvFile, true, ',');
@@ -29,7 +30,7 @@ const { desk } = createDesk(TransferListKey, {
   debug: false,
   plugins,
 });
-const ctx = desk.setContext(useTransferList<TransferableItem>(desk, rows));
+const ctx = desk.setContext(useTransferList<TransferableItem>(desk, rows))!;
 
 const main = useTemplateRef('main');
 const availableItems = useTemplateRef('availableItems');
@@ -40,20 +41,22 @@ onClickOutside(main, () => {
 useSortable(availableItems, ctx!.available);
 useSortable(transferredItems, ctx!.transferred);
 
-const available = computed(() => ctx?.available.value || []);
-const transferred = computed(() => ctx?.transferred.value || []);
-const size = computed(() => ctx?.size.value || 0);
+const available = computed(() => ctx.available.value || []);
+const transferred = computed(() => ctx.transferred.value || []);
+const size = computed(() => ctx.size.value || 0);
 
 const csv = computed(() => {
-  const obj = ctx?.toObject();
+  const obj = ctx.toObject();
   return obj ? toCsv(obj || [], true, ',') : '';
 });
 const download = () => {
-  const obj = ctx?.toObject();
+  const obj = ctx.toObject();
   if (obj) {
     downloadCsv(obj, 'transfer-list.csv', true, ',');
   }
 };
+
+console.log(resultTyped);
 </script>
 
 <template>
