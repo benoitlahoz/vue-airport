@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useTemplateRef } from 'vue';
 import { onClickOutside } from '@vueuse/core';
+import { useSortable } from '@vueuse/integrations/useSortable';
 import { useCheckIn } from 'vue-airport';
 import { createActiveItemPlugin } from '@vue-airport/plugins-base';
 import { useTransferList, type TransferableItem } from './useTransferList';
@@ -31,9 +32,13 @@ const { desk } = createDesk(TransferListKey, {
 const ctx = desk.setContext(useTransferList<TransferableItem>(desk, rows));
 
 const main = useTemplateRef('main');
+const availableItems = useTemplateRef('availableItems');
+const transferredItems = useTemplateRef('transferredItems');
 onClickOutside(main, () => {
   (desk as TransferListDesk).clearActive();
 });
+useSortable(availableItems, ctx!.available);
+useSortable(transferredItems, ctx!.transferred);
 
 const available = computed(() => ctx?.available.value || []);
 const transferred = computed(() => ctx?.transferred.value || []);
@@ -55,28 +60,16 @@ const download = () => {
   <div class="w-full flex flex-col gap-4">
     <div ref="main" class="flex flex-col h-64 min-h-64 md:flex-row gap-4 md:gap-2">
       <div
-        v-if="available.length > 0"
+        ref="availableItems"
         class="flex-1 flex flex-col p-2 border border-border rounded-md gap-1"
       >
         <Transferable v-for="item in available" :id="item.id" :key="item.id" />
       </div>
       <div
-        v-else
-        class="flex-1 flex flex-col p-2 border border-border rounded-md gap-1 items-center justify-center text-muted-foreground uppercase"
-      >
-        No items available
-      </div>
-      <div
-        v-if="transferred.length > 0"
+        ref="transferredItems"
         class="flex-1 flex flex-col p-2 border border-border rounded-md gap-1"
       >
         <Transferable v-for="item in transferred" :id="item.id" :key="item.id" />
-      </div>
-      <div
-        v-else
-        class="flex-1 flex flex-col p-2 border border-border rounded-md gap-1 items-center justify-center text-muted-foreground uppercase"
-      >
-        No items transferred
       </div>
     </div>
     <Separator />
