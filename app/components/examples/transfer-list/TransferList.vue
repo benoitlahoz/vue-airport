@@ -7,7 +7,13 @@ import { createActiveItemPlugin } from '@vue-airport/plugins-base';
 import { useTransferList, type TransferableItem } from './useTransferList';
 import { useCsv } from './useCsv';
 import { CsvFile } from './fixtures';
-import { type TransferListContext, type TransferListDesk, TransferListKey, Transferable } from '.';
+import {
+  type TransferListContext,
+  type TransferListDesk,
+  TransferListKey,
+  Transferable,
+  TransferDesksProvider,
+} from '.';
 
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -59,19 +65,22 @@ const download = () => {
 <template>
   <div class="w-full flex flex-col gap-4">
     <div ref="main" class="flex flex-col h-64 min-h-64 md:flex-row gap-4 md:gap-2">
-      <div
-        ref="availableItems"
-        class="flex-1 flex flex-col p-2 border border-border rounded-md gap-1"
-      >
-        <Transferable v-for="item in available" :id="item.id" :key="item.id" />
-      </div>
-      <div
-        ref="transferredItems"
-        class="flex-1 flex flex-col p-2 border border-border rounded-md gap-1"
-      >
-        <Transferable v-for="item in transferred" :id="item.id" :key="item.id" />
-      </div>
+      <TransferDesksProvider :data="rows">
+        <div
+          ref="availableItems"
+          class="flex-1 flex flex-col p-2 border border-border rounded-md gap-1"
+        >
+          <Transferable v-for="item in available" :id="item.id" :key="item.id" />
+        </div>
+        <div
+          ref="transferredItems"
+          class="flex-1 flex flex-col p-2 border border-border rounded-md gap-1"
+        >
+          <Transferable v-for="item in transferred" :id="item.id" :key="item.id" />
+        </div>
+      </TransferDesksProvider>
     </div>
+
     <Separator />
     <Accordion type="single" collapsible class="w-full">
       <AccordionItem :disabled="size === 0" value="content">
