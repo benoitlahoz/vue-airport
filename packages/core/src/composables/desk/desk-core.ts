@@ -81,6 +81,7 @@ export interface DeskCore<T = any, TContext extends Record<string, any> = {}> {
    */
   readonly size: ComputedRef<number>;
 
+  setContext: <U extends TContext>(context: U) => U | undefined;
   getContext: <U extends TContext>() => U | undefined;
 
   checkIn: (id: string | number, data: T, meta?: Record<string, any>) => Promise<boolean>;
@@ -179,6 +180,13 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
   const pluginCleanups: Array<() => void> = [];
 
   const getContext = <U extends TContext>() => options?.context as U | undefined;
+
+  const setContext = <U extends TContext>(context: U) => {
+    if (options) {
+      options.context = context;
+      return context;
+    }
+  };
 
   const checkIn = async (
     id: string | number,
@@ -572,6 +580,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
     registryList,
     sortedRegistry,
     size,
+    setContext,
     getContext,
     checkIn,
     checkOut,

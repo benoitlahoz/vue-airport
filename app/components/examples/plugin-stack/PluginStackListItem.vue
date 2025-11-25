@@ -49,7 +49,6 @@ const isActive = computed(() => {
 });
 
 const setActive = () => {
-  console.log('Should set active to:', props.id, deskWithPlugins.setActive);
   deskWithPlugins.setActive(props.id);
 };
 
