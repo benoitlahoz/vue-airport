@@ -1,4 +1,4 @@
-import type { CheckInPlugin, CheckInPluginMethods } from 'vue-airport';
+import type { CheckInPlugin, CheckInPluginMethods, DeskCore } from 'vue-airport';
 
 // Utility to merge union types into intersection
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void
@@ -19,7 +19,12 @@ export type MergeTransformResults<
 > = T & UnionToIntersection<TransformResultMap<Transforms>[keyof Transforms]>;
 
 export type TransformConfig<T, Item = any> = {
-  fn: (value: T, item: Item, key: string) => Partial<Item> | undefined | null;
+  fn: (
+    desk: DeskCore<Item> & TransformValuePluginExports<Item>,
+    value: T,
+    item: Item,
+    key: string
+  ) => Partial<Item> | undefined | null;
   strict?: boolean;
 };
 
@@ -44,13 +49,15 @@ export function createTransformValuePlugin<T>(
   initialTransforms: Transforms<T> = {}
 ): CheckInPlugin<T, TransformValuePluginMethods<T>> {
   const transforms: Transforms<T> = { ...initialTransforms };
+  let deskInstance: (DeskCore<T> & TransformValuePluginExports<T>) | null = null;
   return {
     name: 'transform-value',
     version: '1.0.0',
 
-    install: (_desk) => {
+    install: (desk) => {
+      deskInstance = desk as DeskCore<T> & TransformValuePluginExports<T>;
       return () => {
-        // Cleanup if necessary
+        deskInstance = null;
       };
     },
 
@@ -62,7 +69,7 @@ export function createTransformValuePlugin<T>(
       for (const key in transforms) {
         const config = transforms[key];
         if (config && config.fn) {
-          const transformResult = config.fn(item[key], result, key);
+          const transformResult = config.fn(deskInstance!, item[key], result, key);
           if (transformResult && typeof transformResult === 'object') {
             Object.assign(result, transformResult);
           }
@@ -80,7 +87,7 @@ export function createTransformValuePlugin<T>(
         const config = transforms[key];
         if (config && config.fn) {
           try {
-            const transformResult = config.fn(item[key], item, key);
+            const transformResult = config.fn(deskInstance!, item[key], item, key);
             if (transformResult && typeof transformResult === 'object') {
               Object.assign(item, transformResult);
             } else if (transformResult === undefined || transformResult === null) {
