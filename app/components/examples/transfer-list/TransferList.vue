@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useCheckIn } from 'vue-airport';
-import { createTransformValuePlugin } from '@vue-airport/plugins-base';
+import { createActiveItemPlugin } from '@vue-airport/plugins-base';
 import { useTransferList, type TransferableItem } from './useTransferList';
 import { useCsv } from './useCsv';
 import { CsvFile } from './fixtures';
@@ -12,20 +11,7 @@ import { Separator } from '@/components/ui/separator';
 const { fromCsv } = useCsv();
 const { rows } = fromCsv(CsvFile, true, ',');
 
-const transforms = ref({
-  name: {
-    fn: (value: string) => {
-      const [firstname, lastname] = value.split(' ');
-      return { firstname, lastname };
-    },
-  },
-});
-
-const plugins = [
-  createTransformValuePlugin<TransferableItem>({
-    name: transforms.value.name,
-  }),
-];
+const plugins = [createActiveItemPlugin<TransferableItem>()];
 
 const { createDesk } = useCheckIn<TransferableItem, TransferListContext>();
 const { desk } = createDesk(TransferListKey, {
@@ -33,11 +19,11 @@ const { desk } = createDesk(TransferListKey, {
   debug: false,
   plugins,
 });
-desk.setContext(useTransferList<TransferableItem, TransferListContext>(desk, rows));
-const ctx = desk.getContext<TransferListContext>();
+const ctx = desk.setContext(useTransferList<TransferableItem>(desk, rows));
 
 const available = computed(() => ctx?.available.value || []);
 const transferred = computed(() => ctx?.transferred.value || []);
+const size = computed(() => ctx?.size.value || 0);
 </script>
 
 <template>
@@ -57,12 +43,8 @@ const transferred = computed(() => ctx?.transferred.value || []);
       <table class="w-full border-collapse table-fixed">
         <thead class="sticky top-0">
           <tr>
-            <th
-              v-for="header in transferred"
-              :key="header.id"
-              class="font-bold uppercase p-2 border-b"
-            >
-              {{ header.name }}
+            <th v-for="item in transferred" :key="item.id" class="font-bold uppercase p-2 border-b">
+              {{ item.name }}
             </th>
           </tr>
         </thead>
@@ -70,13 +52,13 @@ const transferred = computed(() => ctx?.transferred.value || []);
       <div class="max-h-128 overflow-auto">
         <table class="w-full border-collapse table-fixed">
           <tbody>
-            <tr v-for="row in ctx?.data" :key="row.id">
+            <tr v-for="(rowIndex, idx) in size" :key="`row-${String(idx)}`">
               <td
-                v-for="header in transferred"
-                :key="`row-${row.id}-col-${header.id}`"
+                v-for="item in transferred"
+                :key="`row-${rowIndex}-col-${item.id}`"
                 class="p-2 border-b text-center"
               >
-                {{ row[header.name] }}
+                {{ item.data?.[rowIndex] }}
               </td>
             </tr>
           </tbody>

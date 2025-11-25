@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn } from '#vue-airport';
 import { cn } from '@/lib/utils';
-import { type TransferListContext, TransferListKey } from '.';
+import { type TransferListContext, type TransferListDesk, TransferListKey } from '.';
 import { Button } from '@/components/ui/button';
 import type { TransferableItem } from './useTransferList';
 
@@ -9,14 +9,23 @@ const props = defineProps<{ id: string }>();
 
 const { checkIn } = useCheckIn<TransferableItem, TransferListContext>();
 const { desk } = checkIn(TransferListKey);
+const deskWithPlugins = desk as typeof desk & TransferListDesk;
 const ctx = desk?.getContext<TransferListContext>();
 
 const item = computed(() => {
-  const item = ctx?.getTransferableById(props.id) || null;
+  const item = ctx?.getTransferableByKey(props.id) || null;
   return item;
 });
 
 const isTransferred = computed(() => ctx?.isTransferred(props.id) || false);
+
+const isActive = computed(() => {
+  return deskWithPlugins.activeId.value === props.id;
+});
+
+const setActive = () => {
+  deskWithPlugins.setActive(props.id);
+};
 </script>
 
 <template>
@@ -25,9 +34,11 @@ const isTransferred = computed(() => ctx?.isTransferred(props.id) || false);
     :class="
       cn(
         'p-2 border border-border rounded-md flex items-center justify-between select-none hover:bg-accent hover:text-accent-foreground group',
-        isTransferred ? 'pr-4' : 'pl-4'
+        isTransferred ? 'pr-4' : 'pl-4',
+        isActive ? 'bg-accent text-accent-foreground' : ''
       )
     "
+    @click="setActive"
   >
     <Button
       v-if="isTransferred"

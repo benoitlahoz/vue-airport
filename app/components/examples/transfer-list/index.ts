@@ -4,8 +4,8 @@
  */
 import type { InjectionKey, Ref } from 'vue';
 import type { DeskWithContext } from '#vue-airport';
-import type { TransformValuePluginExports } from '@vue-airport/plugins-base/transformValue';
 import type { TransferableItem, UseTransferListReturn } from './useTransferList';
+import type { ActiveItemPluginExports } from '@vue-airport/plugins-base/activeItem';
 
 // The actual data item structure used in the transfer list
 export interface TransferListDataItem {
@@ -17,7 +17,7 @@ export type TransferListContext = UseTransferListReturn;
 
 // What we want to transfer are headers.
 export type TransferListDesk = DeskWithContext<TransferableItem, TransferListContext> &
-  TransformValuePluginExports<TransferableItem>;
+  ActiveItemPluginExports<TransferableItem>;
 
 export const TransferListKey: InjectionKey<Ref<TransferableItem> & TransferListContext> =
   Symbol('TransferList');

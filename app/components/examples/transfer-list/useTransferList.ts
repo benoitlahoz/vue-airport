@@ -1,51 +1,53 @@
+import { type Ref, ref } from 'vue';
 import type { DeskWithContext } from '#vue-airport';
 
 export interface TransferableItem {
   id: string;
   name: string;
-  transferred?: boolean;
+  data?: Record<string, any>[];
 }
 
 export type UseTransferListReturn<T extends TransferableItem = TransferableItem> = {
   available: Ref<T[]>;
   transferred: Ref<T[]>;
-  data: Record<string, any>[];
-  transfer: (id: T['id']) => void;
-  retrieve: (id: T['id']) => void;
-  isTransferred: (id: T['id']) => boolean;
-  getTransferableById: (id: T['id']) => T | undefined;
+  size: Ref<number>;
+  transfer: (key: T['id']) => void;
+  retrieve: (key: T['id']) => void;
+  isTransferred: (key: T['id']) => boolean;
+  getTransferableByKey: (key: T['id']) => T | undefined;
   dataForKey: (key: T['id']) => Record<string, any>[];
 };
 
-export const useTransferList = <T extends TransferableItem, U extends Record<string, any>>(
-  desk: DeskWithContext<T, U>,
+export const useTransferList = <T extends TransferableItem>(
+  desk: DeskWithContext<T>,
   data: Record<string, any>[]
 ): UseTransferListReturn<T> => {
   {
     const available: Ref<T[]> = ref([]);
     const transferred: Ref<T[]> = ref([]);
-    const discriminatedData = data.map((item) => ({
-      ...item,
-      // Data has a unique ID different from the transferable items
-      id: item.id || `item-${Math.random().toString(36).substr(2, 9)}`,
-    }));
-
     const uniqueKeys = Object.keys(data[0] ?? {});
 
     available.value = uniqueKeys.map((key) => ({
-      // Each transferable item has a unique ID
       id: key,
       name: key,
-      transferred: false,
+      // Gather all data entries for this key and remove the header
+      data: data.map((d) => d[key as keyof typeof d]),
     })) as T[];
 
-    for (const item of discriminatedData) {
-      // Check in the data, NOT the transferable items
-      desk.checkIn(item.id, item as T);
+    for (const item of available.value) {
+      // Check in the transferable items
+      desk.checkIn(item.id, item);
     }
 
-    const transfer = (id: T['id']) => {
-      const availableItem = available.value.find((i) => i.id === id);
+    const size = ref(0);
+
+    const computeSize = () => {
+      const transferredDataLengths = transferred.value.map((item) => item.data?.length || 0);
+      size.value = Math.max(...transferredDataLengths, 0);
+    };
+
+    const transfer = (key: T['id']) => {
+      const availableItem = available.value.find((i) => i.id === key);
       if (!availableItem) return;
 
       const itemIndex = available.value.indexOf(availableItem);
@@ -53,10 +55,12 @@ export const useTransferList = <T extends TransferableItem, U extends Record<str
 
       const [item] = available.value.splice(itemIndex, 1);
       transferred.value.push(item as T);
+
+      computeSize();
     };
 
-    const retrieve = (id: T['id']) => {
-      const transferredItem = transferred.value.find((i) => i.id === id);
+    const retrieve = (key: T['id']) => {
+      const transferredItem = transferred.value.find((i) => i.id === key);
       if (!transferredItem) return;
 
       const itemIndex = transferred.value.indexOf(transferredItem);
@@ -64,33 +68,35 @@ export const useTransferList = <T extends TransferableItem, U extends Record<str
 
       const [item] = transferred.value.splice(itemIndex, 1);
       available.value.push(item as T);
+
+      computeSize();
     };
 
-    const isTransferred = (id: T['id']) => {
-      return transferred.value.find((i) => i.id === id) !== undefined;
+    const isTransferred = (key: T['id']) => {
+      return transferred.value.find((i) => i.id === key) !== undefined;
     };
 
-    const getTransferableById = (id: T['id']) => {
-      return available.value.find((i) => i.id === id) || transferred.value.find((i) => i.id === id);
+    const getTransferableByKey = (key: T['id']) => {
+      return (
+        available.value.find((i) => i.id === key) || transferred.value.find((i) => i.id === key)
+      );
     };
 
     const dataForKey = (key: T['id']) => {
-      const item = [...available.value, ...transferred.value].find((i) => i.id === key);
-      if (!item) return [];
-
-      return discriminatedData.map((d) => {
-        return d[key as keyof typeof d];
-      });
+      return (
+        [...available.value, ...transferred.value].find((i) => i.id === key)?.data ||
+        ([] as Record<string, any>[])
+      );
     };
 
     return {
       available,
       transferred,
-      data: discriminatedData,
+      size,
       transfer,
       retrieve,
       isTransferred,
-      getTransferableById,
+      getTransferableByKey,
       dataForKey,
     };
   }
