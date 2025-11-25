@@ -70,7 +70,7 @@ export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, 
       };
     },
 
-    async onBeforeCheckIn(id: string | number, item: I): Promise<boolean> {
+    async onBeforeCheckIn(_id: string | number, item: I): Promise<boolean> {
       try {
         const result = this.methods.encode(item);
         Object.assign(item as any, result);
@@ -82,6 +82,7 @@ export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, 
         errors.value.push(error);
         return false;
       }
+
       return true;
     },
 
@@ -91,10 +92,14 @@ export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, 
           if (!deskInstance) {
             throw new Error('Desk instance not initialized');
           }
-          return codecs.reduce(
+          const result = codecs.reduce(
             (acc, t) => (typeof t === 'function' ? t(acc) : t.encode(acc, deskInstance!)),
             input
           ) as CodecOutput<Ts, I>;
+          if (options.onEncode) {
+            options.onEncode(input, result);
+          }
+          return result;
         } catch (e) {
           const error = e instanceof Error ? e : new Error('Unknown error during encoding');
           if (options.onError) {
@@ -109,15 +114,16 @@ export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, 
           if (!deskInstance) {
             throw new Error('Desk instance not initialized');
           }
-          return codecs.reduceRight((acc, t) => {
-            if (typeof t === 'function') {
-              throw new Error('Cannot decode: codec is a function');
-            }
-            if (t.decode) {
+          const result = codecs.reduceRight((acc, t) => {
+            if (typeof t !== 'function' && t.decode) {
               return t.decode(acc, deskInstance!);
             }
             throw new Error('Cannot decode: decode method not defined for the codec');
           }, output) as I;
+          if (options.onDecode) {
+            options.onDecode(output, result);
+          }
+          return result;
         } catch (e) {
           const error = e instanceof Error ? e : new Error('Unknown error during decoding');
           if (options.onError) {
