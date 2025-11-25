@@ -22,15 +22,34 @@ export const useCsv = () => {
     return { rows, headers };
   };
 
-  const toCsv = (data: Record<string, any>[], _hasHeaders = true, separator = ',') => {
+  const toCsv = (data: Record<string, any>[], hasHeaders = true, separator = ',') => {
     if (!data || data.length === 0 || !data[0]) return '';
-    const headers = Object.keys(data[0]);
+    const headers = hasHeaders
+      ? Object.keys(data[0])
+      : Object.keys(data[0]).map((_, i) => `col_${i + 1}`);
     const csvLines = data.map((item) => headers.map((header) => item[header]).join(separator));
     return [headers.join(separator), ...csvLines].join('\n');
+  };
+
+  const downloadCsv = (
+    data: Record<string, any>[],
+    filename = 'data.csv',
+    hasHeaders = true,
+    separator = ','
+  ) => {
+    const csvContent = toCsv(data, hasHeaders, separator);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return {
     fromCsv,
     toCsv,
+    downloadCsv,
   };
 };

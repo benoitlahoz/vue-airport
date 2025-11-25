@@ -16,6 +16,7 @@ export type UseTransferListReturn<T extends TransferableItem = TransferableItem>
   isTransferred: (key: T['id']) => boolean;
   getTransferableByKey: (key: T['id']) => T | undefined;
   dataForKey: (key: T['id']) => Record<string, any>[];
+  toObject: () => Record<string, any>[];
 };
 
 export const useTransferList = <T extends TransferableItem>(
@@ -89,6 +90,18 @@ export const useTransferList = <T extends TransferableItem>(
       );
     };
 
+    const toObject = () => {
+      const result: Record<string, any>[] = [];
+      for (let i = 0; i < size.value; i++) {
+        const obj: Record<string, any> = {};
+        for (const item of transferred.value) {
+          obj[item.id] = item.data ? item.data[i] : null;
+        }
+        result.push(obj);
+      }
+      return result;
+    };
+
     return {
       available,
       transferred,
@@ -98,6 +111,7 @@ export const useTransferList = <T extends TransferableItem>(
       isTransferred,
       getTransferableByKey,
       dataForKey,
+      toObject,
     };
   }
 };

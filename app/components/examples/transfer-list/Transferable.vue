@@ -44,20 +44,22 @@ const setActive = () => {
       v-if="isTransferred"
       size="icon"
       variant="ghost"
-      class="invisible group-hover:visible"
+      class="md:invisible md:group-hover:visible"
       @click="ctx?.retrieve(props.id)"
     >
-      ←
+      <UIcon name="lucide:arrow-left" class="hidden md:block" />
+      <UIcon name="lucide:arrow-up" class="md:hidden" />
     </Button>
     <div class="font-bold uppercase">{{ item?.name }}</div>
     <Button
       v-if="!isTransferred"
       size="icon"
       variant="ghost"
-      class="invisible group-hover:visible"
+      class="md:invisible md:group-hover:visible"
       @click="ctx?.transfer(props.id)"
     >
-      →
+      <UIcon name="lucide:arrow-right" class="hidden md:block" />
+      <UIcon name="lucide:arrow-down" class="md:hidden" />
     </Button>
   </div>
 </template>
