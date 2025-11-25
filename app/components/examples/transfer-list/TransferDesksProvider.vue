@@ -27,6 +27,18 @@ const headers = computed(() => {
   return [];
 });
 
+const dataForHeaders = (...headers: string[]) => {
+  return (
+    props.data?.map((item) => {
+      const newItem: Record<string, any> = {};
+      headers.forEach((header) => {
+        newItem[header] = item[header];
+      });
+      return newItem;
+    }) || []
+  );
+};
+
 const { createDesk: createHeadersDesk } = useCheckIn<TransferableHeader>();
 const { desk: availableHeadersDesk } = createHeadersDesk(AvailableDeskKey, {
   devTools: true,
@@ -42,12 +54,24 @@ const { desk: availableHeadersDesk } = createHeadersDesk(AvailableDeskKey, {
 const { desk: transferredHeadersDesk } = createHeadersDesk(TransferredDeskKey, {
   devTools: true,
   debug: false,
+  onCheckIn() {
+    // When a header is transferred, we need to update the encoded data desk
+    const all = transferredHeadersDesk.getAll().map((item) => item.data.name);
+    const encodedData = dataForHeaders(...all);
+    encodedDataDesk.clear();
+    encodedDataDesk.checkInMany(
+      encodedData.map((item, index) => ({
+        id: `data-${index}`,
+        data: item,
+      }))
+    );
+  },
   onCheckOut(id, desk) {
     console.log('Transferred Headers Desk - onCheckOut', id, desk);
     const item = desk.get(id);
     if (item) {
       availableHeadersDesk.checkIn(id, item.data);
-      encodedDataDesk.checkIn(id, props.data);
+      // TODO: Update encoded data desk when a header is moved back
     }
   },
 });
