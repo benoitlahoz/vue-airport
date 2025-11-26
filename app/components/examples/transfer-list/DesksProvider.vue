@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import { useCheckIn, type DeskCore } from 'vue-airport';
+import { useCheckIn, type CheckInItem, type DeskCore } from 'vue-airport';
 import {
   AvailableDeskKey,
   TransferredDeskKey,
   EncodedDataDeskKey,
   type TransferableHeader,
-  type TransferDataItem,
+  type TransferredDataItem,
 } from '.';
 import { createActiveItemPlugin } from '@vue-airport/plugins-base';
 
 export type TransferDesksProviderProps = {
-  data?: Record<string, any>[];
+  data: Record<string, any>[];
 };
 
-const props = withDefaults(defineProps<TransferDesksProviderProps>(), {
-  data: () => [],
-});
+const props = defineProps<TransferDesksProviderProps>();
 
 const headers = computed(() => {
   if (props.data && props.data[0]) {
@@ -39,45 +37,58 @@ const dataForHeaders = (...headers: string[]) => {
   );
 };
 
-const removeKeyFromData = (data: TransferDataItem, key: string) => {
-  const { [key]: _, ...rest } = data;
-  return rest;
+const removeKeyFromData = (item: CheckInItem<TransferredDataItem>, key: string) => {
+  const { [key]: _, ...rest } = item.data;
+  if (Object.keys(rest).length === 0) {
+    return undefined;
+  }
+
+  return {
+    id: item.id,
+    data: rest,
+  };
 };
 
-const onTransfer = (id: string | number, desk: DeskCore<TransferableHeader>) => {
+const onTransfer = async (id: string | number, desk: DeskCore<TransferableHeader>) => {
   const item = desk.get(id);
   if (item) {
-    transferredHeadersDesk.checkIn(id, item.data);
+    await transferredHeadersDesk.checkIn(id, item.data);
     return true;
   }
 };
 
-const onTransferred = () => {
+const onTransferred = async () => {
   // Build actual data when a new header is transferred
   const all = transferredHeadersDesk.getAll().map((item) => item.data.name);
   const encodedData = dataForHeaders(...all);
   encodedDataDesk.clear();
-  encodedDataDesk.checkInMany(
+  await encodedDataDesk.checkInMany(
     encodedData.map((item, index) => ({
       id: `data-${index}`,
-      data: item as TransferDataItem,
+      data: item as TransferredDataItem,
     }))
   );
 };
 
-const onRetrieve = (id: string | number, desk: DeskCore<TransferableHeader>) => {
+const onRetrieve = async (id: string | number, desk: DeskCore<TransferableHeader>) => {
   // Update encoded data when a header is retrieved
   const item = desk.get(id);
   if (item) {
-    availableHeadersDesk.checkIn(id, item.data);
-    const all = encodedDataDesk.getAll();
-    encodedDataDesk.updateMany(
-      all.map((dataItem) => ({
-        id: dataItem.id,
-        data: removeKeyFromData(dataItem.data, id as string),
-      }))
-    );
+    await availableHeadersDesk.checkIn(id, item.data);
     return true;
+  }
+};
+
+const onRetrieved = async (id: string | number) => {
+  // Now item is back in available desk
+  const item = availableHeadersDesk.get(id);
+  if (item) {
+    const all = encodedDataDesk.getAll();
+    const newRegistryData = all
+      .map((dataItem) => removeKeyFromData(dataItem, id as string))
+      .filter((dataItem): dataItem is CheckInItem<TransferredDataItem> => !!dataItem);
+    encodedDataDesk.clear();
+    await encodedDataDesk.checkInMany(newRegistryData);
   }
 };
 
@@ -98,10 +109,11 @@ const { desk: transferredHeadersDesk } = createHeadersDesk(TransferredDeskKey, {
   plugins: [createActiveItemPlugin<TransferableHeader>()],
   onCheckIn: onTransferred,
   onBeforeCheckOut: onRetrieve,
+  onCheckOut: onRetrieved,
 });
 
 // Encoded data desk
-const { createDesk: createDataDesk } = useCheckIn<TransferDataItem>();
+const { createDesk: createDataDesk } = useCheckIn<TransferredDataItem>();
 const { desk: encodedDataDesk } = createDataDesk(EncodedDataDeskKey, {
   devTools: true,
   debug: false,

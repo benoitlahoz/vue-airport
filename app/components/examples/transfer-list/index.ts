@@ -4,10 +4,7 @@
  */
 import type { InjectionKey, Ref } from 'vue';
 import type { DeskWithContext } from '#vue-airport';
-import type { TransferableItem, UseTransferListReturn } from './useTransferList';
 import type { ActiveItemPluginExports } from '@vue-airport/plugins-base/activeItem';
-
-export type TransferListContext = UseTransferListReturn;
 
 // Definition of transferable header item
 export interface TransferableHeader {
@@ -16,25 +13,25 @@ export interface TransferableHeader {
 }
 
 // The actual data item structure used in the transfer list
-export interface TransferDataItem {
+export interface TransferredDataItem {
   id: string;
   [key: string]: string | number | boolean | null | undefined;
 }
 
 // What we want to transfer are headers.
-export type TransferListDesk = DeskWithContext<TransferableItem, TransferListContext> &
-  ActiveItemPluginExports<TransferableItem>;
+export type TransferListDesk = DeskWithContext<TransferableHeader> &
+  ActiveItemPluginExports<TransferableHeader>;
 
 // Only available headers
 export const AvailableDeskKey: InjectionKey<Ref<TransferableHeader>> = Symbol('AvailableDesk');
 // Only transferred headers
 export const TransferredDeskKey: InjectionKey<Ref<TransferableHeader>> = Symbol('TransferredDesk');
 // Final data structure desk
-export const EncodedDataDeskKey: InjectionKey<Ref<TransferDataItem>> = Symbol('EncodedDesk');
+export const EncodedDataDeskKey: InjectionKey<Ref<TransferredDataItem>> = Symbol('EncodedDesk');
 
-export const TransferListKey: InjectionKey<Ref<TransferableItem> & TransferListContext> =
-  Symbol('TransferList');
-
+export { default as TransferListEncode } from './TransferListEncode.vue';
 export { default as DesksProvider } from './DesksProvider.vue';
 export { default as TransferList } from './TransferList.vue';
 export { default as Transferable } from './Transferable.vue';
+export { default as DataTable } from './DataTable.vue';
+export { default as CsvDownloader } from './CsvDownloader.vue';
