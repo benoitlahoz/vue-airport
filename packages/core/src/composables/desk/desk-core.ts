@@ -85,6 +85,17 @@ export interface DeskCore<T = any, TContext extends Record<string, any> = {}> {
    */
   readonly size: ComputedRef<number>;
 
+  /**
+   * Plugins installed on the desk
+   */
+  readonly plugins: ComputedRef<
+    CheckInPlugin<T, CheckInPluginMethods<T>, CheckInPluginComputed<T>>[]
+  >;
+
+  pluginByName: (
+    name: string
+  ) => CheckInPlugin<T, CheckInPluginMethods<T>, CheckInPluginComputed<T>> | undefined;
+
   setContext: <U extends TContext>(context: U) => U | undefined;
   getContext: <U extends TContext>() => U | undefined;
 
@@ -181,6 +192,15 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
    * Reactive size/count of items in the registry
    */
   const size = computed(() => registryList.value.length);
+
+  /**
+   * Plugins available on the desk
+   */
+  const plugins = computed(() => options?.plugins || []);
+
+  const pluginByName = (name: string) => {
+    return plugins.value.find((plugin) => plugin.name === name);
+  };
 
   const pluginCleanups: Array<() => void> = [];
 
@@ -620,6 +640,8 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
     registryList,
     sortedRegistry,
     size,
+    plugins,
+    pluginByName,
     setContext,
     getContext,
     checkIn,
