@@ -8,7 +8,6 @@ import type {
 
 export interface CodecPlugin<I, O>
   extends CheckInPlugin<I, CodecPluginMethods<I, O>, CodecPluginComputed> {
-  canApplyCodec(codec: Codec<any, any>): boolean;
   methods: CodecPluginMethods<I, O>;
   computed: CodecPluginComputed;
 }
@@ -22,6 +21,13 @@ export interface CodecPluginMethods<I, O> extends CheckInPluginMethods<I> {
    * @param autoEncode Whether to automatically encode existing items in the registry with the new codec.
    */
   addCodec(codec: Codec<any, any>, autoEncode?: boolean): void;
+
+  /**
+   * Check if a codec can be applied based on its dependencies.
+   * @param codec The codec to check.
+   * @returns True if the codec can be applied, false otherwise.
+   */
+  canApplyCodec(codec: Codec<any, any>): boolean;
 
   /**
    * Encode an input value to the output type.
@@ -49,7 +55,7 @@ export type Codec<I, O> = {
   name?: string;
   prop: string;
   targets?: string[];
-  dependsOn?: string | string[];
+  dependsOn?: string | string[] | ((actualCodecNames: string[]) => boolean);
   encode: (input: I, props: string | string[], targets: string[], desk: DeskCore<I>) => O;
   decode?: (output: O, props: string | string[], targets: string[], desk: DeskCore<O>) => I;
 };
@@ -62,6 +68,52 @@ export type CodecOutput<Ts extends Codec<any, any>[], TIn> = Ts extends [
     ? CodecOutput<Rest, O>
     : O
   : TIn;
+
+function parseDependsOn(expr: string, activeCodecs: string[]): boolean {
+  // Tokenisation
+  const tokens = expr
+    .replace(/\s+/g, '')
+    .replace(/([()&|])/g, ' $1 ')
+    .trim()
+    .split(/\s+/);
+
+  let pos = 0;
+
+  function parseExpr(): boolean {
+    let value = parseTerm();
+    while (tokens[pos] === '|') {
+      pos++;
+      value = value || parseTerm();
+    }
+    return value;
+  }
+
+  function parseTerm(): boolean {
+    let value = parseFactor();
+    while (tokens[pos] === '&') {
+      pos++;
+      value = value && parseFactor();
+    }
+    return value;
+  }
+
+  function parseFactor(): boolean {
+    if (tokens[pos] === '(') {
+      pos++;
+      const value = parseExpr();
+      if (tokens[pos] !== ')') throw new Error('Parenthèse fermante attendue');
+      pos++;
+      return value;
+    }
+    // Nom de codec
+    const name = tokens[pos++];
+    return activeCodecs.includes(name);
+  }
+
+  const result = parseExpr();
+  if (pos < tokens.length) throw new Error('Expression mal formée');
+  return result;
+}
 
 export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, any>[]]>(
   codecs: Ts = [] as unknown as Ts,
@@ -82,19 +134,6 @@ export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, 
       return () => {
         // Cleanup if necessary
       };
-    },
-
-    canApplyCodec: (codec: Codec<any, any>): boolean => {
-      if (!deskInstance) {
-        throw new Error('Desk instance not initialized');
-      }
-      if (!codec.dependsOn) {
-        return true;
-      }
-      const dependencies = Array.isArray(codec.dependsOn) ? codec.dependsOn : [codec.dependsOn];
-      return dependencies.every((dep) => {
-        return codecs.some((c) => c.name === dep);
-      });
     },
 
     async onBeforeCheckIn(_id: string | number, item: I): Promise<boolean> {
@@ -145,6 +184,24 @@ export function createCodecPlugin<I, Ts extends [Codec<any, any>, ...Codec<any, 
             errors.value.push(error);
           }
         });
+      },
+      canApplyCodec: (codec: Codec<any, any>): boolean => {
+        if (!deskInstance) {
+          throw new Error('Desk instance not initialized');
+        }
+        if (!codec.dependsOn) {
+          return true;
+        }
+        const activeCodecNames = codecs.map((c) => c.name).filter((name): name is string => !!name);
+
+        if (typeof codec.dependsOn === 'function') {
+          return codec.dependsOn(activeCodecNames);
+        }
+        if (Array.isArray(codec.dependsOn)) {
+          return codec.dependsOn.every((dep) => activeCodecNames.includes(dep));
+        }
+        // Chaîne logique
+        return parseDependsOn(codec.dependsOn, activeCodecNames);
       },
       encode(input: I): CodecOutput<Ts, I> {
         try {

@@ -10,7 +10,7 @@ import {
 
 type TransferredDeskType = typeof transferredDesk & TransferListDesk;
 
-const codecs = {
+const availableCodecs = {
   name: [
     {
       name: 'split-name',
@@ -72,10 +72,19 @@ const { desk: transferredDesk } = checkInTransferred(TransferredDeskKey, {
 });
 
 const activeId = computed(() => {
-  return (transferredDesk as TransferredDeskType).activeId.value;
+  return (
+    ((transferredDesk as TransferredDeskType).activeId.value as keyof typeof availableCodecs) || ''
+  );
 });
 </script>
 
 <template>
-  <div>{{ activeId }}</div>
+  <div>
+    <div v-for="codec in availableCodecs[activeId]" :key="codec.name" class="mb-4">
+      <label class="inline-flex items-center">
+        <input type="checkbox" class="form-checkbox" :value="codec.name" />
+        <span class="ml-2">{{ codec.name }}</span>
+      </label>
+    </div>
+  </div>
 </template>

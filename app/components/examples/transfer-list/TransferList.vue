@@ -99,8 +99,6 @@ const download = () => {
 
     <Separator />
     <Accordion type="single" collapsible class="w-full">
-      <DataTable />
-
       <AccordionItem value="csv" :disabled="size === 0">
         <AccordionTrigger class="hover:no-underline"
           >CSV Content - {{ size }} rows & header</AccordionTrigger
