@@ -23,7 +23,12 @@ export interface TransferredDataItem {
 export type TransferListDesk = DeskWithContext<TransferableHeader> &
   ActiveItemPluginExports<TransferableHeader>;
 
-export type TransferDataDesk = DeskWithContext<TransferredDataItem> &
+export interface TransferDataContext {
+  keysOrder: Ref<string[]>;
+  updateKeysOrder: (keys?: string[]) => void;
+}
+
+export type TransferDataDesk = DeskWithContext<TransferredDataItem, TransferDataContext> &
   CodecPluginExports<TransferredDataItem, any>;
 
 // Only available headers

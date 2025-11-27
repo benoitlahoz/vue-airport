@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, watch } from 'vue';
 import { useCheckIn, type CheckInItem, type DeskCore } from 'vue-airport';
 import {
   AvailableDeskKey,
@@ -6,6 +7,7 @@ import {
   EncodedDataDeskKey,
   type TransferableHeader,
   type TransferredDataItem,
+  type TransferDataContext,
 } from '.';
 import { createActiveItemPlugin, createCodecPlugin } from '@vue-airport/plugins-base';
 
@@ -92,6 +94,24 @@ const onRetrieved = async (id: string | number) => {
   }
 };
 
+const updateKeysOrder = (keys?: string[]) => {
+  if (keys) {
+    const keysOrder = (
+      encodedDataDesk as DeskCore<TransferredDataItem, TransferDataContext>
+    ).getContext()!.keysOrder;
+    keysOrder.value = keys;
+    return;
+  }
+
+  const keysOrder = (
+    encodedDataDesk as DeskCore<TransferredDataItem, TransferDataContext>
+  ).getContext()!.keysOrder;
+  const currentHeaders = transferredHeadersDesk.getAll().map((item) => item.id as string);
+  const prevOrder = (keysOrder.value || []).filter((key) => currentHeaders.includes(key));
+  const mergedOrder = [...prevOrder, ...currentHeaders.filter((key) => !prevOrder.includes(key))];
+  keysOrder.value = mergedOrder;
+};
+
 const { createDesk: createHeadersDesk } = useCheckIn<TransferableHeader>();
 
 // Available headers desk
@@ -118,7 +138,18 @@ const { desk: encodedDataDesk } = createDataDesk(EncodedDataDeskKey, {
   devTools: true,
   debug: false,
   plugins: [createCodecPlugin<TransferredDataItem, any>()],
+  context: {
+    keysOrder: ref<string[]>([]),
+    updateKeysOrder,
+  },
+  onCheckIn: () => {
+    updateKeysOrder();
+  },
+  onCheckOut: () => {
+    updateKeysOrder();
+  },
 });
+
 watch(
   () => headers.value,
   (newHeaders) => {
