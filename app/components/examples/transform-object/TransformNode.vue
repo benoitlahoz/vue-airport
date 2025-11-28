@@ -30,6 +30,13 @@ const transforms = computed(() => [
     params: [],
   },
   {
+    name: 'To Capitalized',
+    if: (node: NodeObject) => node.type === 'string',
+    fn: (node: NodeObject) =>
+      node.value.charAt(0).toUpperCase() + node.value.slice(1).toLowerCase(),
+    params: [],
+  },
+  {
     name: 'Increment',
     if: (node: NodeObject) => node.type === 'number',
     fn: (node: NodeObject) => node.value + 1,
@@ -67,8 +74,8 @@ function handleTransformChange(transformName: string) {
   if (transform) {
     const transformedValue = transform.fn(props.tree);
     addSibling(props.tree, transformedValue);
+    selectedTransform.value = transformName;
   }
-  selectedTransform.value = '';
 }
 
 const { checkIn } = useCheckIn<NodeObject>();
