@@ -51,7 +51,10 @@ const transforms = computed(() => [
   {
     name: 'Stringify',
     if: (node: NodeObject) => node.type === 'object' || node.type === 'array',
-    fn: (node: NodeObject) => JSON.stringify(decodeNodeTree(node)),
+    fn: (node: NodeObject) => {
+      // On retourne la valeur stringifiée pour le sibling, en utilisant deployNodeTree qui gère les transformations et objets imbriqués
+      return JSON.stringify(deployNodeTree(node));
+    },
     params: [],
   },
 ]);
@@ -79,34 +82,68 @@ function handleTransformChange(transformName: any) {
   }
 }
 
+function deployNodeTree(node: NodeObject, acc = {}): any {
+  const obj = acc;
+  if (node.type === 'object') {
+    obj[node.value] = {};
+    for (const child of node.children || []) {
+      Object.assign(obj[node.value], deployNodeTree(child));
+    }
+    return obj;
+  } else if (node.type === 'array') {
+    obj[node.value] = [];
+    for (const child of node.children || []) {
+      obj[node.value].push(deployNodeTree(child));
+    }
+    return obj;
+  } else if (node.type === 'property') {
+    if (node.children && node.children.length > 0) {
+      const lastChild = node.children[node.children.length - 1];
+      obj[node.value] = deployNodeTree(lastChild);
+    } else {
+      obj[node.value] = undefined;
+    }
+    return obj;
+  }
+  return node.value;
+}
+
 // Fonction de décodage qui reconstruit un objet JS à partir d'un NodeObject
-function decodeNodeTree(node: NodeObject): any {
+function decodeNodeTree(node: NodeObject, isRoot = true): any {
+  // Si le node a des siblings (transformations), on prend le dernier sibling
+  if (node.siblings && node.siblings.length > 0) {
+    const lastSibling = node.siblings[node.siblings.length - 1];
+    if (lastSibling) {
+      return decodeNodeTree(lastSibling, isRoot);
+    }
+  }
+  if (node.type === 'property') {
+    if (node.children && node.children.length > 0) {
+      const lastChild = node.children[node.children.length - 1];
+      if (lastChild) {
+        const decoded = decodeNodeTree(lastChild, false);
+        return { [node.value]: decoded };
+      }
+    }
+    return { [node.value]: undefined };
+  }
   if (node.type === 'array') {
     // On reconstruit un tableau à partir des enfants
-    return node.children?.map((child) => decodeNodeTree(child)) ?? [];
+    return node.children?.map((child) => decodeNodeTree(child, false)) ?? [];
   }
   if (node.type === 'object') {
     // On reconstruit un objet à partir des propriétés
     const obj: Record<string, any> = {};
     node.children?.forEach((child) => {
       if (child.type === 'property') {
-        // La clé est child.value, la valeur est le décodage du premier enfant
-        if (child.children && child.children.length > 0) {
-          obj[child.value] = decodeNodeTree(child.children[0]);
-        } else {
-          obj[child.value] = undefined;
+        const prop = decodeNodeTree(child, false);
+        // On fusionne chaque propriété dans l'objet final
+        if (prop && typeof prop === 'object' && !Array.isArray(prop)) {
+          Object.assign(obj, prop);
         }
       }
     });
     return obj;
-  }
-  if (node.type === 'property') {
-    // On retourne la valeur du premier enfant
-    if (node.children && node.children.length > 0) {
-      return decodeNodeTree(node.children[0]);
-    } else {
-      return undefined;
-    }
   }
   // Pour les types primitifs
   return node.value;

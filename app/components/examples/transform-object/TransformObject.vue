@@ -80,6 +80,10 @@ const data = {
   address: {
     street: '123 main st',
     zip: '13001',
+    custom: {
+      info: 'some custom info',
+      tags: ['tag1', 'tag2'],
+    },
   },
   hobbies: ['reading', 'traveling', 'swimming'],
 };
