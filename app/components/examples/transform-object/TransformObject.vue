@@ -52,7 +52,7 @@ const buildNodeTree = (value: any, nodeName: string = ''): NodeObject => {
       type: 'array',
       children: value.map((item, idx) => buildNodeTree(item, String(idx))),
     };
-  } else if (value && typeof value === 'object') {
+  } else if (value && typeof value === 'object' && !Array.isArray(value)) {
     return {
       value: nodeName,
       type: 'object',

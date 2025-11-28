@@ -10,7 +10,8 @@ export type NodeType =
   | 'array'
   | 'undefined'
   | 'function'
-  | 'property';
+  | 'property'
+  | 'index';
 
 export interface NodeObject {
   value: any;
