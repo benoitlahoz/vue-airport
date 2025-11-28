@@ -94,16 +94,9 @@ function onAddChild(parentList: TransformNode[], index: number, transformName: s
     // Ajoute la transformation dans les children du Split
     parentNode.children.push(createNode(transformName));
   } else if (t.name === 'Split') {
-    // Split insère un nœud Split dans le pipeline
+    // Split insère un nœud Split dans le pipeline, les enfants seront créés dynamiquement
     const splitNode = createNode(transformName);
     parentList.splice(index + 1, 0, splitNode);
-    // Génère les enfants selon le résultat du split
-    const input = computeInputValue(index + 1);
-    const delimiter = splitNode.params?.delimiter ?? ',';
-    const result = t.fn(input, delimiter);
-    if (Array.isArray(result)) {
-      splitNode.children = result.map(() => createNode());
-    }
   } else {
     // Les autres transformations sont des siblings (pipeline)
     parentList.splice(index + 1, 0, createNode(transformName));
@@ -172,11 +165,8 @@ function applyPipeline(nodes: TransformNode[], input: any): any {
     if (!t?.if(current)) continue;
     const args = t.params.map((p) => node.params[p.name]);
     const result = t.fn(current, ...args);
-    if (t.name === 'Split' && Array.isArray(result)) {
+    if (Array.isArray(result)) {
       // Split : chaque branche reçoit sa partie
-      if (node.children.length === 0) {
-        result.forEach(() => node.children.push(createNode()));
-      }
       return result.map((part, idx) => {
         const child = node.children[idx];
         return child ? applyPipeline([child], part) : part;
