@@ -62,6 +62,7 @@ const emit = defineEmits<{
     transformName: string,
     params: Record<string, any>
   ): void;
+  (e: 'update-split-children', node: TransformNode, delimiter: string): void;
 }>();
 
 function handleAddChildTransform(value: any) {
@@ -79,6 +80,10 @@ function handleRemove() {
 
 function handleParamInput(paramName: string, value: any) {
   emit('update-param', props.node, paramName, value);
+  // Si Split, recalculer les enfants dynamiquement
+  if (props.node.name === 'Split' && paramName === 'delimiter') {
+    emit('update-split-children', props.node, value);
+  }
 }
 
 function handleSelectTransform(value: string | null) {
@@ -135,19 +140,32 @@ function handleSelectTransform(value: string | null) {
           </Select>
           <span class="text-xs text-gray-400">Transformation</span>
         </div>
-        <div
-          v-for="p in props.node.name
-            ? props.transforms.find((t: Transform) => t.name === props.node.name)?.params || []
-            : []"
-          :key="p.name"
-          class="mb-2"
-        >
-          <label class="block text-sm font-medium mb-1">{{ p.label }}</label>
-          <Input
-            type="text"
-            :model-value="props.node.params[p.name]"
-            @update:model-value="(val) => handleParamInput(p.name, val)"
-          />
+        <div class="flex items-center gap-2 mb-2">
+          <template v-if="props.node.name === 'Split'">
+            <span class="text-xs text-gray-400">Délimiteur</span>
+            <Input
+              type="text"
+              class="w-[100px]"
+              :model-value="props.node.params['delimiter']"
+              @update:model-value="(val) => handleParamInput('delimiter', val)"
+            />
+          </template>
+          <template v-else>
+            <div
+              v-for="p in props.node.name
+                ? props.transforms.find((t: Transform) => t.name === props.node.name)?.params || []
+                : []"
+              :key="p.name"
+              class="mb-2"
+            >
+              <label class="block text-sm font-medium mb-1">{{ p.label }}</label>
+              <Input
+                type="text"
+                :model-value="props.node.params[p.name]"
+                @update:model-value="(val) => handleParamInput(p.name, val)"
+              />
+            </div>
+          </template>
         </div>
         <!-- (Select d'ajout de sous-transformation supprimé, un seul select par nœud) -->
       </div>

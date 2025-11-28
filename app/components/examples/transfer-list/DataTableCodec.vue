@@ -89,12 +89,21 @@ function createNode(name?: string): TransformNode {
 function onAddChild(parentList: TransformNode[], index: number, transformName: string) {
   const t = transforms.find((x) => x.name === transformName);
   if (!t) return;
-  if (t.name === 'Split') {
-    // Split crée des branches (enfants)
+  const parentNode = parentList[index];
+  if (parentNode && parentNode.name === 'Split') {
+    // Ajoute la transformation dans les children du Split
+    parentNode.children.push(createNode(transformName));
+  } else if (t.name === 'Split') {
+    // Split insère un nœud Split dans le pipeline
     const splitNode = createNode(transformName);
     parentList.splice(index + 1, 0, splitNode);
-    // Génère les enfants vides pour chaque partie (sera rempli lors de l'exécution)
-    splitNode.children = [];
+    // Génère les enfants selon le résultat du split
+    const input = computeInputValue(index + 1);
+    const delimiter = splitNode.params?.delimiter ?? ',';
+    const result = t.fn(input, delimiter);
+    if (Array.isArray(result)) {
+      splitNode.children = result.map(() => createNode());
+    }
   } else {
     // Les autres transformations sont des siblings (pipeline)
     parentList.splice(index + 1, 0, createNode(transformName));
@@ -110,7 +119,31 @@ function onUpdateParam(node: TransformNode, paramName: string, value: any) {
 }
 
 function onAddSibling(parentList: TransformNode[], index: number) {
+  const node = parentList[index];
+  if (node && node.name === 'Split') {
+    // Split ne doit pas ajouter de sibling
+    return;
+  }
+  // Ajoute un sibling classique pour les autres transformations
   parentList.splice(index + 1, 0, createNode());
+}
+
+// Met à jour dynamiquement les enfants du nœud Split selon le résultat du split
+function onUpdateSplitChildren(node: TransformNode, delimiter: string) {
+  const t = transforms.find((x) => x.name === 'Split');
+  if (!t) return;
+  // On utilise l'input calculé pour ce nœud
+  const idx = rootNodes.indexOf(node);
+  let input = '';
+  if (idx !== -1) {
+    input = computeInputValue(idx);
+  } else if ((node as any)._inputValue) {
+    input = (node as any)._inputValue;
+  }
+  const result = t.fn(input, delimiter);
+  if (Array.isArray(result)) {
+    node.children = result.map(() => createNode());
+  }
 }
 
 // Mise à jour de la transformation et des paramètres du nœud
@@ -123,9 +156,9 @@ function onUpdateTransform(
   node.params = reactive({ ...params });
   // Si on change la transformation, on vide les enfants
   node.children = [];
-  // S'assurer qu'il y a toujours un nœud vide à la fin du pipeline
+  // N'ajoute pas de sibling pipeline vide après un Split
   const last = rootNodes[rootNodes.length - 1];
-  if (last && last.name) {
+  if (last && last.name && last.name !== 'Split') {
     rootNodes.push(createNode());
   }
 }
@@ -195,6 +228,7 @@ function computeInputValue(idx: number): any {
             @update-transform="onUpdateTransform"
             @remove="onRemoveNode"
             @update-param="onUpdateParam"
+            @update-split-children="onUpdateSplitChildren"
           />
         </div>
       </div>
