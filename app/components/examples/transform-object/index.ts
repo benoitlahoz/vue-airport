@@ -10,14 +10,22 @@ export type NodeType =
   | 'array'
   | 'undefined'
   | 'function'
-  | 'property'
-  | 'index';
+  | 'null';
+
+export interface NodeTransform {
+  name: string;
+  if: (node: NodeObject) => boolean;
+  fn: (value: any, ...params: any[]) => any;
+  params?: any[];
+}
 
 export interface NodeObject {
-  value: any;
   type: NodeType;
-  children?: NodeObject[];
-  siblings?: NodeObject[];
+  key?: string; // pour les propriétés / index
+  initialValue: any; // valeur brute ou conteneur
+  transforms: NodeTransform[]; // transformations successives
+  children?: NodeObject[]; // pour object / array
+  parent?: NodeObject;
 }
 
 export const TransformObjectDeskKey: InjectionKey<Ref<NodeObject>> = Symbol('TransformObjectDesk');

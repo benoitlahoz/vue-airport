@@ -3,91 +3,130 @@ import { ref } from 'vue';
 import { useCheckIn } from '#vue-airport';
 import { TransformNode, TransformObjectDeskKey, type NodeObject, type NodeType } from '.';
 /*
-const tree: NodeObject = ref({
-  value: 'Root',
-  children: [
-    {
-      value: 'Child 1',
-      children: [
-        {
-          value: 'Grandchild 1',
-          children: [],
-        },
-        {
-          value: 'Grandchild 2',
-          children: [],
-        },
-      ],
-      siblings: [
-        {
-          value: 'Sibling 1',
-          children: [],
-        },
-        {
-          value: 'Sibling 2',
-          children: [],
-        },
-      ],
-    },
-    {
-      value: 'Child 2',
-      children: [
-        {
-          value: 'Grandchild 1',
-          children: ['Great Grandchild 1', 'Great Grandchild 2'].map((v) => ({
-            value: v,
-            children: [],
-          })),
-        },
-      ],
-    },
-  ],
-});
-*/
-
-const buildNodeTree = (value: any, nodeName: string = ''): NodeObject => {
+const buildNodeTree = (value: any, nodeName: string = '', parent?: NodeObject): NodeObject => {
   if (Array.isArray(value)) {
-    return {
+    const node: NodeObject = {
       value: nodeName,
       type: 'array',
-      children: value.map((item, idx) => buildNodeTree(item, String(idx))),
+      parent,
+    };
+    return {
+      ...node,
+      children: value.map((item, index) => buildNodeTree(item, index.toString(), node)),
     };
   } else if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return {
+    const node: NodeObject = {
       value: nodeName,
       type: 'object',
-      children: Object.keys(value).map((key) => buildNodeTree(value[key], key)),
+      parent,
+    };
+    return {
+      ...node,
+      children: Object.keys(value).map((key) => buildNodeTree(value[key], key, node)),
     };
   } else {
-    // Si nodeName est un index numérique, on met le type 'index', sinon 'property'
+    const isInArray = parent?.type === 'array';
     const isIndex = !isNaN(Number(nodeName)) && nodeName !== '';
-    if (isIndex) {
-      return {
-        value: nodeName, // l'index
-        type: 'index',
-        children: [
-          {
-            value: value, // la vraie valeur de l'élément
-            type: typeof value as NodeType,
-            children: [],
-          },
-        ],
-      };
-    } else {
-      return {
+    if (isInArray && isIndex) {
+      const node = {
         value: nodeName,
-        type: 'property',
+        type: 'index',
+        parent,
+      };
+      return {
+        ...node,
         children: [
           {
             value,
             type: typeof value as NodeType,
             children: [],
+            parent: node,
+          },
+        ],
+      };
+    } else {
+      const node = {
+        value: nodeName,
+        type: 'property',
+        parent,
+      };
+      return {
+        ...node,
+        children: [
+          {
+            value,
+            type: typeof value as NodeType,
+            children: [],
+            parent,
           },
         ],
       };
     }
   }
 };
+*/
+
+function buildNodeTree(value: any, key?: string, parent?: NodeObject): NodeObject {
+  if (Array.isArray(value)) {
+    const node: NodeObject = {
+      type: 'array',
+      key,
+      initialValue: [],
+      transforms: [],
+      children: [],
+      parent,
+    };
+
+    node.children = value.map((item, index) => buildNodeTree(item, String(index), node));
+
+    // Construire la valeur initiale à partir des enfants
+    node.initialValue = node.children.map((c) => c.initialValue);
+
+    return node;
+  } else if (value !== null && typeof value === 'object') {
+    const node: NodeObject = {
+      type: 'object',
+      key,
+      initialValue: {},
+      transforms: [],
+      children: [],
+      parent,
+    };
+
+    node.children = Object.entries(value).map(([k, v]) => buildNodeTree(v, k, node));
+
+    // Construire la valeur initiale à partir des enfants
+    node.initialValue = node.children.reduce(
+      (acc, c) => {
+        acc[c.key!] = c.initialValue;
+        return acc;
+      },
+      {} as Record<string, any>
+    );
+
+    return node;
+  } else {
+    // primitive
+    const type: NodeType =
+      typeof value === 'string'
+        ? 'string'
+        : typeof value === 'number'
+          ? 'number'
+          : typeof value === 'boolean'
+            ? 'boolean'
+            : value === null
+              ? 'null'
+              : 'undefined';
+
+    return {
+      type,
+      key,
+      initialValue: value,
+      transforms: [],
+      parent,
+    };
+  }
+}
 
 const data = {
   name: 'john doe',
@@ -105,6 +144,8 @@ const data = {
 };
 
 const tree = ref<NodeObject>(buildNodeTree(data, 'Root'));
+
+console.log('Tree:', tree.value);
 
 const { createDesk } = useCheckIn<NodeObject>();
 createDesk(TransformObjectDeskKey, {

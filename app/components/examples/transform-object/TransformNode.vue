@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useCheckIn } from '#vue-airport';
-import { TransformNode, TransformObjectDeskKey, type NodeObject } from '.';
+import { TransformNode, type NodeObject, type NodeTransform } from '.';
 import {
   Select,
   SelectTrigger,
@@ -12,147 +11,126 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 
-const props = defineProps<{
-  tree: NodeObject;
-}>();
+const props = defineProps<{ tree: NodeObject }>();
 
-const transforms = computed(() => [
+// Liste des transformations disponibles
+const transforms: NodeTransform[] = [
   {
     name: 'To Uppercase',
     if: (node: NodeObject) => node.type === 'string',
-    fn: (node: NodeObject) => node.value.toUpperCase(),
-    params: [],
+    fn: (value: any) => value.toUpperCase(),
   },
   {
     name: 'To Lowercase',
     if: (node: NodeObject) => node.type === 'string',
-    fn: (node: NodeObject) => node.value.toLowerCase(),
-    params: [],
+    fn: (value: any) => value.toLowerCase(),
   },
   {
     name: 'To Capitalized',
     if: (node: NodeObject) => node.type === 'string',
-    fn: (node: NodeObject) =>
-      node.value.charAt(0).toUpperCase() + node.value.slice(1).toLowerCase(),
-    params: [],
+    fn: (value: any) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase(),
   },
   {
     name: 'Increment',
     if: (node: NodeObject) => node.type === 'number',
-    fn: (node: NodeObject) => node.value + 1,
-    params: [],
+    fn: (value: any) => value + 1,
   },
   {
     name: 'Decrement',
     if: (node: NodeObject) => node.type === 'number',
-    fn: (node: NodeObject) => node.value - 1,
-    params: [],
+    fn: (value: any) => value - 1,
   },
   {
     name: 'Stringify',
     if: (node: NodeObject) => node.type === 'object' || node.type === 'array',
-    fn: (node: NodeObject) => {
-      // On retourne la valeur stringifiée pour le sibling, en utilisant deployNodeTree qui gère les transformations et objets imbriqués
-      return JSON.stringify(deployNodeTree(node));
-    },
-    params: [],
+    fn: (value: any) => JSON.stringify(value),
   },
-]);
+];
 
-const nodeId = ref('');
+const selectedTransform = ref<string | null>(null);
 
-const setSingleSibling = (node: NodeObject, value: any) => {
-  node.siblings = [
-    {
-      value,
-      type: typeof value,
-      children: [],
-    },
-  ];
-};
+// Vérifier si c'est une primitive
+const isPrimitive = computed(() => !['object', 'array'].includes(props.tree.type));
 
-const selectedTransform = ref('');
+// Valeur calculée après application cumulative des transformations
+const currentValue = computed(() =>
+  props.tree.transforms.reduce((val, t) => t.fn(val, ...(t.params || [])), props.tree.initialValue)
+);
 
-function handleTransformChange(transformName: any) {
-  const transform = transforms.value.find((t) => t.name === transformName);
-  if (transform) {
-    const transformedValue = transform.fn(props.tree);
-    setSingleSibling(props.tree, transformedValue);
-    selectedTransform.value = transformName;
-  }
-}
+// Propagation ascendante pour mettre à jour les parents
+function propagate(node: NodeObject) {
+  if (!node) return;
 
-function deployNodeTree(node: NodeObject, acc = {} as Record<string, any>): any {
-  const obj = acc;
   if (node.type === 'object') {
-    obj[node.value] = {};
-    for (const child of node.children || []) {
-      Object.assign(obj[node.value], deployNodeTree(child));
-    }
-    return obj;
+    node.initialValue =
+      node.children?.reduce(
+        (acc: any, child) => {
+          acc[child.key!] = child.transforms.reduce(
+            (v, t) => t.fn(v, ...(t.params || [])),
+            child.initialValue
+          );
+          return acc;
+        },
+        {} as Record<string, any>
+      ) || {};
   } else if (node.type === 'array') {
-    obj[node.value] = [];
-    for (const child of node.children || []) {
-      obj[node.value].push(deployNodeTree(child));
-    }
-    return obj;
-  } else if (node.type === 'property') {
-    if (node.children && node.children.length > 0) {
-      // Property can only have one child.
-      const lastChild = node.children[node.children.length - 1];
-      if (lastChild) obj[node.value] = deployNodeTree(lastChild);
-    } else {
-      // This should never happen, but left for debugging.
-      obj[node.value] = undefined;
-    }
-    return obj;
-  } else if (node.type === 'index') {
-    if (node.children && node.children[0]) {
-      // Index can only have one child.
-      return deployNodeTree(node.children[0]);
-    }
-    // This should never happen, but left for debugging.
-    return undefined;
+    node.initialValue =
+      node.children?.map((child) =>
+        child.transforms.reduce((v, t) => t.fn(v, ...(t.params || [])), child.initialValue)
+      ) || [];
   }
 
-  // Return the last transformed value or the original value
-  return node.siblings && node.siblings.length > 0
-    ? node.siblings[node.siblings.length - 1]
-    : node.value;
+  if (node.parent) propagate(node.parent);
 }
 
-const { checkIn } = useCheckIn<NodeObject>();
-checkIn(TransformObjectDeskKey, {
-  autoCheckIn: true,
-  watchData: true,
-  data: (_desk, id) => {
-    nodeId.value = String(id);
-    return {
-      id,
-      value: props.tree.value,
-      type: props.tree.type,
-      children: props.tree.children || [],
-      siblings: props.tree.siblings || [],
-    };
-  },
-});
+// Transformations disponibles pour ce nœud
+const availableTransforms = computed(() => transforms.filter((t) => t.if(props.tree)));
+
+// Ajouter une transformation et recalculer
+function handleTransformChange(name: string) {
+  const transform = transforms.find((t) => t.name === name);
+  if (!transform) return;
+
+  props.tree.transforms.push(transform);
+
+  if (props.tree.parent) propagate(props.tree.parent);
+}
 </script>
 
 <template>
   <div class="text-xs">
-    <div class="flex items-center gap-4 my-2 w-full justify-between">
-      <div class="font-bold">{{ tree?.value }}</div>
-      <template v-if="transforms.filter((t) => t.if(tree)).length > 0">
+    <!-- Nœud -->
+    <div class="flex items-center gap-2 my-1">
+      <span class="font-semibold">{{ tree.key }}</span>
+      <template v-if="isPrimitive">
+        <span class="ml-2">{{ currentValue }}</span>
+      </template>
+    </div>
+
+    <!-- Affichage des transformations appliquées en stack -->
+    <div class="ml-5 pl-2 border-l-2">
+      <div v-for="(t, index) in tree.transforms" :key="index" class="flex items-center gap-2 my-1">
+        <span class="text-blue-600 text-xs"
+          >→ {{ t.name }}:
+          {{
+            tree.transforms
+              .slice(0, index + 1)
+              .reduce((val, tr) => tr.fn(val, ...(tr.params || [])), tree.initialValue)
+          }}
+        </span>
+      </div>
+
+      <!-- Select pour ajouter une nouvelle transformation -->
+      <template v-if="availableTransforms.length > 0">
         <Select v-model="selectedTransform" @update:model-value="handleTransformChange">
-          <!-- @vue-ignore -->
           <SelectTrigger size="xs" class="px-2 py-1">
-            <SelectValue placeholder="Transformation" class="text-xs" />
+            <SelectValue placeholder="Add Transformation" class="text-xs" />
           </SelectTrigger>
           <SelectContent class="text-xs">
             <SelectGroup>
               <SelectLabel>Available Transformations</SelectLabel>
               <SelectItem
-                v-for="transform in transforms.filter((t) => t.if(tree))"
+                v-for="transform in availableTransforms"
                 :key="transform.name"
                 :value="transform.name"
                 class="text-xs"
@@ -164,29 +142,10 @@ checkIn(TransformObjectDeskKey, {
         </Select>
       </template>
     </div>
-    <div class="border-l-2 ml-5">
-      <div class="ml-5">
-        <template v-for="child in tree?.children" :key="child.value">
-          <template v-if="child.type === 'property'">
-            <div :key="child.value" class="flex flex-col py-1">
-              <div class="flex items-center gap-2">
-                <span class="font-semibold">{{ child.value }}</span>
-              </div>
-              <div class="ml-5">
-                <template v-for="grandchild in child.children" :key="grandchild.value">
-                  <TransformNode :tree="grandchild" />
-                </template>
-              </div>
-            </div>
-          </template>
-          <template v-else>
-            <TransformNode :tree="child">{{ child.value }}</TransformNode>
-          </template>
-        </template>
-      </div>
+
+    <!-- Children récursifs -->
+    <div class="ml-5 border-l-2 pl-2" v-if="tree.children?.length">
+      <TransformNode v-for="child in tree.children" :key="child.key || child.value" :tree="child" />
     </div>
-    <TransformNode v-for="sibling in tree?.siblings || []" :key="sibling.value" :tree="sibling">
-      {{ sibling.value }}
-    </TransformNode>
   </div>
 </template>
