@@ -30,7 +30,7 @@ const transforms: NodeTransform[] = [
   },
 ];
 
-const selectedTransform = ref<Record<number, string>>({}); // un select par étape
+const selectedTransform = ref<Record<number, string | null>>({});
 
 const isPrimitive = computed(() => !['object', 'array'].includes(props.tree.type));
 
@@ -63,21 +63,26 @@ function propagate(node: NodeObject) {
   if (node.parent) propagate(node.parent);
 }
 
-// Transformations disponibles pour ce nœud
+// Transformations disponibles
 const availableTransforms = computed(() => transforms.filter((t) => t.if(props.tree)));
 
-// Ajouter une transformation à l'étape suivante dans la stack
-function handleStepTransform(index: number, name: string) {
-  const transform = transforms.find((t) => t.name === name);
-  if (!transform) return;
+// Ajouter ou supprimer une transformation
+function handleStepTransform(index: number, name: string | null) {
+  if (name === null || name === 'None') {
+    // Supprime cette transformation et toutes celles qui suivent
+    props.tree.transforms.splice(index);
+  } else {
+    const transform = transforms.find((t) => t.name === name);
+    if (!transform) return;
 
-  // Ajouter juste après l'étape actuelle
-  props.tree.transforms.splice(index + 1, 0, transform);
+    // Ajouter juste après l'étape actuelle
+    props.tree.transforms.splice(index + 1, 0, transform);
+  }
 
   // Recalculer les parents
   if (props.tree.parent) propagate(props.tree.parent);
 
-  // Réinitialiser le select de cette étape
+  // Réinitialiser le select
   selectedTransform.value[index] = '';
 }
 </script>
@@ -92,7 +97,7 @@ function handleStepTransform(index: number, name: string) {
       </template>
     </div>
 
-    <!-- Transformations cumulatives avec Select à droite de chaque étape -->
+    <!-- Stack des transformations avec Select à droite de chaque étape -->
     <div class="ml-5 pl-2 border-l-2">
       <div v-for="(t, index) in tree.transforms" :key="index" class="flex items-center gap-2 my-1">
         <span class="text-blue-600 text-xs">
@@ -104,7 +109,7 @@ function handleStepTransform(index: number, name: string) {
           }}
         </span>
 
-        <!-- Select pour enchaîner une nouvelle transformation après cette étape -->
+        <!-- Select pour ajouter une nouvelle transformation ou supprimer -->
         <Select
           size="xs"
           v-model="selectedTransform[index]"
@@ -116,6 +121,7 @@ function handleStepTransform(index: number, name: string) {
           <SelectContent class="text-xs">
             <SelectGroup>
               <SelectLabel>Next Transformation</SelectLabel>
+              <SelectItem value="None" class="text-xs">Remove this & following</SelectItem>
               <SelectItem
                 v-for="tr in availableTransforms"
                 :key="tr.name"
@@ -129,7 +135,7 @@ function handleStepTransform(index: number, name: string) {
         </Select>
       </div>
 
-      <!-- Ajouter transformation si aucune étape existante -->
+      <!-- Select initial si aucune transformation -->
       <template v-if="tree.transforms.length === 0 && availableTransforms.length > 0">
         <Select
           size="xs"
