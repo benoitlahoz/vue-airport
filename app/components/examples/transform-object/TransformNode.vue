@@ -98,20 +98,27 @@ function deployNodeTree(node: NodeObject, acc = {} as Record<string, any>): any 
     return obj;
   } else if (node.type === 'property') {
     if (node.children && node.children.length > 0) {
+      // Property can only have one child.
       const lastChild = node.children[node.children.length - 1];
       if (lastChild) obj[node.value] = deployNodeTree(lastChild);
     } else {
+      // This should never happen, but left for debugging.
       obj[node.value] = undefined;
     }
     return obj;
   } else if (node.type === 'index') {
-    // On retourne la valeur de l'enfant (la vraie valeur de l'élément d'array)
     if (node.children && node.children[0]) {
+      // Index can only have one child.
       return deployNodeTree(node.children[0]);
     }
+    // This should never happen, but left for debugging.
     return undefined;
   }
-  return node.value;
+
+  // Return the last transformed value or the original value
+  return node.siblings && node.siblings.length > 0
+    ? node.siblings[node.siblings.length - 1]
+    : node.value;
 }
 
 const { checkIn } = useCheckIn<NodeObject>();
@@ -133,7 +140,7 @@ checkIn(TransformObjectDeskKey, {
 
 <template>
   <div class="text-xs">
-    <div class="flex items-center gap-4 my-2">
+    <div class="flex items-center gap-4 my-2 w-full justify-between">
       <div class="font-bold">{{ tree?.value }}</div>
       <template v-if="transforms.filter((t) => t.if(tree)).length > 0">
         <Select v-model="selectedTransform" @update:model-value="handleTransformChange">
@@ -143,7 +150,7 @@ checkIn(TransformObjectDeskKey, {
           </SelectTrigger>
           <SelectContent class="text-xs">
             <SelectGroup>
-              <SelectLabel>Transformations disponibles</SelectLabel>
+              <SelectLabel>Available Transformations</SelectLabel>
               <SelectItem
                 v-for="transform in transforms.filter((t) => t.if(tree))"
                 :key="transform.name"
