@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { TransformNode, type NodeObject, type NodeTransform } from '.';
+import { TransformNode, type NodeObject, type NodeTransform, type NodeType } from '.';
 import {
   Select,
   SelectTrigger,
@@ -10,6 +10,7 @@ import {
   SelectItem,
   SelectLabel,
 } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 const props = defineProps<{ tree: NodeObject }>();
 
@@ -30,12 +31,103 @@ const transforms: NodeTransform[] = [
   },
 ];
 
+const tree = ref(props.tree);
 const nodeSelect = ref<string | null>(null);
 const stepSelect = ref<Record<number, string | null>>({});
+const availableTransforms = computed(() => {
+  const type = getCurrentType(tree.value);
+  return transforms.filter((t) => t.if({ ...tree.value, type: type as NodeType }));
+});
+const isPrimitive = computed(() => ['string', 'number', 'boolean'].includes(tree.value.type));
+const editingKey = ref(false);
+const tempKey = ref(props.tree.key);
 
-// Transformations disponibles pour le nœud
-const availableTransforms = computed(() => transforms.filter((t) => t.if(props.tree)));
-const isPrimitive = computed(() => ['string', 'number', 'boolean'].includes(props.tree.type));
+// Liste des clés interdites (prototype pollution)
+const FORBIDDEN_KEYS = new Set([
+  '__proto__',
+  'prototype',
+  'constructor',
+  'toString',
+  '__defineGetter__',
+  '__defineSetter__',
+  '__lookupGetter__',
+  '__lookupSetter__',
+]);
+
+// REFUSE et renvoie null si la clé est dangereuse
+function sanitizeKey(key: string): string | null {
+  if (!key) return null;
+
+  // Forme brute interdite
+  if (FORBIDDEN_KEYS.has(key)) return null;
+
+  // Pattenrs dangereux
+  if (key.startsWith('__') && key.endsWith('__')) return null;
+  if (key.includes('.')) return null; // pour éviter des accès style obj['a.b']
+
+  return key;
+}
+
+// Génère un nom sûr et unique
+function autoRenameKey(parent: NodeObject, base: string) {
+  let safeBase = sanitizeKey(base);
+  if (!safeBase) safeBase = 'key'; // fallback
+
+  if (!parent.children?.some((c) => c.key === safeBase)) {
+    return safeBase;
+  }
+
+  let i = 1;
+  let candidate = `${safeBase}_${i}`;
+
+  while (parent.children?.some((c) => c.key === candidate)) {
+    i++;
+    candidate = `${safeBase}_${i}`;
+  }
+
+  return candidate;
+}
+
+// Valider le changement de clé
+function confirmKeyChange() {
+  const newKey = tempKey.value?.trim();
+
+  // Clé vide → revert
+  if (!newKey) {
+    tempKey.value = props.tree.key;
+    editingKey.value = false;
+    return;
+  }
+
+  // Clé interdite → revert
+  if (!sanitizeKey(newKey)) {
+    tempKey.value = props.tree.key;
+    editingKey.value = false;
+    return;
+  }
+
+  // Identique → fermer
+  if (newKey === props.tree.key) {
+    editingKey.value = false;
+    return;
+  }
+
+  const parent = props.tree.parent;
+
+  if (parent?.type === 'object' && parent.children) {
+    const finalKey = autoRenameKey(parent, newKey);
+    tree.value.key = finalKey;
+    tempKey.value = finalKey;
+  }
+
+  editingKey.value = false;
+}
+
+// Annuler
+function cancelKeyChange() {
+  tempKey.value = props.tree.key;
+  editingKey.value = false;
+}
 
 // Propagation des valeurs vers le parent
 function propagate(node: NodeObject) {
@@ -67,16 +159,16 @@ function propagate(node: NodeObject) {
 function handleNodeTransform(name: string | null) {
   if (!name) return;
   if (name === 'None') {
-    props.tree.transforms = [];
+    tree.value.transforms = [];
   } else {
     const transform = transforms.find((t) => t.name === name);
-    if (transform) props.tree.transforms.push(transform);
+    if (transform) tree.value.transforms.push(transform);
   }
-  if (props.tree.parent) propagate(props.tree.parent);
+  if (tree.value.parent) propagate(tree.value.parent);
 
   // On met à jour le Select pour refléter la dernière transformation
-  nodeSelect.value = props.tree.transforms.length
-    ? props.tree.transforms[props.tree.transforms.length - 1].name
+  nodeSelect.value = tree.value.transforms.length
+    ? tree.value.transforms[tree.value.transforms.length - 1].name
     : null;
 }
 
@@ -85,23 +177,44 @@ function handleStepTransform(index: number, name: string | null) {
   if (!name) return;
 
   if (name === 'None') {
-    props.tree.transforms.splice(index);
+    tree.value.transforms.splice(index);
   } else {
     const transform = transforms.find((t) => t.name === name);
-    if (transform) props.tree.transforms.splice(index + 1, 0, transform);
+    if (transform) tree.value.transforms.splice(index + 1, 0, transform);
   }
 
-  if (props.tree.parent) propagate(props.tree.parent);
+  if (tree.value.parent) propagate(tree.value.parent);
 
   // Mettre à jour le Select de cette étape pour refléter le choix
-  stepSelect.value[index] = props.tree.transforms[index]?.name || null;
+  stepSelect.value[index] = tree.value.transforms[index]?.name || null;
 }
 
 // Calculer la valeur cumulée jusqu'à une étape
 function computeStepValue(index: number) {
-  return props.tree.transforms
+  return tree.value.transforms
     .slice(0, index + 1)
-    .reduce((val, t) => t.fn(val, ...(t.params || [])), props.tree.initialValue);
+    .reduce((val, t) => t.fn(val, ...(t.params || [])), tree.value.initialValue);
+}
+
+function getCurrentType(node: NodeObject): string {
+  let value = node.initialValue;
+
+  for (const t of node.transforms) {
+    value = t.fn(value, ...(t.params || []));
+  }
+
+  const t = typeof value;
+  if (t === 'string') return 'string';
+  if (t === 'symbol') return 'symbol';
+  if (t === 'number') return 'number';
+  if (t === 'bigint') return 'bigint';
+  if (t === 'boolean') return 'boolean';
+  if (t === 'undefined') return 'undefined';
+  if (t === 'function') return 'function';
+  if (t === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (value && typeof value === 'object') return 'object';
+  return 'unknown';
 }
 </script>
 
@@ -109,13 +222,33 @@ function computeStepValue(index: number) {
   <div class="text-xs">
     <!-- Nœud: key + valeur si primitive, Select à droite -->
     <div class="flex items-center gap-2 my-1">
-      <span class="font-semibold">{{ tree.key }}</span>
+      <!-- Edition du nom de la propriété -->
+      <div class="cursor-pointer ml-5" @click="editingKey = true">
+        <template v-if="editingKey">
+          <Input
+            v-model="tempKey"
+            class="h-6 px-2 py-0 text-xs"
+            autofocus
+            @keyup.enter="confirmKeyChange"
+            @blur="confirmKeyChange"
+            @keyup.esc="cancelKeyChange"
+          />
+        </template>
+
+        <template v-else>
+          <span class="font-semibold">{{ tree.key }}</span>
+        </template>
+      </div>
+
+      <!-- Valeur s'affiche juste pour primitives -->
       <template v-if="isPrimitive">
         <span class="ml-2">{{ tree.initialValue }}</span>
       </template>
 
+      <!-- Select principal -->
       <template v-if="availableTransforms.length > 0">
         <Select v-model="nodeSelect" @update:model-value="handleNodeTransform">
+          <!-- @vue-ignore -->
           <SelectTrigger size="xs" class="px-2 py-1">
             <SelectValue placeholder="+" class="text-xs" />
           </SelectTrigger>
@@ -138,16 +271,17 @@ function computeStepValue(index: number) {
     </div>
 
     <!-- Stack des transformations avec Select pour enchaîner -->
-    <div class="ml-5 pl-2 border-l-2" v-if="tree.transforms.length">
+    <div v-if="tree.transforms.length" class="ml-5 pl-2 border-l-2">
       <div v-for="(t, index) in tree.transforms" :key="index" class="flex items-center gap-2 my-1">
-        <span class="text-blue-600 text-xs"> → {{ t.name }}: {{ computeStepValue(index) }} </span>
+        <span class="text-blue-600 text-xs"> {{ computeStepValue(index) }} </span>
 
         <template v-if="availableTransforms.length > 0">
           <Select
-            size="xs"
             v-model="stepSelect[index]"
+            size="xs"
             @update:model-value="(val) => handleStepTransform(index, val)"
           >
+            <!-- @vue-ignore -->
             <SelectTrigger size="xs" class="px-1 py-0">
               <SelectValue placeholder="+" class="text-xs" />
             </SelectTrigger>
@@ -171,7 +305,7 @@ function computeStepValue(index: number) {
     </div>
 
     <!-- Children récursifs -->
-    <div class="ml-5 border-l-2 pl-2" v-if="tree.children?.length">
+    <div v-if="tree.children?.length" class="ml-5 border-l-2 pl-2">
       <TransformNode v-for="child in tree.children" :key="child.key || child.value" :tree="child" />
     </div>
   </div>
