@@ -12,7 +12,7 @@ export type NodeType =
   | 'function'
   | 'null';
 
-export interface NodeTransform {
+export interface Transform {
   name: string;
   if: (node: NodeObject) => boolean;
   fn: (value: any, ...params: any[]) => any;
@@ -23,12 +23,13 @@ export interface NodeObject {
   type: NodeType;
   key?: string; // pour les propriétés / index
   initialValue: any; // valeur brute ou conteneur
-  transforms: NodeTransform[]; // transformations successives
+  transforms: Transform[]; // transformations successives
   children?: NodeObject[]; // pour object / array
   parent?: NodeObject;
 }
 
-export const TransformObjectDeskKey: InjectionKey<Ref<NodeObject>> = Symbol('TransformObjectDesk');
+export const ObjectTransformerDeskKey: InjectionKey<Ref<NodeObject>> =
+  Symbol('ObjectTransformerDesk');
 
-export { default as TransformObject } from './TransformObject.vue';
-export { default as TransformNode } from './TransformNode.vue';
+export { default as ObjectTransformer } from './ObjectTransformer.vue';
+export { default as ObjectTransformerNode } from './ObjectTransformerNode.vue';

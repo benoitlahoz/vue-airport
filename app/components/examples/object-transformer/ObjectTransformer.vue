@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useCheckIn } from '#vue-airport';
-import { TransformNode, TransformObjectDeskKey, type NodeObject, type NodeType } from '.';
+import { ObjectTransformerNode, ObjectTransformerDeskKey, type NodeObject, type NodeType } from '.';
 /*
 const buildNodeTree = (value: any, nodeName: string = '', parent?: NodeObject): NodeObject => {
   if (Array.isArray(value)) {
@@ -148,13 +148,14 @@ const tree = ref<NodeObject>(buildNodeTree(data, 'Object'));
 // console.log('Tree:', tree.value);
 
 const { createDesk } = useCheckIn<NodeObject>();
-createDesk(TransformObjectDeskKey, {
+createDesk(ObjectTransformerDeskKey, {
   devTools: true,
 });
 </script>
 
 <template>
-  <TransformNode :tree="tree" />
+  <ObjectTransformerNode :tree="tree" />
+  <slot />
 </template>
 
 <style scoped></style>

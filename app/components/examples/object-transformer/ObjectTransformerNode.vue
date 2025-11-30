@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { TransformNode, type NodeObject, type NodeTransform, type NodeType } from '.';
+import { ObjectTransformerNode, type NodeObject, type Transform, type NodeType } from '.';
 import {
   Select,
   SelectTrigger,
@@ -16,7 +16,7 @@ import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
 const props = defineProps<{ tree: NodeObject }>();
 
-const transforms: NodeTransform[] = [
+const transforms: Transform[] = [
   // Strings
   { name: 'To Uppercase', if: (node) => node.type === 'string', fn: (v: any) => v.toUpperCase() },
   { name: 'To Lowercase', if: (node) => node.type === 'string', fn: (v: any) => v.toLowerCase() },
@@ -218,7 +218,7 @@ function handleStepTransform(index: number, name: any) {
   stepSelect.value[index] = tree.value.transforms[index]?.name || null;
 }
 
-function initParams(t: NodeTransform) {
+function initParams(t: Transform) {
   return t.params?.map((p) => p.default ?? null) || [];
 }
 
@@ -319,7 +319,7 @@ function getCurrentType(node: NodeObject): string {
     <template v-if="isOpen">
       <!-- Children récursifs -->
       <div v-if="tree.children?.length" class="ml-1 border-l-2 pl-2">
-        <TransformNode
+        <ObjectTransformerNode
           v-for="child in tree.children"
           :key="child.key || child.initialValue"
           :tree="child"
