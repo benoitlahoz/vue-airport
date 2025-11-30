@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 const props = defineProps<{ tree: NodeObject }>();
 
 const transforms: NodeTransform[] = [
+  // Strings
   { name: 'To Uppercase', if: (node) => node.type === 'string', fn: (v: any) => v.toUpperCase() },
   { name: 'To Lowercase', if: (node) => node.type === 'string', fn: (v: any) => v.toLowerCase() },
   {
@@ -32,12 +33,26 @@ const transforms: NodeTransform[] = [
     ],
     fn: (v: string, s: string, r: string) => v.replaceAll(s, r),
   },
-  { name: 'Increment', if: (node) => node.type === 'number', fn: (v: any) => v + 1 },
-  { name: 'Decrement', if: (node) => node.type === 'number', fn: (v: any) => v - 1 },
+
+  // Numbers
+  {
+    name: 'Increment',
+    if: (node) => node.type === 'number',
+    params: [{ key: 'amount', label: 'Amount', type: 'number', default: 1 }],
+    fn: (v: any, amount: number) => v + amount,
+  },
+  {
+    name: 'Decrement',
+    if: (node) => node.type === 'number',
+    params: [{ key: 'amount', label: 'Amount', type: 'number', default: 1 }],
+    fn: (v: any, amount: number) => v - amount,
+  },
+
+  // Numbers, Objects and Arrays
   {
     name: 'Stringify',
-    if: (node) => node.type === 'object' || node.type === 'array',
-    fn: (v: any) => JSON.stringify(v),
+    if: (node) => node.type === 'number' || node.type === 'object' || node.type === 'array',
+    fn: (v: any) => (typeof v === 'number' ? String(v) : JSON.stringify(v)),
   },
 ];
 
