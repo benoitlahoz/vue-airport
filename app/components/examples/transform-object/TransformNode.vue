@@ -11,6 +11,7 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const props = defineProps<{ tree: NodeObject }>();
 
@@ -21,6 +22,15 @@ const transforms: NodeTransform[] = [
     name: 'To Capitalized',
     if: (node) => node.type === 'string',
     fn: (v: any) => v.charAt(0).toUpperCase() + v.slice(1).toLowerCase(),
+  },
+  {
+    name: 'Replace',
+    if: (n) => n.type === 'string',
+    params: [
+      { key: 'search', label: 'Search', type: 'text', default: '' },
+      { key: 'replace', label: 'Replace', type: 'text', default: '' },
+    ],
+    fn: (v: string, s: string, r: string) => v.replaceAll(s, r),
   },
   { name: 'Increment', if: (node) => node.type === 'number', fn: (v: any) => v + 1 },
   { name: 'Decrement', if: (node) => node.type === 'number', fn: (v: any) => v - 1 },
@@ -38,11 +48,13 @@ const availableTransforms = computed(() => {
   const type = getCurrentType(tree.value);
   return transforms.filter((t) => t.if({ ...tree.value, type: type as NodeType }));
 });
-const isPrimitive = computed(() => ['string', 'number', 'boolean'].includes(tree.value.type));
+const isPrimitive = computed(() =>
+  ['string', 'number', 'boolean', 'bigint', 'symbol', 'undefined', 'null'].includes(tree.value.type)
+);
 const editingKey = ref(false);
 const tempKey = ref(props.tree.key);
 
-// Liste des clés interdites (prototype pollution)
+// Avoid prototype pollution and other unsafe keys
 const FORBIDDEN_KEYS = new Set([
   '__proto__',
   'prototype',
@@ -54,21 +66,15 @@ const FORBIDDEN_KEYS = new Set([
   '__lookupSetter__',
 ]);
 
-// REFUSE et renvoie null si la clé est dangereuse
 function sanitizeKey(key: string): string | null {
   if (!key) return null;
-
-  // Forme brute interdite
   if (FORBIDDEN_KEYS.has(key)) return null;
-
-  // Pattenrs dangereux
   if (key.startsWith('__') && key.endsWith('__')) return null;
-  if (key.includes('.')) return null; // pour éviter des accès style obj['a.b']
+  if (key.includes('.')) return null;
 
   return key;
 }
 
-// Génère un nom sûr et unique
 function autoRenameKey(parent: NodeObject, base: string) {
   let safeBase = sanitizeKey(base);
   if (!safeBase) safeBase = 'key'; // fallback
@@ -88,25 +94,25 @@ function autoRenameKey(parent: NodeObject, base: string) {
   return candidate;
 }
 
-// Valider le changement de clé
+// Validate and apply key change
 function confirmKeyChange() {
   const newKey = tempKey.value?.trim();
 
-  // Clé vide → revert
+  // Empty key → revert
   if (!newKey) {
     tempKey.value = props.tree.key;
     editingKey.value = false;
     return;
   }
 
-  // Clé interdite → revert
+  // Forbidden key → revert
   if (!sanitizeKey(newKey)) {
     tempKey.value = props.tree.key;
     editingKey.value = false;
     return;
   }
 
-  // Identique → fermer
+  // Identical → close
   if (newKey === props.tree.key) {
     editingKey.value = false;
     return;
@@ -155,41 +161,47 @@ function propagate(node: NodeObject) {
   if (node.parent) propagate(node.parent);
 }
 
-// Ajouter ou supprimer une transformation sur le nœud
+// Add or remove a transformation on the node
 function handleNodeTransform(name: any) {
   if (!name) return;
   if (name === 'None') {
     tree.value.transforms = [];
   } else {
     const transform = transforms.find((t) => t.name === name);
-    if (transform) tree.value.transforms.push(transform);
+    if (transform)
+      tree.value.transforms.push({
+        ...transform,
+        params: initParams(transform),
+      });
   }
   if (tree.value.parent) propagate(tree.value.parent);
 
-  // On met à jour le Select pour refléter la dernière transformation
-  nodeSelect.value = tree.value.transforms.length
-    ? tree.value.transforms[tree.value.transforms.length - 1]!.name
-    : null;
+  if (tree.value.parent) propagate(tree.value.parent);
+  nodeSelect.value = tree.value.transforms.at(-1)?.name || null;
 }
 
-// Ajouter ou supprimer une transformation après une étape de la pile
+// Add or remove a transformation after a step in the stack
 function handleStepTransform(index: number, name: any) {
   if (!name) return;
 
   if (name === 'None') {
     tree.value.transforms.splice(index);
   } else {
-    const transform = transforms.find((t) => t.name === name);
-    if (transform) tree.value.transforms.splice(index + 1, 0, transform);
+    const t = transforms.find((x) => x.name === name);
+    if (t) tree.value.transforms.splice(index + 1, 0, { ...t, params: initParams(t) });
   }
 
   if (tree.value.parent) propagate(tree.value.parent);
 
-  // Mettre à jour le Select de cette étape pour refléter le choix
+  // Update the Select for this step to reflect the choice
   stepSelect.value[index] = tree.value.transforms[index]?.name || null;
 }
 
-// Calculer la valeur cumulée jusqu'à une étape
+function initParams(t: NodeTransform) {
+  return t.params?.map((p) => p.default ?? null) || [];
+}
+
+// Calculate the cumulative value up to a step
 function computeStepValue(index: number) {
   return tree.value.transforms
     .slice(0, index + 1)
@@ -309,6 +321,49 @@ function getCurrentType(node: NodeObject): string {
               </SelectGroup>
             </SelectContent>
           </Select>
+
+          <!-- PARAM INPUTS FOR STACK -->
+          <div v-if="t.params" class="flex gap-2">
+            <div v-for="(_p, pi) in t.params" :key="'stack-param-' + index + '-' + pi">
+              <Input
+                v-if="transforms.find((x) => x.name === t.name)?.params?.[pi].type === 'text'"
+                v-model="t.params[pi]"
+                :placeholder="transforms.find((x) => x.name === t.name)?.params?.[pi].label"
+                class="h-6.5 px-2 py-0"
+                style="font-size: var(--text-xs)"
+                @input="propagate(tree)"
+              />
+
+              <Input
+                v-else-if="
+                  transforms.find((x) => x.name === t.name)?.params?.[pi].type === 'number'
+                "
+                v-model.number="t.params[pi]"
+                type="number"
+                :placeholder="transforms.find((x) => x.name === t.name)?.params?.[pi].label"
+                class="h-6.5 px-2 py-0 text-xs"
+                @input="propagate(tree)"
+              />
+
+              <div
+                v-else-if="
+                  transforms.find((x) => x.name === t.name)?.params?.[pi].type === 'boolean'
+                "
+                class="flex items-center gap-1"
+              >
+                <Checkbox
+                  :checked="t.params[pi]"
+                  @update:checked="
+                    (v: any) => {
+                      t.params![pi] = v;
+                      propagate(tree);
+                    }
+                  "
+                />
+                <span class="text-xs">{{ t.params![pi] ? 'true' : 'false' }}</span>
+              </div>
+            </div>
+          </div>
         </template>
       </div>
     </div>
