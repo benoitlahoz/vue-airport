@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useCheckIn } from '#vue-airport';
-import { ObjectTransformerNode, ObjectTransformerDeskKey, type NodeObject, type NodeType } from '.';
+import { ObjectTransformerNode, ObjectTransformerDeskKey, type ObjectNode, type NodeType } from '.';
 /*
 const buildNodeTree = (value: any, nodeName: string = '', parent?: NodeObject): NodeObject => {
   if (Array.isArray(value)) {
@@ -66,9 +66,9 @@ const buildNodeTree = (value: any, nodeName: string = '', parent?: NodeObject): 
 };
 */
 
-function buildNodeTree(value: any, key?: string, parent?: NodeObject): NodeObject {
+function buildNodeTree(value: any, key?: string, parent?: ObjectNode): ObjectNode {
   if (Array.isArray(value)) {
-    const node: NodeObject = {
+    const node: ObjectNode = {
       type: 'array',
       key,
       initialValue: [],
@@ -84,7 +84,7 @@ function buildNodeTree(value: any, key?: string, parent?: NodeObject): NodeObjec
 
     return node;
   } else if (value !== null && typeof value === 'object') {
-    const node: NodeObject = {
+    const node: ObjectNode = {
       type: 'object',
       key,
       initialValue: {},
@@ -143,11 +143,19 @@ const data = {
   hobbies: ['reading', 'traveling', 'swimming'],
 };
 
-const tree = ref<NodeObject>(buildNodeTree(data, 'Object'));
+const tree = ref<ObjectNode>(buildNodeTree(data, 'Object'));
 
 // console.log('Tree:', tree.value);
 
-const { createDesk } = useCheckIn<NodeObject>();
+watch(
+  tree.value,
+  (newTree) => {
+    console.log('Updated Tree:', newTree);
+  },
+  { deep: true }
+);
+
+const { createDesk } = useCheckIn<ObjectNode>();
 createDesk(ObjectTransformerDeskKey, {
   devTools: true,
 });

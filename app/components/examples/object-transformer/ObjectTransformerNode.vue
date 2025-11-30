@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { ObjectTransformerNode, type NodeObject, type Transform, type NodeType } from '.';
+import { ObjectTransformerNode, type ObjectNode, type Transform, type NodeType } from '.';
 import {
   Select,
   SelectTrigger,
@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
-const props = defineProps<{ tree: NodeObject }>();
+const props = defineProps<{ tree: ObjectNode }>();
 
 const transforms: Transform[] = [
   // Strings
@@ -96,7 +96,7 @@ function sanitizeKey(key: string): string | null {
   return key;
 }
 
-function autoRenameKey(parent: NodeObject, base: string) {
+function autoRenameKey(parent: ObjectNode, base: string) {
   let safeBase = sanitizeKey(base);
   if (!safeBase) safeBase = 'key'; // fallback
 
@@ -157,7 +157,7 @@ function cancelKeyChange() {
 }
 
 // Propagation des valeurs vers le parent
-function propagate(node: NodeObject) {
+function propagate(node: ObjectNode) {
   if (!node) return;
 
   if (node.type === 'object') {
@@ -229,7 +229,7 @@ function computeStepValue(index: number) {
     .reduce((val, t) => t.fn(val, ...(t.params || [])), tree.value.initialValue);
 }
 
-function getCurrentType(node: NodeObject): string {
+function getCurrentType(node: ObjectNode): string {
   let value = node.initialValue;
 
   for (const t of node.transforms) {

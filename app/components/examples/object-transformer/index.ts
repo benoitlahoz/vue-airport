@@ -14,22 +14,25 @@ export type NodeType =
 
 export interface Transform {
   name: string;
-  if: (node: NodeObject) => boolean;
+  if: (node: ObjectNode) => boolean;
   fn: (value: any, ...params: any[]) => any;
   params?: any[];
 }
 
-export interface NodeObject {
+export interface ObjectNode {
   type: NodeType;
   key?: string; // pour les propriétés / index
   initialValue: any; // valeur brute ou conteneur
   transforms: Transform[]; // transformations successives
-  children?: NodeObject[]; // pour object / array
-  parent?: NodeObject;
+  children?: ObjectNode[]; // pour object / array
+  parent?: ObjectNode;
 }
 
-export const ObjectTransformerDeskKey: InjectionKey<Ref<NodeObject>> =
+export const ObjectTransformerDeskKey: InjectionKey<Ref<ObjectNode>> =
   Symbol('ObjectTransformerDesk');
 
 export { default as ObjectTransformer } from './ObjectTransformer.vue';
 export { default as ObjectTransformerNode } from './ObjectTransformerNode.vue';
+
+// Transforms
+export { default as TransformString } from './TransformString.vue';
