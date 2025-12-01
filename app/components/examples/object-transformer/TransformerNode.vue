@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { ChevronDown, ChevronRight, Undo, Trash } from 'lucide-vue-next';
 import { getNodeType, isPrimitive as isPrimitiveType } from './utils/type-guards.util';
 import { formatValue } from './utils/node-utilities.util';
@@ -492,5 +493,8 @@ function isStructuralTransform(transformIndex: number): boolean {
         </div>
       </div>
     </template>
+    
+    <!-- Separator pour mobile entre les propriétés -->
+    <Separator v-if="tree.parent" class="md:hidden my-4" />
   </div>
 </template>
