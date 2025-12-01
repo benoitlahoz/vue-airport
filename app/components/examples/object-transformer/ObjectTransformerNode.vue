@@ -30,12 +30,44 @@ const { checkIn } = useCheckIn<ObjectNode, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
 const deskWithContext = desk as DeskWithContext;
 
+const PRIMITIVE_TYPES: ObjectNodeType[] = [
+  'string',
+  'number',
+  'boolean',
+  'bigint',
+  'symbol',
+  'undefined',
+  'null',
+  'date',
+  'function',
+] as const;
+
+const tree = ref(props.tree);
+
+// Capture the original type once and keep it stable
+const originalType = deskWithContext.getNodeType(props.tree);
+
 const transforms: ComputedRef<Transform[]> = computed(() => {
   return deskWithContext.transforms.value;
 });
+
+// Transformations available for the main select (based on original type)
 const availableTransforms = computed(() => {
-  const type = deskWithContext.getNodeType(tree.value);
-  return transforms.value.filter((t) => t.if({ ...tree.value, type: type as ObjectNodeType }));
+  return transforms.value.filter((t) =>
+    t.if({ ...tree.value, type: originalType as ObjectNodeType })
+  );
+});
+
+// Transformations available for step selects (based on transformed type)
+const availableStepTransforms = computed(() => {
+  const transformedValue = tree.value.transforms.reduce(
+    (val, t) => t.fn(val, ...(t.params || [])),
+    tree.value.value
+  );
+  const transformedType = deskWithContext.getNodeType({ ...tree.value, value: transformedValue });
+  return transforms.value.filter((t) =>
+    t.if({ ...tree.value, type: transformedType as ObjectNodeType, value: transformedValue })
+  );
 });
 
 const isOpen = ref(true);
@@ -43,26 +75,12 @@ const toggleOpen = () => {
   isOpen.value = !isOpen.value;
 };
 
-const tree = ref(props.tree);
-// Initialize nodeSelect: null if no transforms, otherwise show the last one
 const nodeSelect = ref<string | null>(
   props.tree.transforms.length > 0 ? props.tree.transforms.at(-1)?.name || null : null
 );
 const stepSelect = ref<Record<number, string | null>>({});
 
-const isPrimitive = computed(() =>
-  [
-    'string',
-    'number',
-    'boolean',
-    'bigint',
-    'symbol',
-    'undefined',
-    'null',
-    'date',
-    'function',
-  ].includes(tree.value.type)
-);
+const isPrimitive = computed(() => PRIMITIVE_TYPES.includes(tree.value.type));
 const editingKey = ref(false);
 const tempKey = ref(props.tree.key);
 
@@ -135,86 +153,65 @@ function cancelKeyChange() {
   editingKey.value = false;
 }
 
-// Add or remove a transformation on the node
-function handleNodeTransform(name: any) {
-  if (!name) return;
+function findTransform(name: string): Transform | undefined {
+  return transforms.value.find((t) => t.name === name);
+}
 
-  if (name === 'None') {
+function createTransformEntry(name: string) {
+  const transform = findTransform(name);
+  return transform ? { ...transform, params: initParams(transform) } : null;
+}
+
+function handleNodeTransform(name: unknown) {
+  const transformName = typeof name === 'string' ? name : null;
+
+  if (!transformName || transformName === 'None') {
     tree.value.transforms = [];
     nodeSelect.value = null;
     stepSelect.value = {};
-  } else {
-    const previousValue = nodeSelect.value;
-
-    if (!previousValue || previousValue === '+') {
-      // ADDING a new transformation
-      const transform = transforms.value.find((t) => t.name === name);
-      if (transform) {
-        tree.value.transforms.push({
-          ...transform,
-          params: initParams(transform),
-        });
-        nodeSelect.value = name;
-      }
-    } else if (previousValue !== name) {
-      // CHANGING - clear all and add the new one
-      const transform = transforms.value.find((t) => t.name === name);
-
-      if (transform) {
-        // Clear all transformations and add only the new one
-        tree.value.transforms = [
-          {
-            ...transform,
-            params: initParams(transform),
-          },
-        ];
-        nodeSelect.value = name;
-        // Clear all step selects
-        stepSelect.value = {};
-      }
-    }
-    // If previousValue === name, do nothing (same transform selected again)
+    if (tree.value.parent) deskWithContext.propagateTransform(tree.value.parent);
+    return;
   }
 
+  const previousValue = nodeSelect.value;
+  const shouldAdd = !previousValue || previousValue === '+';
+  const shouldChange = previousValue && previousValue !== '+' && previousValue !== transformName;
+
+  if (!shouldAdd && !shouldChange) return;
+
+  const entry = createTransformEntry(transformName);
+  if (!entry) return;
+
+  if (shouldAdd) {
+    tree.value.transforms.push(entry);
+  } else {
+    tree.value.transforms = [entry];
+    stepSelect.value = {};
+  }
+
+  nodeSelect.value = transformName;
   if (tree.value.parent) deskWithContext.propagateTransform(tree.value.parent);
 }
 
-// Add or remove a transformation after a step in the stack
-function handleStepTransform(index: number, name: any) {
-  if (!name) return;
+function handleStepTransform(index: number, name: unknown) {
+  const transformName = typeof name === 'string' ? name : null;
 
-  if (name === 'None') {
-    // Remove this transformation and all following ones
-    // index is the transform index, we remove from index + 1 onwards
+  if (!transformName) return;
+
+  if (transformName === 'None') {
+    // Remove the selected transformation and all following ones from the pipeline
     tree.value.transforms.splice(index + 1);
 
-    // Clean up stepSelect for removed transforms
-    // stepSelect[i+1] is displayed for transform at index i
-    // After removing from index+1, we need to reset stepSelect[index+1] to null
-    // and remove all stepSelect entries after that
-    const newStepSelect: Record<number, string | null> = {};
-    Object.keys(stepSelect.value).forEach((key) => {
-      const keyNum = parseInt(key);
-      if (keyNum < index + 1) {
-        // Keep selects before the one we clicked
-        const val = stepSelect.value[keyNum];
-        if (val !== undefined) {
-          newStepSelect[keyNum] = val;
-        }
-      }
-    });
-    // Reset the select we clicked to null (will show "+")
+    // Clean up stepSelect: keep only entries before the clicked select, then reset it to null
+    const newStepSelect = Object.fromEntries(
+      Object.entries(stepSelect.value).filter(([key]) => parseInt(key) < index + 1)
+    );
     newStepSelect[index + 1] = null;
-
     stepSelect.value = newStepSelect;
-
-    // Don't touch nodeSelect - it should remain showing the first transformation
   } else {
-    const t = transforms.value.find((x) => x.name === name);
-    if (t) {
-      tree.value.transforms.splice(index + 1, 0, { ...t, params: initParams(t) });
-      // Update the Select for the newly added step
-      // The select after transform at index is stepSelect[index + 1]
+    const entry = createTransformEntry(transformName);
+    if (entry) {
+      tree.value.transforms.splice(index + 1, 0, entry);
       stepSelect.value[index + 1] = tree.value.transforms[index + 1]?.name || null;
     }
   }
@@ -233,32 +230,25 @@ function computeStepValue(index: number) {
     .reduce((val, t) => t.fn(val, ...(t.params || [])), tree.value.value);
 }
 
-// Get the type of a computed value
 function getComputedValueType(value: any): ObjectNodeType {
   return deskWithContext.getNodeType({ ...tree.value, value });
 }
 
-// Format value for display
+const VALUE_FORMATTERS: Partial<Record<ObjectNodeType, (v: any) => string>> = {
+  date: (v) => (v instanceof Date ? v.toISOString() : String(v)),
+  function: (v) => `[Function: ${v.name || 'anonymous'}]`,
+  bigint: (v) => `${v}n`,
+  symbol: (v) => v.toString(),
+  undefined: () => 'undefined',
+  null: () => 'null',
+};
+
 function formatValue(value: any, type: ObjectNodeType): string {
-  if (type === 'date' && value instanceof Date) {
-    return value.toISOString();
-  }
-  if (type === 'function') {
-    return `[Function: ${value.name || 'anonymous'}]`;
-  }
-  if (type === 'bigint') {
-    return `${value}n`;
-  }
-  if (type === 'symbol') {
-    return value.toString();
-  }
-  if (type === 'undefined') {
-    return 'undefined';
-  }
-  if (type === 'null') {
-    return 'null';
-  }
-  return String(value);
+  return VALUE_FORMATTERS[type]?.(value) ?? String(value);
+}
+
+function getParamConfig(transformName: string, paramIndex: number) {
+  return transforms.value.find((x) => x.name === transformName)?.params?.[paramIndex];
 }
 </script>
 
@@ -353,35 +343,29 @@ function formatValue(value: any, type: ObjectNodeType): string {
             }}
           </span>
 
-          <template v-if="availableTransforms.length > 1">
-            <!-- PARAM INPUTS FOR STACK -->
-            <!-- PARAM INPUTS FOR STACK -->
+          <template v-if="availableStepTransforms.length > 1">
             <div v-if="t.params" class="flex gap-2">
-              <div v-for="(_p, pi) in t.params" :key="'stack-param-' + index + '-' + pi">
+              <div v-for="(_p, pi) in t.params" :key="`param-${index}-${pi}`">
                 <Input
-                  v-if="transforms.find((x) => x.name === t.name)?.params?.[pi].type === 'text'"
+                  v-if="getParamConfig(t.name, pi)?.type === 'text'"
                   v-model="t.params[pi]"
-                  :placeholder="transforms.find((x) => x.name === t.name)?.params?.[pi].label"
+                  :placeholder="getParamConfig(t.name, pi)?.label"
                   class="h-6.5 px-2 py-0"
                   style="font-size: var(--text-xs)"
                   @input="deskWithContext.propagateTransform(tree)"
                 />
 
                 <Input
-                  v-else-if="
-                    transforms.find((x) => x.name === t.name)?.params?.[pi].type === 'number'
-                  "
+                  v-else-if="getParamConfig(t.name, pi)?.type === 'number'"
                   v-model.number="t.params[pi]"
                   type="number"
-                  :placeholder="transforms.find((x) => x.name === t.name)?.params?.[pi].label"
+                  :placeholder="getParamConfig(t.name, pi)?.label"
                   class="h-6.5 px-2 py-0 text-xs"
                   @input="deskWithContext.propagateTransform(tree)"
                 />
 
                 <div
-                  v-else-if="
-                    transforms.find((x) => x.name === t.name)?.params?.[pi].type === 'boolean'
-                  "
+                  v-else-if="getParamConfig(t.name, pi)?.type === 'boolean'"
                   class="flex items-center gap-1"
                 >
                   <Checkbox
@@ -412,7 +396,7 @@ function formatValue(value: any, type: ObjectNodeType): string {
                   <SelectLabel>Next Transformation</SelectLabel>
                   <SelectItem value="None" class="text-xs">Remove this & following</SelectItem>
                   <SelectItem
-                    v-for="tr in availableTransforms"
+                    v-for="tr in availableStepTransforms"
                     :key="tr.name"
                     :value="tr.name"
                     class="text-xs"
