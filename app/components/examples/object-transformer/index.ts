@@ -67,8 +67,8 @@ export const ObjectTransformerDeskKey: InjectionKey<ObjectTransformerDesk> =
   Symbol('ObjectTransformerDesk');
 
 export { default as ObjectTransformer } from './ObjectTransformer.vue';
-export { default as ObjectTransformerNode } from './ObjectTransformerNode.vue';
-export { default as ObjectTransformerParamInput } from './ObjectTransformerParamInput.vue';
+export { default as TransformerNode } from './TransformerNode.vue';
+export { default as TransformerParamInput } from './TransformerParamInput.vue';
 
 // Transforms
 export { default as TransformString } from './TransformString.vue';

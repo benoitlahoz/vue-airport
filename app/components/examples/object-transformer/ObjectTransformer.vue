@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
-  ObjectTransformerNode,
+  TransformerNode,
   ObjectTransformerDeskKey,
   type ObjectNode,
   type ObjectNodeType,
@@ -422,7 +422,7 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
 </script>
 
 <template>
-  <ObjectTransformerNode :tree="tree" />
+  <TransformerNode :tree="tree" />
   <slot />
 </template>
 

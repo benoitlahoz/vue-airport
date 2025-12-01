@@ -2,8 +2,8 @@
 import { computed, ref, type ComputedRef, watch, onUnmounted } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
-  ObjectTransformerNode,
-  ObjectTransformerParamInput,
+  TransformerNode,
+  TransformerParamInput,
   type ObjectNode,
   type Transform,
   type ObjectNodeType,
@@ -348,9 +348,9 @@ function isStructuralTransform(transformIndex: number): boolean {
 
           <!-- Conteneur pour bouton + nom avec hover commun -->
           <div
-            class="flex items-center group-hover:border-l-2 group-hover:border-primary -ml-0.5 pl-1.5"
+            class="flex items-center transition-all group-hover:border-l-2 group-hover:border-primary group-hover:pl-2.5 -ml-0.5 pl-1.5"
             @mouseenter="isHovered = true"
-            @mouseleave="isHovered = false"
+            @mouseleave="!editingKey && (isHovered = false)"
           >
             <!-- Bouton Delete/Restore à gauche avec slide (apparaît au hover desktop ou en mode édition) -->
             <div
@@ -365,7 +365,6 @@ function isStructuralTransform(transformIndex: number): boolean {
                 class="h-4 w-4 p-0 shrink-0"
                 :title="tree.deleted ? 'Restore property' : 'Delete property'"
                 @click.stop="toggleDelete"
-                @mousedown.prevent
               >
                 <Undo v-if="tree.deleted" class="w-3.5 h-3.5 text-muted-foreground" />
                 <Trash v-else class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
@@ -471,7 +470,7 @@ function isStructuralTransform(transformIndex: number): boolean {
     <template v-if="isOpen">
       <!-- Children récursifs -->
       <div v-if="tree.children?.length" class="ml-1 md:ml-1 border-l-2 pl-2 md:pl-2">
-        <ObjectTransformerNode
+        <TransformerNode
           v-for="(child, index) in tree.children"
           :key="getChildKey(child, index)"
           :tree="child"
@@ -502,7 +501,7 @@ function isStructuralTransform(transformIndex: number): boolean {
                 <template v-if="availableStepTransforms.length > 1">
                   <div class="flex flex-col md:flex-row md:items-center gap-2">
                     <div v-if="t.params" class="flex flex-col md:flex-row gap-2">
-                      <ObjectTransformerParamInput
+                      <TransformerParamInput
                         v-for="(_p, pi) in t.params"
                         :key="`param-${index}-${pi}`"
                         v-model="t.params[pi]"
@@ -553,7 +552,7 @@ function isStructuralTransform(transformIndex: number): boolean {
 
               <template v-else>
                 <div v-if="t.params" class="flex flex-col md:flex-row gap-2">
-                  <ObjectTransformerParamInput
+                  <TransformerParamInput
                     v-for="(_p, pi) in t.params"
                     :key="`param-${index}-${pi}`"
                     v-model="t.params[pi]"
