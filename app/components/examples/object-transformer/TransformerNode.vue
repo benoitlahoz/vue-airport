@@ -404,7 +404,7 @@ function isStructuralTransform(transformIndex: number): boolean {
       <!-- Stack des transformations avec Select pour enchaîner -->
       <div v-if="tree.transforms.length" class="">
         <!-- Wrapper avec scroll horizontal pour les transformations -->
-        <div class="overflow-x-auto">
+        <div class="md:overflow-x-auto">
           <div v-for="(t, index) in tree.transforms" :key="index" class="my-2">
             <!-- Carte sur mobile, ligne sur desktop -->
             <div
@@ -493,7 +493,7 @@ function isStructuralTransform(transformIndex: number): boolean {
         </div>
       </div>
     </template>
-    
+
     <!-- Separator pour mobile entre les propriétés -->
     <Separator v-if="tree.parent" class="md:hidden my-4" />
   </div>
