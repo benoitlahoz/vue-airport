@@ -409,16 +409,12 @@ function isStructuralTransform(transformIndex: number): boolean {
             <div
               class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 p-2 md:p-0 border md:border-0 rounded-md md:rounded-none bg-card md:bg-transparent transition-all group hover:bg-accent/30 min-w-fit"
             >
-              <!-- La valeur transformée alignée dynamiquement -->
+              <!-- La valeur transformée alignée dynamiquement sur desktop, normale sur mobile -->
               <span
                 class="text-muted-foreground text-xs"
-                :style="{ paddingLeft: transformsPaddingLeft }"
+                :style="{ paddingLeft: isPrimitive ? transformsPaddingLeft : '0px' }"
+                :class="{ 'md:pl-0': !isPrimitive }"
               >
-                {{ getFormattedStepValue(index) }}
-              </span>
-
-              <!-- Version mobile -->
-              <span class="md:hidden text-muted-foreground text-xs">
                 {{ getFormattedStepValue(index) }}
               </span>
 
