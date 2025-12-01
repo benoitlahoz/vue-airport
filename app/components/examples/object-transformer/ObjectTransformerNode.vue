@@ -44,7 +44,10 @@ const toggleOpen = () => {
 };
 
 const tree = ref(props.tree);
-const nodeSelect = ref<string | null>(null);
+// Initialize nodeSelect: null if no transforms, otherwise show the last one
+const nodeSelect = ref<string | null>(
+  props.tree.transforms.length > 0 ? props.tree.transforms.at(-1)?.name || null : null
+);
 const stepSelect = ref<Record<number, string | null>>({});
 
 const isPrimitive = computed(() =>
@@ -134,20 +137,51 @@ function cancelKeyChange() {
 
 // Add or remove a transformation on the node
 function handleNodeTransform(name: any) {
+  console.log('handleNodeTransform called with:', name, 'previous:', nodeSelect.value);
   if (!name) return;
+
   if (name === 'None') {
     tree.value.transforms = [];
+    nodeSelect.value = null;
+    stepSelect.value = {};
   } else {
-    const transform = transforms.value.find((t) => t.name === name);
-    if (transform)
-      tree.value.transforms.push({
-        ...transform,
-        params: initParams(transform),
-      });
-  }
-  if (tree.value.parent) deskWithContext.propagateTransform(tree.value.parent);
+    const previousValue = nodeSelect.value;
 
-  nodeSelect.value = tree.value.transforms.at(-1)?.name || null;
+    if (!previousValue || previousValue === '+') {
+      // ADDING a new transformation
+      const transform = transforms.value.find((t) => t.name === name);
+      console.log('ADDING transformation:', transform);
+      if (transform) {
+        tree.value.transforms.push({
+          ...transform,
+          params: initParams(transform),
+        });
+        nodeSelect.value = name;
+        console.log('Added, transforms now:', tree.value.transforms);
+      }
+    } else if (previousValue !== name) {
+      // CHANGING - clear all and add the new one
+      const transform = transforms.value.find((t) => t.name === name);
+      console.log('CHANGING - clearing all and adding:', transform);
+
+      if (transform) {
+        // Clear all transformations and add only the new one
+        tree.value.transforms = [
+          {
+            ...transform,
+            params: initParams(transform),
+          },
+        ];
+        nodeSelect.value = name;
+        // Clear all step selects
+        stepSelect.value = {};
+        console.log('Changed, transforms now:', tree.value.transforms);
+      }
+    }
+    // If previousValue === name, do nothing (same transform selected again)
+  }
+
+  if (tree.value.parent) deskWithContext.propagateTransform(tree.value.parent);
 }
 
 // Add or remove a transformation after a step in the stack
@@ -251,7 +285,7 @@ function formatValue(value: any, type: ObjectNodeType): string {
 
       <!-- Select principal -->
       <template v-if="availableTransforms.length > 0">
-        <Select v-model="nodeSelect" @update:model-value="handleNodeTransform">
+        <Select :model-value="nodeSelect" @update:model-value="handleNodeTransform">
           <!-- @vue-ignore -->
           <SelectTrigger size="xs" class="px-2 py-1">
             <SelectValue placeholder="+" class="text-xs">
