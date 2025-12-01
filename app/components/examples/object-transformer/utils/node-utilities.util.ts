@@ -1,4 +1,4 @@
-import type { ObjectNode, ObjectNodeType } from '../index';
+import type { ObjectNode, ObjectNodeType } from '..';
 import { all } from './functional.util';
 
 /**

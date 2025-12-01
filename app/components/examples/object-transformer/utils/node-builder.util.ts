@@ -1,4 +1,4 @@
-import type { ObjectNode } from '../index';
+import type { ObjectNode } from '..';
 import { isNull, isArray, isDate, isObject, typeOfToNodeType } from './type-guards.util';
 
 /**

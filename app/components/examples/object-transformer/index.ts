@@ -92,11 +92,21 @@ export { default as ObjectTransformer } from './ObjectTransformer.vue';
 export { default as TransformerNode } from './TransformerNode.vue';
 export { default as TransformerParamInput } from './TransformerParamInput.vue';
 
+// UI Components
+export { default as TransformNodeKey } from './TransformNodeKey.vue';
+export { default as TransformNodeActions } from './TransformNodeActions.vue';
+export { default as TransformSelect } from './TransformSelect.vue';
+export { default as TransformStepList } from './TransformStepList.vue';
+
 // Transforms
 export { default as TransformString } from './TransformString.vue';
 export { default as TransformNumber } from './TransformNumber.vue';
 export { default as TransformDate } from './TransformDate.vue';
 export { default as TransformBoolean } from './TransformBoolean.vue';
 export { default as TransformMisc } from './TransformMisc.vue';
+
+// Utils
+export * from './utils/node-editing.util';
+export * from './utils/node-transforms.util';
 
 export type { ObjectTransformerProps } from './ObjectTransformer.vue';

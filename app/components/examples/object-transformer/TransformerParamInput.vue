@@ -20,6 +20,9 @@ const emit = defineEmits<{
 
 function handleInput(value: any) {
   emit('update:modelValue', value);
+}
+
+function handleChange() {
   emit('change');
 }
 </script>
@@ -33,6 +36,7 @@ function handleInput(value: any) {
       class="h-6.5 px-2 py-0"
       style="font-size: var(--text-xs)"
       @input="handleInput(($event.target as HTMLInputElement).value)"
+      @blur="handleChange"
     />
 
     <Input
@@ -42,6 +46,7 @@ function handleInput(value: any) {
       :placeholder="config?.label"
       class="h-6.5 px-2 py-0 text-xs"
       @input="handleInput(parseFloat(($event.target as HTMLInputElement).value))"
+      @blur="handleChange"
     />
 
     <div v-else-if="config?.type === 'boolean'" class="flex items-center gap-1">

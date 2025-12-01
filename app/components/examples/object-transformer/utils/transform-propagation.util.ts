@@ -1,4 +1,4 @@
-import type { ObjectNode, ObjectTransformerDesk } from '../index';
+import type { ObjectNode, ObjectTransformerDesk } from '..';
 import { isStructuralResult } from './type-guards.util';
 import { buildNodeTree } from './node-builder.util';
 import { until } from './functional.util';

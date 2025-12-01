@@ -1,4 +1,4 @@
-import type { ObjectNode, ObjectNodeType } from '../index';
+import type { ObjectNode, ObjectNodeType } from '..';
 
 /**
  * Type Guards - Pure predicates for type checking
