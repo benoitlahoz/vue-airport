@@ -22,6 +22,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, Undo, Trash } from 'lucide-vue-next';
+import { getNodeType, isPrimitive as isPrimitiveType } from './utils/type-guards.util';
+import { formatValue } from './utils/node-utilities.util';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
 
@@ -34,7 +36,7 @@ const deskWithContext = desk as DeskWithContext;
 const tree = ref(props.tree);
 
 // Capture the original type once and keep it stable
-const originalType = deskWithContext.getNodeType(props.tree);
+const originalType = getNodeType(props.tree);
 
 const transforms: ComputedRef<Transform[]> = computed(() => {
   return deskWithContext.transforms.value;
@@ -49,25 +51,9 @@ const availableTransforms = computed(() => {
 
 // Transformations available for step selects (based on transformed type)
 const availableStepTransforms = computed(() => {
-  let transformedValue = tree.value.value;
-
-  // Appliquer les transformations jusqu'à rencontrer une transformation structurelle
-  for (const t of tree.value.transforms) {
-    const result = t.fn(transformedValue, ...(t.params || []));
-
-    // Si c'est une transformation structurelle, arrêter
-    const isStructural = result && typeof result === 'object' && result.__structuralChange === true;
-    if (isStructural) {
-      break;
-    }
-
-    // Transformation normale
-    transformedValue = result;
-  }
-
-  const transformedType = deskWithContext.getNodeType({ ...tree.value, value: transformedValue });
+  const transformedType = getNodeType(tree.value);
   return transforms.value.filter((t) =>
-    t.if({ ...tree.value, type: transformedType as ObjectNodeType, value: transformedValue })
+    t.if({ ...tree.value, type: transformedType as ObjectNodeType })
   );
 });
 
@@ -87,7 +73,7 @@ const stepSelect = computed({
   set: (value) => deskWithContext.setStepSelection(tree.value, value),
 });
 
-const isPrimitive = computed(() => deskWithContext.primitiveTypes.includes(tree.value.type));
+const isPrimitive = computed(() => isPrimitiveType(tree.value.type));
 const editingKey = computed(() => deskWithContext.editingNode.value === tree.value);
 const tempKey = computed(() => deskWithContext.tempKey.value);
 const isHovered = ref(false);
@@ -334,7 +320,7 @@ function isStructuralTransform(transformIndex: number): boolean {
           <!-- Valeur s'affiche juste pour primitives (caché sur mobile) -->
           <template v-if="isPrimitive">
             <span ref="valueElement" class="hidden md:inline ml-2 text-muted-foreground">
-              {{ deskWithContext.formatValue(tree.value, tree.type) }}
+              {{ formatValue(tree.value, tree.type) }}
             </span>
           </template>
         </div>
@@ -375,7 +361,7 @@ function isStructuralTransform(transformIndex: number): boolean {
         class="flex md:hidden items-center justify-between gap-2 mt-1 ml-5 pl-1.5"
       >
         <span v-if="isPrimitive" class="text-muted-foreground text-xs">
-          {{ deskWithContext.formatValue(tree.value, tree.type) }}
+          {{ formatValue(tree.value, tree.type) }}
         </span>
         <span v-else class="flex-1"></span>
 

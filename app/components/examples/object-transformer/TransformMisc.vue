@@ -10,7 +10,14 @@ const transforms: Transform[] = [
   {
     name: 'To String',
     if: (node) => node.type === 'number' || node.type === 'object' || node.type === 'array',
-    fn: (v: any) => (typeof v === 'number' ? String(v) : JSON.stringify(v)),
+    fn: (v: any) => {
+      if (typeof v === 'number') return String(v);
+      try {
+        return JSON.stringify(v, null, 0);
+      } catch {
+        return String(v);
+      }
+    },
   },
 ];
 

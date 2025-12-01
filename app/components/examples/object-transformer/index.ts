@@ -54,18 +54,14 @@ export interface ObjectTransformerContext {
   computeStepValue: (node: ObjectNode, index: number) => any;
   // Nodes
   forbiddenKeys: Ref<string[]>;
-  sanitizeKey: (key: string) => string | null;
-  autoRenameKey: (parent: ObjectNode, base: string) => string;
-  getNodeType: (node: ObjectNode) => ObjectNodeType;
   getComputedValueType: (node: ObjectNode, value: any) => ObjectNodeType;
-  formatValue: (value: any, type: ObjectNodeType) => string;
   // Key editing
   editingNode: Ref<ObjectNode | null>;
   tempKey: Ref<string | null>;
   startEditKey: (node: ObjectNode) => void;
   confirmEditKey: (node: ObjectNode) => void;
   cancelEditKey: (node: ObjectNode) => void;
-  // Node utilities
+  // Node utilities (pure functions)
   isAddedProperty: (node: ObjectNode) => boolean;
   getKeyClasses: (node: ObjectNode) => string;
   generateChildKey: (child: ObjectNode, index: number) => string;
