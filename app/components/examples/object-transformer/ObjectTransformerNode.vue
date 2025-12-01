@@ -84,6 +84,21 @@ const isPrimitive = computed(() => deskWithContext.primitiveTypes.includes(tree.
 const editingKey = ref(false);
 const tempKey = ref(props.tree.key);
 
+// Déterminer si la propriété a été ajoutée (issue d'un Split)
+const isAddedProperty = computed(() => {
+  const key = tree.value.key;
+  if (!key) return false;
+  // Une propriété ajoutée a une clé du format "parentKey_index"
+  return /_\d+$/.test(key);
+});
+
+// Classes CSS pour la clé
+const keyClasses = computed(() => {
+  if (isAddedProperty.value) return 'font-semibold text-blue-600';
+  if (tree.value.keyModified) return 'font-semibold text-yellow-600';
+  return 'font-semibold';
+});
+
 function confirmKeyChange() {
   const newKey = tempKey.value?.trim();
 
@@ -109,6 +124,7 @@ function confirmKeyChange() {
   if (parent?.type === 'object' && parent.children) {
     const finalKey = deskWithContext.autoRenameKey(parent, newKey);
     tree.value.key = finalKey;
+    tree.value.keyModified = true; // Marquer la clé comme modifiée
     tempKey.value = finalKey;
 
     // Propager au parent pour recalculer l'objet avec la nouvelle clé
@@ -255,7 +271,7 @@ function isStructuralTransform(transformIndex: number): boolean {
         </template>
 
         <template v-else>
-          <span class="font-semibold">{{ tree.key }}</span>
+          <span :class="keyClasses">{{ tree.key }}</span>
         </template>
       </div>
 

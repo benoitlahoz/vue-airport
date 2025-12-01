@@ -36,6 +36,7 @@ export interface ObjectNode {
   transforms: Transform[];
   children?: ObjectNode[];
   parent?: ObjectNode;
+  keyModified?: boolean; // True si la clé a été modifiée par l'utilisateur
 }
 
 export interface ObjectTransformerContext {
