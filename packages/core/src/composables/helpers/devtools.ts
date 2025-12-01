@@ -4,12 +4,14 @@
  */
 
 export interface DevToolsEvent {
-  type: 'check-in' | 'check-out' | 'update' | 'plugin-execute' | 'clear';
+  type: 'check-in' | 'check-out' | 'update' | 'switch' | 'plugin-execute' | 'clear';
   timestamp: number;
   deskId: string;
   childId?: string | number;
   pluginName?: string;
   duration?: number;
+  fromId?: string | number;
+  toId?: string | number;
   data?: Record<string, unknown>;
   previousData?: Record<string, unknown>;
   meta?: Record<string, unknown>;

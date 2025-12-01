@@ -1,30 +1,33 @@
 <script setup lang="ts">
 import { useCheckIn } from '#vue-airport';
 import { cn } from '@/lib/utils';
-import { type TransferListContext, type TransferListDesk, TransferListKey } from '.';
+import { AvailableDeskKey, type TransferableHeader, TransferredDeskKey } from '.';
 import { Button } from '@/components/ui/button';
-import type { TransferableItem } from './useTransferList';
 
 const props = defineProps<{ id: string }>();
 
-const { checkIn } = useCheckIn<TransferableItem, TransferListContext>();
-const { desk } = checkIn(TransferListKey);
-const deskWithPlugins = desk as typeof desk & TransferListDesk;
-const ctx = desk?.getContext<TransferListContext>();
+const { checkIn } = useCheckIn<TransferableHeader>();
+const { desk: availableDesk } = checkIn(AvailableDeskKey, {
+  watchData: true,
+});
+const { desk: transferredDesk } = checkIn(TransferredDeskKey, {
+  watchData: true,
+});
 
 const item = computed(() => {
-  const item = ctx?.getTransferableByKey(props.id) || null;
-  return item;
+  return availableDesk!.get(props.id)?.data || transferredDesk!.get(props.id)?.data;
 });
 
-const isTransferred = computed(() => ctx?.isTransferred(props.id) || false);
-
-const isActive = computed(() => {
-  return deskWithPlugins.activeId.value === props.id;
+const isTransferred = computed(() => {
+  return !!transferredDesk!.has(props.id);
 });
 
-const setActive = () => {
-  deskWithPlugins.setActive(props.id);
+const checkOut = () => {
+  if (isTransferred.value) {
+    transferredDesk!.checkOut(props.id);
+  } else {
+    availableDesk!.checkOut(props.id);
+  }
 };
 </script>
 
@@ -34,36 +37,29 @@ const setActive = () => {
     :class="
       cn(
         'p-2 border border-border rounded-md flex items-center justify-between select-none hover:bg-accent hover:text-accent-foreground group',
-        isTransferred ? 'pr-4' : 'pl-4',
-        isActive ? 'bg-accent text-accent-foreground' : ''
+        isTransferred ? 'pr-4' : 'pl-4'
       )
     "
-    @click="setActive"
   >
     <template v-if="isTransferred">
       <Button
         size="icon"
         variant="ghost"
         class="md:invisible md:group-hover:visible"
-        @click="ctx?.retrieve(props.id)"
+        @click="checkOut"
       >
         <UIcon name="lucide:arrow-left" class="hidden md:block" />
         <UIcon name="lucide:arrow-up" class="md:hidden" />
       </Button>
-      <div class="flex items-center gap-1">
-        <Button size="icon" variant="ghost" class="text-destructive/80 hover:text-destructive">
-          <UIcon name="i-tabler:transform" />
-        </Button>
-        <div class="font-bold uppercase">{{ item?.name }}</div>
-      </div>
+      <div class="font-bold uppercase">{{ item?.name }}</div>
     </template>
-    <template v-else>
+    <template v-if="!isTransferred">
       <div class="font-bold uppercase">{{ item?.name }}</div>
       <Button
         size="icon"
         variant="ghost"
         class="md:invisible md:group-hover:visible"
-        @click="ctx?.transfer(props.id)"
+        @click="checkOut"
       >
         <UIcon name="lucide:arrow-right" class="hidden md:block" />
         <UIcon name="lucide:arrow-down" class="md:hidden" />

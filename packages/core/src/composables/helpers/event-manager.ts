@@ -1,5 +1,5 @@
 import { nextTick } from 'vue';
-import type { DeskEventType, DeskEventCallback } from '../desk/desk-core';
+import type { DeskEventType, DeskEventCallback, DeskEventPayload } from '../desk/desk-core';
 import { NoOp, Debug } from '../utils';
 
 const DebugPrefix = '[EventManager]';
@@ -46,7 +46,7 @@ export class EventManager<T = any> {
     this.debug(`${DebugPrefix} All listeners removed`);
   }
 
-  public emit(event: DeskEventType, payload: { id?: string | number; data?: T }) {
+  public emit(event: DeskEventType, payload: DeskEventPayload<T>) {
     // Use batching for update events (high frequency)
     if (event === 'update') {
       this.eventBatcher.add(event, payload);
@@ -67,7 +67,10 @@ export class EventManager<T = any> {
 export class EventBatcher<T = any> {
   private pendingEvents: Map<
     DeskEventType,
-    Array<{ id?: string | number; data?: T; timestamp: number }>
+    Array<
+      | { id?: string | number; data?: T; timestamp: number }
+      | { from: string | number; to: string | number; timestamp: number }
+    >
   > = new Map();
   private flushScheduled = false;
   private listeners: Map<DeskEventType, Set<DeskEventCallback<T>>>;
@@ -79,7 +82,7 @@ export class EventBatcher<T = any> {
   /**
    * Adds an event to the batch queue
    */
-  public add(event: DeskEventType, payload: { id?: string | number; data?: T }) {
+  public add(event: DeskEventType, payload: DeskEventPayload<T>) {
     if (!this.pendingEvents.has(event)) {
       this.pendingEvents.set(event, []);
     }
