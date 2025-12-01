@@ -146,6 +146,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
     createdAt: new Date().toLocaleString(),
     plugins: options?.plugins?.map((p) => p.name) || [],
     label: options?.deskId || 'Default Desk',
+    context: options?.context,
   });
 
   /**
@@ -209,6 +210,8 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
   const setContext = <U extends TContext>(context: U) => {
     if (options) {
       options.context = context;
+      // Update DevTools with new context
+      devTools.updateContext(deskId, context as Record<string, unknown>);
       return context;
     }
   };
@@ -268,7 +271,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       meta: meta as Record<string, unknown>,
       registrySize: registryMap.size,
     });
-    devTools.updateRegistry(deskId, registryMap);
+    devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
 
     // Call plugin hooks and track execution
     if (options?.plugins) {
@@ -351,7 +354,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       childId: id,
       registrySize: registryMap.size,
     });
-    devTools.updateRegistry(deskId, registryMap);
+    devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
 
     // Call plugin hooks and track execution
     if (options?.plugins) {
@@ -497,7 +500,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
         previousData: previousData as Record<string, unknown>,
         registrySize: registryMap.size,
       });
-      devTools.updateRegistry(deskId, registryMap);
+      devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
 
       if (options?.debug) {
         debug(`${DebugPrefix} update diff:`, {
@@ -547,7 +550,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       toId: to,
       registrySize: registryMap.size,
     });
-    devTools.updateRegistry(deskId, registryMap);
+    devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
 
     if (options?.debug) {
       debug(`${DebugPrefix} switch completed:`, { from, to });
@@ -574,7 +577,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       deskId,
       registrySize: count,
     });
-    devTools.updateRegistry(deskId, registryMap);
+    devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
 
     debug(`${DebugPrefix} Cleared ${count} items from registry`);
   };
