@@ -110,6 +110,9 @@ function confirmKeyChange() {
     const finalKey = deskWithContext.autoRenameKey(parent, newKey);
     tree.value.key = finalKey;
     tempKey.value = finalKey;
+
+    // Propager au parent pour recalculer l'objet avec la nouvelle clé
+    deskWithContext.propagateTransform(parent);
   }
 
   editingKey.value = false;
@@ -143,7 +146,7 @@ function handleNodeTransform(name: unknown) {
     const hasSplitNodes = tree.value.parent.children!.some(
       (child) => child !== tree.value && child.key?.startsWith(baseKeyPrefix)
     );
-    
+
     if (hasSplitNodes) {
       // Supprimer tous les nœuds splittés
       tree.value.parent.children = tree.value.parent.children!.filter(
