@@ -6,6 +6,7 @@ import type { ObjectNode } from './index';
 interface Props {
   node: ObjectNode;
   isVisible: boolean;
+  asChild?: boolean;
 }
 
 defineProps<Props>();
@@ -13,7 +14,12 @@ const emit = defineEmits<{ toggle: [] }>();
 </script>
 
 <template>
+  <!-- Si as-child, on render le slot -->
+  <slot v-if="asChild" />
+
+  <!-- Sinon, on render le composant par défaut -->
   <div
+    v-else
     class="overflow-hidden transition-all duration-200"
     :class="isVisible ? 'w-4 mr-1.5' : 'w-0'"
   >

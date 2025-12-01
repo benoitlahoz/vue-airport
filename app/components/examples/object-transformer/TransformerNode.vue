@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue';
+import { computed, ref, watch, onUnmounted, h, useSlots } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
   TransformerNode,
   TransformNodeKey,
   TransformNodeActions,
+  TransformNodeValue,
+  TransformToggleIcon,
   TransformSelect,
   TransformStepList,
   type ObjectNode,
@@ -17,8 +19,8 @@ import {
   shouldStartEdit,
   canConfirmEdit,
 } from '.';
+import { SlotName } from './constants';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 import { getNodeType, isPrimitive as isPrimitiveType } from './utils/type-guards.util';
 import { formatValue } from './utils/node-utilities.util';
 
@@ -26,15 +28,31 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 
 interface Props {
   id?: string | null; // null = root
+  asChild?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   id: null,
+  asChild: false,
 });
 
 const { checkIn } = useCheckIn<ObjectNode, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
 const deskWithContext = desk as DeskWithContext;
+
+// Slots locaux de TransformerNode
+const slots = useSlots();
+const hasCustomToggle = computed(() => !!slots[SlotName.ToggleIcon]);
+const hasCustomValue = computed(() => !!slots[SlotName.NodeValue]);
+const hasCustomActions = computed(() => !!slots[SlotName.NodeActions]);
+const hasCustomTransformSelect = computed(() => !!slots[SlotName.TransformSelect]);
+
+// Helper pour rendre un slot local avec props
+const renderSlot = (slotName: string, slotProps: any) => {
+  const slot = slots[slotName];
+  if (!slot) return null;
+  return h('div', {}, slot(slotProps));
+};
 
 // Get the node from the desk
 const tree = computed(() => {
@@ -189,7 +207,8 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
 </script>
 
 <template>
-  <div class="text-xs" :class="{ 'opacity-50': tree.deleted }">
+  <slot v-if="asChild" :data-slot="SlotName.Node" />
+  <div v-else :data-slot="SlotName.Node" class="text-xs" :class="{ 'opacity-50': tree.deleted }">
     <!-- Wrapper avec scroll horizontal -->
     <div class="overflow-x-auto">
       <div
@@ -198,16 +217,18 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
         <!-- Partie gauche : chevron + delete + key + value -->
         <div class="flex items-center gap-2">
           <template v-if="tree.children?.length">
-            <ChevronRight
-              v-if="!isOpen"
-              class="w-3 h-3 text-muted-foreground cursor-pointer shrink-0"
-              @click="toggleOpen"
+            <!-- Toggle Icon : custom (as-child) ou défaut -->
+            <component
+              :is="
+                renderSlot(SlotName.ToggleIcon, {
+                  isOpen,
+                  onClick: toggleOpen,
+                  node: tree,
+                })
+              "
+              v-if="hasCustomToggle"
             />
-            <ChevronDown
-              v-else-if="isOpen"
-              class="w-3 h-3 text-muted-foreground cursor-pointer shrink-0"
-              @click="toggleOpen"
-            />
+            <TransformToggleIcon v-else :is-open="isOpen" @click="toggleOpen" />
           </template>
           <div v-else class="w-3 shrink-0" />
 
@@ -217,9 +238,22 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
             @mouseenter="isHovered = true"
             @mouseleave="!editingKey && (isHovered = false)"
           >
-            <!-- Bouton Delete/Restore -->
+            <!-- Bouton Delete/Restore : custom ou défaut -->
+            <component
+              :is="
+                renderSlot(SlotName.NodeActions, {
+                  node: tree,
+                  isVisible: isHovered || editingKey,
+                  onToggle: toggleDelete,
+                })
+              "
+              v-if="
+                hasCustomActions &&
+                (tree.parent?.type === 'object' || tree.parent?.type === 'array')
+              "
+            />
             <div
-              v-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'"
+              v-else-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'"
               ref="buttonElement"
             >
               <TransformNodeActions
@@ -244,21 +278,41 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
               />
             </div>
 
-            <!-- Value (lecture seule) - masquée pour object/array -->
-            <span
-              v-if="tree.type !== 'object' && tree.type !== 'array'"
-              ref="valueElement"
-              class="ml-2 text-muted-foreground"
-            >
-              {{ formatValue(tree.value, tree.type) }}
-            </span>
+            <!-- Value : custom ou défaut -->
+            <component
+              :is="
+                renderSlot(SlotName.NodeValue, {
+                  node: tree,
+                  value: tree.value,
+                  formattedValue: formatValue(tree.value, tree.type),
+                  type: tree.type,
+                })
+              "
+              v-if="hasCustomValue && tree.type !== 'object' && tree.type !== 'array'"
+            />
+            <TransformNodeValue
+              v-else-if="tree.type !== 'object' && tree.type !== 'array'"
+              :formatted-value="formatValue(tree.value, tree.type)"
+              :type="tree.type"
+            />
             <span v-else ref="valueElement" class="hidden" />
           </div>
         </div>
 
-        <!-- Partie droite : select de transformation -->
+        <!-- Partie droite : select de transformation : custom ou défaut -->
         <div v-if="availableTransforms.length" class="shrink-0 md:ml-auto">
+          <component
+            :is="
+              renderSlot(SlotName.TransformSelect, {
+                transforms: availableTransforms,
+                modelValue: nodeSelect,
+                'onUpdate:modelValue': handleNodeTransform,
+              })
+            "
+            v-if="hasCustomTransformSelect"
+          />
           <TransformSelect
+            v-else
             v-model="nodeSelect"
             :transforms="availableTransforms"
             @update:model-value="handleNodeTransform"

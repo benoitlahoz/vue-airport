@@ -1,20 +1,12 @@
 import type { ObjectNode, ObjectNodeType } from '..';
 import { all } from './functional.util';
+import { FORBIDDEN_KEYS } from '../constants';
 
 /**
  * Key Validation - Pure predicates and validation
  */
 
-export const forbiddenKeys = [
-  '__proto__',
-  'prototype',
-  'constructor',
-  'toString',
-  '__defineGetter__',
-  '__defineSetter__',
-  '__lookupGetter__',
-  '__lookupSetter__',
-];
+export const forbiddenKeys = FORBIDDEN_KEYS;
 
 // Validation predicates
 const isNotEmpty = (key: string): boolean => Boolean(key);

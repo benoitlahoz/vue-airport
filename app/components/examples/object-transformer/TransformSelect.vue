@@ -16,6 +16,7 @@ interface Props {
   placeholder?: string;
   showRemove?: boolean;
   removeLabel?: string;
+  asChild?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -30,7 +31,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <Select :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
+  <!-- Si as-child, on render le slot -->
+  <slot v-if="asChild" />
+
+  <!-- Sinon, on render le composant par défaut -->
+  <Select v-else :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
     <SelectTrigger
       class="h-auto max-h-6 px-2 py-0.5 text-xs group-hover:border-primary min-w-[120px]"
     >

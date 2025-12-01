@@ -43,6 +43,11 @@ export interface ObjectNode {
 }
 
 export interface ObjectTransformerContext {
+  // Slot Registry
+  slotRegistry: Ref<Record<string, any>>;
+  registerSlots: () => void;
+  getSlot: (name: string) => any | null;
+  hasSlot: (name: string) => boolean;
   // Tree
   tree: Ref<ObjectNode>;
   getNode: (id: string) => ObjectNode | null;
@@ -57,7 +62,7 @@ export interface ObjectTransformerContext {
   propagateTransform: (node: ObjectNode) => void;
   computeStepValue: (node: ObjectNode, index: number) => any;
   // Nodes
-  forbiddenKeys: Ref<string[]>;
+  forbiddenKeys: Ref<readonly string[]>;
   getComputedValueType: (node: ObjectNode, value: any) => ObjectNodeType;
   // Key editing
   editingNode: Ref<ObjectNode | null>;
@@ -95,6 +100,8 @@ export { default as TransformerParamInput } from './TransformerParamInput.vue';
 // UI Components
 export { default as TransformNodeKey } from './TransformNodeKey.vue';
 export { default as TransformNodeActions } from './TransformNodeActions.vue';
+export { default as TransformNodeValue } from './TransformNodeValue.vue';
+export { default as TransformToggleIcon } from './TransformToggleIcon.vue';
 export { default as TransformSelect } from './TransformSelect.vue';
 export { default as TransformStepList } from './TransformStepList.vue';
 
@@ -104,6 +111,15 @@ export { default as TransformNumber } from './TransformNumber.vue';
 export { default as TransformDate } from './TransformDate.vue';
 export { default as TransformBoolean } from './TransformBoolean.vue';
 export { default as TransformMisc } from './TransformMisc.vue';
+
+// Constants
+export {
+  SlotName,
+  ForbiddenKey,
+  FORBIDDEN_KEYS,
+  DATA_SLOT_ATTRIBUTE,
+  AS_CHILD_ATTRIBUTE,
+} from './constants';
 
 // Utils
 export * from './utils/node-editing.util';

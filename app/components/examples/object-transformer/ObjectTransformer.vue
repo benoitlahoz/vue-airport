@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, useSlots, watch, type VNode } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
-  TransformerNode,
   ObjectTransformerDeskKey,
   type ObjectNode,
   type ObjectNodeType,
@@ -10,6 +9,7 @@ import {
   type ObjectTransformerContext,
   type ObjectTransformerDesk,
 } from '.';
+import { SlotName, DATA_SLOT_ATTRIBUTE, AS_CHILD_ATTRIBUTE } from './constants';
 import { buildNodeTree } from './utils/node-builder.util';
 import {
   computeIntermediateValue,
@@ -35,10 +35,41 @@ const props = withDefaults(defineProps<ObjectTransformerProps>(), {
   data: () => ({}),
 });
 
+const slots = useSlots();
+
 const { createDesk } = useCheckIn<ObjectNode, ObjectTransformerContext>();
 const { desk } = createDesk(ObjectTransformerDeskKey, {
   devTools: true,
   context: {
+    // Slot Registry
+    slotRegistry: ref<Record<string, any>>({}),
+    registerSlots() {
+      const registry: Record<string, any> = {};
+
+      if (slots.default) {
+        const vnodes = slots.default();
+        vnodes.forEach((vnode) => {
+          const dataSlot = vnode.props?.[DATA_SLOT_ATTRIBUTE];
+          if (dataSlot) {
+            // Si as-child, on prend le premier enfant du slot
+            const asChild = vnode.props?.[AS_CHILD_ATTRIBUTE] ?? false;
+            if (asChild && Array.isArray(vnode.children) && vnode.children.length > 0) {
+              registry[dataSlot] = vnode.children[0] as VNode;
+            } else {
+              registry[dataSlot] = vnode;
+            }
+          }
+        });
+      }
+
+      this.slotRegistry.value = registry;
+    },
+    getSlot(name: string) {
+      return this.slotRegistry.value[name] || null;
+    },
+    hasSlot(name: string): boolean {
+      return !!this.slotRegistry.value[name];
+    },
     // Tree
     tree: ref<ObjectNode>(
       buildNodeTree(props.data, Array.isArray(props.data) ? 'Array' : 'Object')
@@ -97,7 +128,7 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
     computeStepValue,
 
     // Nodes
-    forbiddenKeys: ref<string[]>(forbiddenKeys),
+    forbiddenKeys: ref<readonly string[]>(forbiddenKeys),
     getComputedValueType(_node: ObjectNode, value: any): ObjectNodeType {
       return getTypeFromValue(value);
     },
@@ -194,6 +225,15 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
   },
 });
 
+// Enregistrer les slots au montage et les réévaluer quand ils changent
+watch(
+  () => slots.default?.(),
+  () => {
+    (desk as ObjectTransformerDesk).registerSlots();
+  },
+  { immediate: true, deep: true }
+);
+
 watch(
   () => props.data,
   (newData) => {
@@ -207,8 +247,8 @@ watch(
 </script>
 
 <template>
-  <TransformerNode :id="null" />
-  <slot />
+  <component :is="(desk as ObjectTransformerDesk).getSlot(SlotName.Node)" :id="null" />
+  <slot style="display: none" />
 </template>
 
 <style scoped></style>
