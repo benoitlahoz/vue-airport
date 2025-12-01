@@ -19,12 +19,14 @@ const props = withDefaults(defineProps<ObjectTransformerProps>(), {
   data: () => ({}),
 });
 
-const tree = ref<ObjectNode>(buildNodeTree(props.data, 'Object'));
+const tree = ref<ObjectNode>(
+  buildNodeTree(props.data, Array.isArray(props.data) ? 'Array' : 'Object')
+);
 
 watch(
   () => props.data,
   (newData) => {
-    tree.value = buildNodeTree(newData, 'Object');
+    tree.value = buildNodeTree(newData, Array.isArray(newData) ? 'Array' : 'Object');
   },
   { deep: true }
 );
