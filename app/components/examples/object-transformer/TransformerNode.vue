@@ -114,9 +114,12 @@ onUnmounted(() => {
 const transformsPaddingLeft = computed(() => {
   if (!valueElement.value || !isPrimitive.value) return '0px';
   const rect = valueElement.value.getBoundingClientRect();
-  const parentRect = valueElement.value.closest('.text-xs.mb-4')?.getBoundingClientRect();
-  if (!parentRect) return '0px';
-  return `${rect.left - parentRect.left}px`;
+  const containerEl = valueElement.value.closest('.text-xs');
+  if (!containerEl) return '0px';
+  const containerRect = containerEl.getBoundingClientRect();
+  const offset = rect.left - containerRect.left;
+  // Ne pas soustraire car on est déjà dans le container avec border-l
+  return `${offset}px`;
 });
 
 // Classes CSS pour la clé
@@ -243,7 +246,7 @@ function isStructuralTransform(transformIndex: number): boolean {
 </script>
 
 <template>
-  <div class="text-xs mb-4" :class="{ 'opacity-50': tree.deleted }">
+  <div class="text-xs" :class="{ 'opacity-50': tree.deleted }">
     <!-- Wrapper avec scroll horizontal -->
     <div class="overflow-x-auto">
       <div
