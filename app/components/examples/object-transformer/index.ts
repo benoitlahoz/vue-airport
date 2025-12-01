@@ -67,8 +67,8 @@ export interface ObjectTransformerContext {
   generateChildKey: (child: ObjectNode, index: number) => string;
   toggleNodeDeletion: (node: ObjectNode) => void;
   // Transform selections
-  nodeSelections: Map<ObjectNode, string | null>;
-  stepSelections: Map<ObjectNode, Record<number, string | null>>;
+  nodeSelections: WeakMap<ObjectNode, string | null>;
+  stepSelections: WeakMap<ObjectNode, Record<number, string | null>>;
   getNodeSelection: (node: ObjectNode) => string | null;
   setNodeSelection: (node: ObjectNode, value: string | null) => void;
   getStepSelection: (node: ObjectNode) => Record<number, string | null>;

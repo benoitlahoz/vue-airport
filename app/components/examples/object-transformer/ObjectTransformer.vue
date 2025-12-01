@@ -144,8 +144,8 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
     },
 
     // Transform selections
-    nodeSelections: new Map<ObjectNode, string | null>(),
-    stepSelections: new Map<ObjectNode, Record<number, string | null>>(),
+    nodeSelections: new WeakMap<ObjectNode, string | null>(),
+    stepSelections: new WeakMap<ObjectNode, Record<number, string | null>>(),
     getNodeSelection(node: ObjectNode): string | null {
       if (!this.nodeSelections.has(node)) {
         const initial = node.transforms.length > 0 ? node.transforms.at(-1)?.name || null : null;
