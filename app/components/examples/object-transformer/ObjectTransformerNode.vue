@@ -3,6 +3,7 @@ import { computed, ref, type ComputedRef } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
   ObjectTransformerNode,
+  ObjectTransformerParamInput,
   type ObjectNode,
   type Transform,
   type ObjectNodeType,
@@ -19,7 +20,6 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
@@ -29,18 +29,6 @@ const props = defineProps<{ tree: ObjectNode }>();
 const { checkIn } = useCheckIn<ObjectNode, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
 const deskWithContext = desk as DeskWithContext;
-
-const PRIMITIVE_TYPES: ObjectNodeType[] = [
-  'string',
-  'number',
-  'boolean',
-  'bigint',
-  'symbol',
-  'undefined',
-  'null',
-  'date',
-  'function',
-] as const;
 
 const tree = ref(props.tree);
 
@@ -80,57 +68,25 @@ const nodeSelect = ref<string | null>(
 );
 const stepSelect = ref<Record<number, string | null>>({});
 
-const isPrimitive = computed(() => PRIMITIVE_TYPES.includes(tree.value.type));
+const isPrimitive = computed(() => deskWithContext.primitiveTypes.includes(tree.value.type));
 const editingKey = ref(false);
 const tempKey = ref(props.tree.key);
 
-function sanitizeKey(key: string): string | null {
-  if (!key) return null;
-  if (deskWithContext.forbiddenKeys.value.includes(key)) return null;
-  if (key.startsWith('__') && key.endsWith('__')) return null;
-  if (key.includes('.')) return null;
-
-  return key;
-}
-
-function autoRenameKey(parent: ObjectNode, base: string) {
-  let safeBase = sanitizeKey(base);
-  if (!safeBase) safeBase = 'key'; // fallback
-
-  if (!parent.children?.some((c) => c.key === safeBase)) {
-    return safeBase;
-  }
-
-  let i = 1;
-  let candidate = `${safeBase}_${i}`;
-
-  while (parent.children?.some((c) => c.key === candidate)) {
-    i++;
-    candidate = `${safeBase}_${i}`;
-  }
-
-  return candidate;
-}
-
-// Validate and apply key change
 function confirmKeyChange() {
   const newKey = tempKey.value?.trim();
 
-  // Empty key → revert
   if (!newKey) {
     tempKey.value = props.tree.key;
     editingKey.value = false;
     return;
   }
 
-  // Forbidden key → revert
-  if (!sanitizeKey(newKey)) {
+  if (!deskWithContext.sanitizeKey(newKey)) {
     tempKey.value = props.tree.key;
     editingKey.value = false;
     return;
   }
 
-  // Identical → close
   if (newKey === props.tree.key) {
     editingKey.value = false;
     return;
@@ -139,7 +95,7 @@ function confirmKeyChange() {
   const parent = props.tree.parent;
 
   if (parent?.type === 'object' && parent.children) {
-    const finalKey = autoRenameKey(parent, newKey);
+    const finalKey = deskWithContext.autoRenameKey(parent, newKey);
     tree.value.key = finalKey;
     tempKey.value = finalKey;
   }
@@ -147,19 +103,9 @@ function confirmKeyChange() {
   editingKey.value = false;
 }
 
-// Annuler
 function cancelKeyChange() {
   tempKey.value = props.tree.key;
   editingKey.value = false;
-}
-
-function findTransform(name: string): Transform | undefined {
-  return transforms.value.find((t) => t.name === name);
-}
-
-function createTransformEntry(name: string) {
-  const transform = findTransform(name);
-  return transform ? { ...transform, params: initParams(transform) } : null;
 }
 
 function handleNodeTransform(name: unknown) {
@@ -179,7 +125,7 @@ function handleNodeTransform(name: unknown) {
 
   if (!shouldAdd && !shouldChange) return;
 
-  const entry = createTransformEntry(transformName);
+  const entry = deskWithContext.createTransformEntry(transformName);
   if (!entry) return;
 
   if (shouldAdd) {
@@ -209,7 +155,7 @@ function handleStepTransform(index: number, name: unknown) {
     newStepSelect[index + 1] = null;
     stepSelect.value = newStepSelect;
   } else {
-    const entry = createTransformEntry(transformName);
+    const entry = deskWithContext.createTransformEntry(transformName);
     if (entry) {
       tree.value.transforms.splice(index + 1, 0, entry);
       stepSelect.value[index + 1] = tree.value.transforms[index + 1]?.name || null;
@@ -219,36 +165,14 @@ function handleStepTransform(index: number, name: unknown) {
   if (tree.value.parent) deskWithContext.propagateTransform(tree.value.parent);
 }
 
-function initParams(t: Transform) {
-  return t.params?.map((p) => p.default ?? null) || [];
-}
-
-// Calculate the cumulative value up to a step
-function computeStepValue(index: number) {
-  return tree.value.transforms
-    .slice(0, index + 1)
-    .reduce((val, t) => t.fn(val, ...(t.params || [])), tree.value.value);
-}
-
-function getComputedValueType(value: any): ObjectNodeType {
-  return deskWithContext.getNodeType({ ...tree.value, value });
-}
-
-const VALUE_FORMATTERS: Partial<Record<ObjectNodeType, (v: any) => string>> = {
-  date: (v) => (v instanceof Date ? v.toISOString() : String(v)),
-  function: (v) => `[Function: ${v.name || 'anonymous'}]`,
-  bigint: (v) => `${v}n`,
-  symbol: (v) => v.toString(),
-  undefined: () => 'undefined',
-  null: () => 'null',
-};
-
-function formatValue(value: any, type: ObjectNodeType): string {
-  return VALUE_FORMATTERS[type]?.(value) ?? String(value);
-}
-
 function getParamConfig(transformName: string, paramIndex: number) {
   return transforms.value.find((x) => x.name === transformName)?.params?.[paramIndex];
+}
+
+function getFormattedStepValue(index: number): string {
+  const value = deskWithContext.computeStepValue(tree.value, index);
+  const type = deskWithContext.getComputedValueType(tree.value, value);
+  return deskWithContext.formatValue(value, type);
 }
 </script>
 
@@ -288,7 +212,7 @@ function getParamConfig(transformName: string, paramIndex: number) {
       <!-- Valeur s'affiche juste pour primitives -->
       <template v-if="isPrimitive">
         <span class="ml-2 text-muted-foreground italic">
-          {{ formatValue(tree.value, tree.type) }}
+          {{ deskWithContext.formatValue(tree.value, tree.type) }}
         </span>
       </template>
 
@@ -338,48 +262,18 @@ function getParamConfig(transformName: string, paramIndex: number) {
           class="flex items-center gap-2 my-2"
         >
           <span class="text-blue-600 text-xs pl-5">
-            {{
-              formatValue(computeStepValue(index), getComputedValueType(computeStepValue(index)))
-            }}
+            {{ getFormattedStepValue(index) }}
           </span>
 
           <template v-if="availableStepTransforms.length > 1">
             <div v-if="t.params" class="flex gap-2">
-              <div v-for="(_p, pi) in t.params" :key="`param-${index}-${pi}`">
-                <Input
-                  v-if="getParamConfig(t.name, pi)?.type === 'text'"
-                  v-model="t.params[pi]"
-                  :placeholder="getParamConfig(t.name, pi)?.label"
-                  class="h-6.5 px-2 py-0"
-                  style="font-size: var(--text-xs)"
-                  @input="deskWithContext.propagateTransform(tree)"
-                />
-
-                <Input
-                  v-else-if="getParamConfig(t.name, pi)?.type === 'number'"
-                  v-model.number="t.params[pi]"
-                  type="number"
-                  :placeholder="getParamConfig(t.name, pi)?.label"
-                  class="h-6.5 px-2 py-0 text-xs"
-                  @input="deskWithContext.propagateTransform(tree)"
-                />
-
-                <div
-                  v-else-if="getParamConfig(t.name, pi)?.type === 'boolean'"
-                  class="flex items-center gap-1"
-                >
-                  <Checkbox
-                    :checked="t.params[pi]"
-                    @update:checked="
-                      (v: any) => {
-                        t.params![pi] = v;
-                        deskWithContext.propagateTransform(tree);
-                      }
-                    "
-                  />
-                  <span class="text-xs">{{ t.params![pi] ? 'true' : 'false' }}</span>
-                </div>
-              </div>
+              <ObjectTransformerParamInput
+                v-for="(_p, pi) in t.params"
+                :key="`param-${index}-${pi}`"
+                v-model="t.params[pi]"
+                :config="getParamConfig(t.name, pi)"
+                @change="deskWithContext.propagateTransform(tree)"
+              />
             </div>
 
             <Select

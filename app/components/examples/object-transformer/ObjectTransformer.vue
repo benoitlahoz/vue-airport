@@ -140,10 +140,33 @@ const { createDesk } = useCheckIn<ObjectNode, ObjectTransformerContext>();
 const { desk } = createDesk(ObjectTransformerDeskKey, {
   devTools: true,
   context: {
+    // Constants
+    primitiveTypes: [
+      'string',
+      'number',
+      'boolean',
+      'bigint',
+      'symbol',
+      'undefined',
+      'null',
+      'date',
+      'function',
+    ] as ObjectNodeType[],
+
     // Transforms
     transforms: ref<Transform[]>([]),
     addTransforms(...newTransforms: Transform[]) {
       this.transforms.value.push(...newTransforms);
+    },
+    findTransform(name: string): Transform | undefined {
+      return this.transforms.value.find((t) => t.name === name);
+    },
+    initParams(transform: Transform) {
+      return transform.params?.map((p) => p.default ?? null) || [];
+    },
+    createTransformEntry(name: string) {
+      const transform = this.findTransform(name);
+      return transform ? { ...transform, params: this.initParams(transform) } : null;
     },
     propagateTransform(node: ObjectNode) {
       if (!node) return;
@@ -169,6 +192,11 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
 
       if (node.parent) (desk as ObjectTransformerDesk).propagateTransform(node.parent);
     },
+    computeStepValue(node: ObjectNode, index: number) {
+      return node.transforms
+        .slice(0, index + 1)
+        .reduce((val, t) => t.fn(val, ...(t.params || [])), node.value);
+    },
 
     // Nodes
     forbiddenKeys: ref<string[]>([
@@ -181,6 +209,31 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
       '__lookupGetter__',
       '__lookupSetter__',
     ]),
+    sanitizeKey(key: string): string | null {
+      if (!key) return null;
+      if (this.forbiddenKeys.value.includes(key)) return null;
+      if (key.startsWith('__') && key.endsWith('__')) return null;
+      if (key.includes('.')) return null;
+      return key;
+    },
+    autoRenameKey(parent: ObjectNode, base: string): string {
+      let safeBase = this.sanitizeKey(base);
+      if (!safeBase) safeBase = 'key';
+
+      if (!parent.children?.some((c) => c.key === safeBase)) {
+        return safeBase;
+      }
+
+      let i = 1;
+      let candidate = `${safeBase}_${i}`;
+
+      while (parent.children?.some((c) => c.key === candidate)) {
+        i++;
+        candidate = `${safeBase}_${i}`;
+      }
+
+      return candidate;
+    },
     getNodeType(node: ObjectNode) {
       let value = node.value;
 
@@ -201,6 +254,20 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
       if (value instanceof Date) return 'date';
       if (value && typeof value === 'object') return 'object';
       return 'unknown';
+    },
+    getComputedValueType(node: ObjectNode, value: any): ObjectNodeType {
+      return this.getNodeType({ ...node, value });
+    },
+    formatValue(value: any, type: ObjectNodeType): string {
+      const formatters: Partial<Record<ObjectNodeType, (v: any) => string>> = {
+        date: (v) => (v instanceof Date ? v.toISOString() : String(v)),
+        function: (v) => `[Function: ${v.name || 'anonymous'}]`,
+        bigint: (v) => `${v}n`,
+        symbol: (v) => v.toString(),
+        undefined: () => 'undefined',
+        null: () => 'null',
+      };
+      return formatters[type]?.(value) ?? String(value);
     },
   },
 });

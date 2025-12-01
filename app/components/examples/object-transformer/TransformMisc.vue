@@ -8,7 +8,7 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 const transforms: Transform[] = [
   // Numbers, Objects and Arrays
   {
-    name: 'Stringify',
+    name: 'To String',
     if: (node) => node.type === 'number' || node.type === 'object' || node.type === 'array',
     fn: (v: any) => (typeof v === 'number' ? String(v) : JSON.stringify(v)),
   },

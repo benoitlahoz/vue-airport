@@ -32,13 +32,23 @@ export interface ObjectNode {
 }
 
 export interface ObjectTransformerContext {
+  // Constants
+  primitiveTypes: ObjectNodeType[];
   // Transforms
   transforms: Ref<Transform[]>;
   addTransforms: (...newTransforms: Transform[]) => void;
+  findTransform: (name: string) => Transform | undefined;
+  initParams: (transform: Transform) => any[];
+  createTransformEntry: (name: string) => (Transform & { params: any[] }) | null;
   propagateTransform: (node: ObjectNode) => void;
+  computeStepValue: (node: ObjectNode, index: number) => any;
   // Nodes
   forbiddenKeys: Ref<string[]>;
+  sanitizeKey: (key: string) => string | null;
+  autoRenameKey: (parent: ObjectNode, base: string) => string;
   getNodeType: (node: ObjectNode) => ObjectNodeType;
+  getComputedValueType: (node: ObjectNode, value: any) => ObjectNodeType;
+  formatValue: (value: any, type: ObjectNodeType) => string;
 }
 
 export type ObjectTransformerDesk = DeskCore<ObjectNode> & ObjectTransformerContext;
@@ -48,6 +58,7 @@ export const ObjectTransformerDeskKey: InjectionKey<ObjectTransformerDesk> =
 
 export { default as ObjectTransformer } from './ObjectTransformer.vue';
 export { default as ObjectTransformerNode } from './ObjectTransformerNode.vue';
+export { default as ObjectTransformerParamInput } from './ObjectTransformerParamInput.vue';
 
 // Transforms
 export { default as TransformString } from './TransformString.vue';

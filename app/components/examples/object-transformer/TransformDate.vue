@@ -43,6 +43,26 @@ const transforms: Transform[] = [
       return date;
     },
   },
+  {
+    name: 'Get Time',
+    if: (node) => node.type === 'date',
+    fn: (v: any) => (v instanceof Date ? v.getTime() : v),
+  },
+  {
+    name: 'Get Year',
+    if: (node) => node.type === 'date',
+    fn: (v: any) => (v instanceof Date ? v.getFullYear() : v),
+  },
+  {
+    name: 'Get Month',
+    if: (node) => node.type === 'date',
+    fn: (v: any) => (v instanceof Date ? v.getMonth() + 1 : v), // Months are zero-based
+  },
+  {
+    name: 'Get Day',
+    if: (node) => node.type === 'date',
+    fn: (v: any) => (v instanceof Date ? v.getDate() : v), // Day of the month
+  },
 ];
 
 const { checkIn } = useCheckIn<Transform, ObjectTransformerContext>();
