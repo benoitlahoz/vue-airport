@@ -38,6 +38,7 @@ export interface ObjectNode {
   parent?: ObjectNode;
   keyModified?: boolean; // True si la clé a été modifiée par l'utilisateur
   deleted?: boolean; // True si la propriété est marquée comme supprimée
+  isOpen?: boolean; // État d'ouverture des enfants (pour object/array)
 }
 
 export interface ObjectTransformerContext {

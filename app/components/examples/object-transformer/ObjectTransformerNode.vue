@@ -71,9 +71,11 @@ const availableStepTransforms = computed(() => {
   );
 });
 
-const isOpen = ref(true);
+const isOpen = ref(props.tree.isOpen ?? true);
 const toggleOpen = () => {
   isOpen.value = !isOpen.value;
+  // Persister l'état dans le node
+  tree.value.isOpen = isOpen.value;
 };
 
 const nodeSelect = ref<string | null>(
@@ -85,6 +87,16 @@ const isPrimitive = computed(() => deskWithContext.primitiveTypes.includes(tree.
 const editingKey = ref(false);
 const tempKey = ref(props.tree.key);
 const isHovered = ref(false);
+const valueElement = ref<HTMLElement | null>(null);
+
+// Calculer le padding-left pour aligner les transformations avec la valeur
+const transformsPaddingLeft = computed(() => {
+  if (!valueElement.value || !isPrimitive.value) return '0px';
+  const rect = valueElement.value.getBoundingClientRect();
+  const parentRect = valueElement.value.closest('.text-xs.mb-4')?.getBoundingClientRect();
+  if (!parentRect) return '0px';
+  return `${rect.left - parentRect.left}px`;
+});
 
 // Déterminer si la propriété a été ajoutée (issue d'un Split)
 const isAddedProperty = computed(() => {
@@ -100,6 +112,19 @@ const keyClasses = computed(() => {
   if (tree.value.keyModified) return 'font-semibold text-yellow-600';
   return 'font-semibold';
 });
+
+// Générer une clé unique safe pour v-for
+function getChildKey(child: ObjectNode, index: number): string {
+  try {
+    // Utiliser btoa pour encoder en base64 (safe pour HTML attributes)
+    const valueStr = JSON.stringify(child.value);
+    const encoded = btoa(encodeURIComponent(valueStr).slice(0, 100)); // Limiter la taille
+    return `${child.key}-${index}-${encoded}`;
+  } catch {
+    // Fallback si stringify échoue (circular refs, etc.)
+    return `${child.key}-${index}-${typeof child.value}-${Date.now()}`;
+  }
+}
 
 function confirmKeyChange() {
   const newKey = tempKey.value?.trim();
@@ -315,7 +340,7 @@ function isStructuralTransform(transformIndex: number): boolean {
 
       <!-- Valeur s'affiche juste pour primitives -->
       <template v-if="isPrimitive">
-        <span class="ml-2 text-muted-foreground italic">
+        <span ref="valueElement" class="ml-2 text-muted-foreground">
           {{ deskWithContext.formatValue(tree.value, tree.type) }}
         </span>
       </template>
@@ -352,20 +377,20 @@ function isStructuralTransform(transformIndex: number): boolean {
       <div v-if="tree.children?.length" class="ml-1 border-l-2 pl-2">
         <ObjectTransformerNode
           v-for="(child, index) in tree.children"
-          :key="`${child.key}-${index}-${JSON.stringify(child.value)}`"
+          :key="getChildKey(child, index)"
           :tree="child"
           class="ml-4"
         />
       </div>
 
       <!-- Stack des transformations avec Select pour enchaîner -->
-      <div v-if="tree.transforms.length" class="ml-5 pl-2 border-l-2">
+      <div v-if="tree.transforms.length" :style="{ paddingLeft: transformsPaddingLeft }">
         <div
           v-for="(t, index) in tree.transforms"
           :key="index"
           class="flex items-center gap-2 my-2"
         >
-          <span class="text-blue-600 text-xs pl-5">
+          <span class="text-muted-foreground text-xs">
             {{ getFormattedStepValue(index) }}
           </span>
 
