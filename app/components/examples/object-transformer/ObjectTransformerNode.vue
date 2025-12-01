@@ -95,11 +95,11 @@ const inputFieldElement = ref<InstanceType<typeof Input> | null>(null);
 // Gestionnaire de clic global pour fermer l'édition
 function handleClickOutside(event: MouseEvent) {
   if (!editingKey.value) return;
-  
+
   const target = event.target as Node;
   const clickedInput = inputElement.value?.contains(target);
   const clickedButton = buttonElement.value?.contains(target);
-  
+
   if (!clickedInput && !clickedButton) {
     confirmKeyChange();
   }
@@ -405,7 +405,10 @@ function isStructuralTransform(transformIndex: number): boolean {
         <template v-if="availableTransforms.length > 0">
           <Select :model-value="nodeSelect" @update:model-value="handleNodeTransform">
             <!-- @vue-ignore -->
-            <SelectTrigger size="xs" class="hidden md:flex px-2 py-1 group-hover:border-primary md:min-w-[120px]">
+            <SelectTrigger
+              size="xs"
+              class="hidden md:flex px-2 py-1 group-hover:border-primary md:min-w-[120px]"
+            >
               <SelectValue placeholder="+" class="text-xs">
                 {{ nodeSelect || '+' }}
               </SelectValue>
@@ -427,14 +430,17 @@ function isStructuralTransform(transformIndex: number): boolean {
           </Select>
         </template>
       </div>
-      
+
       <!-- Ligne mobile : valeur + select -->
-      <div v-if="isPrimitive || availableTransforms.length > 0" class="flex md:hidden items-center justify-between gap-2 mt-1 ml-5 pl-1.5">
+      <div
+        v-if="isPrimitive || availableTransforms.length > 0"
+        class="flex md:hidden items-center justify-between gap-2 mt-1 ml-5 pl-1.5"
+      >
         <span v-if="isPrimitive" class="text-muted-foreground text-xs">
           {{ deskWithContext.formatValue(tree.value, tree.type) }}
         </span>
         <span v-else class="flex-1"></span>
-        
+
         <template v-if="availableTransforms.length > 0">
           <Select :model-value="nodeSelect" @update:model-value="handleNodeTransform">
             <!-- @vue-ignore -->
