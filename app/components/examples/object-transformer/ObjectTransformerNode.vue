@@ -280,131 +280,191 @@ function isStructuralTransform(transformIndex: number): boolean {
 
 <template>
   <div class="text-xs mb-4" :class="{ 'opacity-50': tree.deleted }">
-    <div
-      class="flex items-center justify-between gap-2 my-2 transition-all group hover:bg-accent/30"
-    >
-      <!-- Partie gauche : chevron + delete + key + value -->
-      <div class="flex items-center gap-2">
-        <template v-if="tree.children?.length">
-          <ChevronRight
-            v-if="!isOpen"
-            class="w-3 h-3 text-muted-foreground cursor-pointer shrink-0"
-            @click="toggleOpen"
-          />
-          <ChevronDown
-            v-else-if="isOpen"
-            class="w-3 h-3 text-muted-foreground cursor-pointer shrink-0"
-            @click="toggleOpen"
-          />
-        </template>
-        <div v-else class="w-3 shrink-0" />
+    <!-- Wrapper avec scroll horizontal -->
+    <div class="overflow-x-auto">
+      <div
+        class="flex items-center justify-between gap-2 my-2 transition-all group hover:bg-accent/30 min-w-fit"
+      >
+        <!-- Partie gauche : chevron + delete + key + value -->
+        <div class="flex items-center gap-2">
+          <template v-if="tree.children?.length">
+            <ChevronRight
+              v-if="!isOpen"
+              class="w-3 h-3 text-muted-foreground cursor-pointer shrink-0"
+              @click="toggleOpen"
+            />
+            <ChevronDown
+              v-else-if="isOpen"
+              class="w-3 h-3 text-muted-foreground cursor-pointer shrink-0"
+              @click="toggleOpen"
+            />
+          </template>
+          <div v-else class="w-3 shrink-0" />
 
-        <!-- Conteneur pour bouton + nom avec hover commun -->
-        <div
-          class="flex items-center group-hover:border-l-2 group-hover:border-primary -ml-0.5 pl-1.5"
-          @mouseenter="isHovered = true"
-          @mouseleave="isHovered = false"
-        >
-          <!-- Bouton Delete/Restore à gauche avec slide -->
+          <!-- Conteneur pour bouton + nom avec hover commun -->
           <div
-            v-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'"
-            class="overflow-hidden transition-all duration-200"
-            :class="isHovered ? 'w-4 mr-1.5' : 'w-0'"
+            class="flex items-center group-hover:border-l-2 group-hover:border-primary -ml-0.5 pl-1.5"
+            @mouseenter="isHovered = true"
+            @mouseleave="isHovered = false"
           >
-            <Button
-              variant="ghost"
-              size="icon"
-              class="h-4 w-4 p-0 shrink-0"
-              :title="tree.deleted ? 'Restore property' : 'Delete property'"
-              @click.stop="toggleDelete"
-              @mousedown.stop
+            <!-- Bouton Delete/Restore à gauche avec slide -->
+            <div
+              v-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'"
+              class="overflow-hidden transition-all duration-200"
+              :class="isHovered ? 'w-4 mr-1.5' : 'w-0'"
             >
-              <Undo v-if="tree.deleted" class="w-3.5 h-3.5 text-muted-foreground" />
-              <Trash v-else class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                class="h-4 w-4 p-0 shrink-0"
+                :title="tree.deleted ? 'Restore property' : 'Delete property'"
+                @click.stop="toggleDelete"
+                @mousedown.stop
+              >
+                <Undo v-if="tree.deleted" class="w-3.5 h-3.5 text-muted-foreground" />
+                <Trash v-else class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </div>
+
+            <div class="cursor-pointer flex items-center gap-2" @click="editingKey = true">
+              <template v-if="editingKey">
+                <Input
+                  v-model="tempKey"
+                  class="h-6 px-2 py-0 text-xs"
+                  autofocus
+                  @keyup.enter="confirmKeyChange"
+                  @blur="confirmKeyChange"
+                  @keyup.esc="cancelKeyChange"
+                />
+              </template>
+
+              <template v-else>
+                <span :class="keyClasses">{{ tree.key }}</span>
+              </template>
+            </div>
           </div>
 
-          <div class="cursor-pointer flex items-center gap-2" @click="editingKey = true">
-            <template v-if="editingKey">
-              <Input
-                v-model="tempKey"
-                class="h-6 px-2 py-0 text-xs"
-                autofocus
-                @keyup.enter="confirmKeyChange"
-                @blur="confirmKeyChange"
-                @keyup.esc="cancelKeyChange"
-              />
-            </template>
-
-            <template v-else>
-              <span :class="keyClasses">{{ tree.key }}</span>
-            </template>
-          </div>
+          <!-- Valeur s'affiche juste pour primitives -->
+          <template v-if="isPrimitive">
+            <span ref="valueElement" class="ml-2 text-muted-foreground">
+              {{ deskWithContext.formatValue(tree.value, tree.type) }}
+            </span>
+          </template>
         </div>
 
-        <!-- Valeur s'affiche juste pour primitives -->
-        <template v-if="isPrimitive">
-          <span ref="valueElement" class="ml-2 text-muted-foreground">
-            {{ deskWithContext.formatValue(tree.value, tree.type) }}
-          </span>
+        <!-- Select principal (partie droite) -->
+        <template v-if="availableTransforms.length > 0">
+          <Select :model-value="nodeSelect" @update:model-value="handleNodeTransform">
+            <!-- @vue-ignore -->
+            <SelectTrigger size="xs" class="px-2 py-1 group-hover:border-primary md:min-w-[120px]">
+              <SelectValue placeholder="+" class="text-xs">
+                {{ nodeSelect || '+' }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent class="text-xs">
+              <SelectGroup>
+                <SelectLabel>Transformations</SelectLabel>
+                <SelectItem value="None" class="text-xs">Remove all</SelectItem>
+                <SelectItem
+                  v-for="tr in availableTransforms"
+                  :key="tr.name"
+                  :value="tr.name"
+                  class="text-xs"
+                >
+                  {{ tr.name }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </template>
       </div>
-
-      <!-- Select principal (partie droite) -->
-      <template v-if="availableTransforms.length > 0">
-        <Select :model-value="nodeSelect" @update:model-value="handleNodeTransform">
-          <!-- @vue-ignore -->
-          <SelectTrigger size="xs" class="px-2 py-1 group-hover:border-primary">
-            <SelectValue placeholder="+" class="text-xs">
-              {{ nodeSelect || '+' }}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent class="text-xs">
-            <SelectGroup>
-              <SelectLabel>Transformations</SelectLabel>
-              <SelectItem value="None" class="text-xs">Remove all</SelectItem>
-              <SelectItem
-                v-for="tr in availableTransforms"
-                :key="tr.name"
-                :value="tr.name"
-                class="text-xs"
-              >
-                {{ tr.name }}
-              </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </template>
     </div>
 
     <template v-if="isOpen">
       <!-- Children récursifs -->
-      <div v-if="tree.children?.length" class="ml-1 border-l-2 pl-2">
+      <div v-if="tree.children?.length" class="ml-1 md:ml-1 border-l-2 pl-2 md:pl-2">
         <ObjectTransformerNode
           v-for="(child, index) in tree.children"
           :key="getChildKey(child, index)"
           :tree="child"
-          class="ml-4"
+          class="ml-2 md:ml-4"
         />
       </div>
 
       <!-- Stack des transformations avec Select pour enchaîner -->
-      <div v-if="tree.transforms.length" :style="{ paddingLeft: transformsPaddingLeft }">
-        <div
-          v-for="(t, index) in tree.transforms"
-          :key="index"
-          class="flex items-center justify-between gap-2 my-2 transition-all group hover:bg-accent/30"
-        >
-          <span
-            class="text-muted-foreground text-xs group-hover:border-l-2 group-hover:border-primary -ml-0.5 pl-1.5"
-          >
-            {{ getFormattedStepValue(index) }}
-          </span>
+      <div
+        v-if="tree.transforms.length"
+        class="pl-0 md:pl-(--transforms-padding)"
+        :style="{ '--transforms-padding': transformsPaddingLeft }"
+      >
+        <!-- Wrapper avec scroll horizontal pour les transformations -->
+        <div class="overflow-x-auto">
+          <div v-for="(t, index) in tree.transforms" :key="index" class="my-2">
+            <!-- Carte sur mobile, ligne sur desktop -->
+            <div
+              class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 p-2 md:p-0 border md:border-0 rounded-md md:rounded-none bg-card md:bg-transparent transition-all group hover:bg-accent/30 min-w-fit"
+            >
+              <span
+                class="text-muted-foreground text-xs group-hover:border-l-2 group-hover:border-primary md:-ml-0.5 md:pl-1.5"
+              >
+                {{ getFormattedStepValue(index) }}
+              </span>
 
-          <template v-if="!isStructuralTransform(index)">
-            <template v-if="availableStepTransforms.length > 1">
-              <div class="flex items-center gap-2">
-                <div v-if="t.params" class="flex gap-2">
+              <template v-if="!isStructuralTransform(index)">
+                <template v-if="availableStepTransforms.length > 1">
+                  <div class="flex flex-col md:flex-row md:items-center gap-2">
+                    <div v-if="t.params" class="flex flex-col md:flex-row gap-2">
+                      <ObjectTransformerParamInput
+                        v-for="(_p, pi) in t.params"
+                        :key="`param-${index}-${pi}`"
+                        v-model="t.params[pi]"
+                        :config="getParamConfig(t.name, pi)"
+                        @change="
+                          () => {
+                            deskWithContext.propagateTransform(tree);
+                            if (tree.parent) deskWithContext.propagateTransform(tree.parent);
+                          }
+                        "
+                      />
+                    </div>
+
+                    <Select
+                      :model-value="stepSelect[index + 1]"
+                      size="xs"
+                      @update:model-value="(val) => handleStepTransform(index, val)"
+                    >
+                      <!-- @vue-ignore -->
+                      <SelectTrigger
+                        size="xs"
+                        class="px-2 py-1 group-hover:border-primary w-full md:min-w-[120px] md:w-auto"
+                      >
+                        <SelectValue placeholder="+" class="text-xs">
+                          {{ stepSelect[index + 1] || '+' }}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent class="text-xs">
+                        <SelectGroup>
+                          <SelectLabel>Next Transformation</SelectLabel>
+                          <SelectItem value="None" class="text-xs"
+                            >Remove this & following</SelectItem
+                          >
+                          <SelectItem
+                            v-for="tr in availableStepTransforms"
+                            :key="tr.name"
+                            :value="tr.name"
+                            class="text-xs"
+                          >
+                            {{ tr.name }}
+                          </SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </template>
+              </template>
+
+              <template v-else>
+                <div v-if="t.params" class="flex flex-col md:flex-row gap-2">
                   <ObjectTransformerParamInput
                     v-for="(_p, pi) in t.params"
                     :key="`param-${index}-${pi}`"
@@ -418,51 +478,9 @@ function isStructuralTransform(transformIndex: number): boolean {
                     "
                   />
                 </div>
-
-                <Select
-                  :model-value="stepSelect[index + 1]"
-                  size="xs"
-                  @update:model-value="(val) => handleStepTransform(index, val)"
-                >
-                  <!-- @vue-ignore -->
-                  <SelectTrigger size="xs" class="px-2 py-1 group-hover:border-primary">
-                    <SelectValue placeholder="+" class="text-xs" />
-                  </SelectTrigger>
-                  <SelectContent class="text-xs">
-                    <SelectGroup>
-                      <SelectLabel>Next Transformation</SelectLabel>
-                      <SelectItem value="None" class="text-xs">Remove this & following</SelectItem>
-                      <SelectItem
-                        v-for="tr in availableStepTransforms"
-                        :key="tr.name"
-                        :value="tr.name"
-                        class="text-xs"
-                      >
-                        {{ tr.name }}
-                      </SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-            </template>
-          </template>
-
-          <template v-else>
-            <div v-if="t.params" class="flex gap-2">
-              <ObjectTransformerParamInput
-                v-for="(_p, pi) in t.params"
-                :key="`param-${index}-${pi}`"
-                v-model="t.params[pi]"
-                :config="getParamConfig(t.name, pi)"
-                @change="
-                  () => {
-                    deskWithContext.propagateTransform(tree);
-                    if (tree.parent) deskWithContext.propagateTransform(tree.parent);
-                  }
-                "
-              />
+              </template>
             </div>
-          </template>
+          </div>
         </div>
       </div>
     </template>
