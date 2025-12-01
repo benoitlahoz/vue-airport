@@ -11,6 +11,24 @@ import {
   type ObjectTransformerDesk,
 } from '.';
 
+export interface ObjectTransformerProps {
+  data?: Record<string, any> | any[];
+}
+
+const props = withDefaults(defineProps<ObjectTransformerProps>(), {
+  data: () => ({}),
+});
+
+const tree = ref<ObjectNode>(buildNodeTree(props.data, 'Object'));
+
+watch(
+  () => props.data,
+  (newData) => {
+    tree.value = buildNodeTree(newData, 'Object');
+  },
+  { deep: true }
+);
+
 function buildNodeTree(value: any, key?: string, parent?: ObjectNode): ObjectNode {
   // Handle null first (before typeof checks)
   if (value === null) {
@@ -116,25 +134,6 @@ function buildNodeTree(value: any, key?: string, parent?: ObjectNode): ObjectNod
     parent,
   };
 }
-
-const data = {
-  name: 'john doe',
-  age: 30,
-  dob: new Date('1993-05-15T00:00:00Z'),
-  active: true,
-  city: 'marseille',
-  address: {
-    street: '123 main st',
-    zip: '13001',
-    custom: {
-      info: 'some custom info',
-      tags: ['tag1', 'tag2'],
-    },
-  },
-  hobbies: ['reading', 'traveling', 'swimming'],
-};
-
-const tree = ref<ObjectNode>(buildNodeTree(data, 'Object'));
 
 function isStructuralResult(result: any): boolean {
   return result && typeof result === 'object' && result.__structuralChange === true;
