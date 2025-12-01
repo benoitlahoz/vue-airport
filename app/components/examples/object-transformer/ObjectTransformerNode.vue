@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, type ComputedRef } from 'vue';
+import { computed, ref, type ComputedRef, watch, onUnmounted } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
   ObjectTransformerNode,
@@ -88,6 +88,38 @@ const editingKey = ref(false);
 const tempKey = ref(props.tree.key);
 const isHovered = ref(false);
 const valueElement = ref<HTMLElement | null>(null);
+const inputElement = ref<HTMLElement | null>(null);
+const buttonElement = ref<HTMLElement | null>(null);
+const inputFieldElement = ref<InstanceType<typeof Input> | null>(null);
+
+// Gestionnaire de clic global pour fermer l'édition
+function handleClickOutside(event: MouseEvent) {
+  if (!editingKey.value) return;
+  
+  const target = event.target as Node;
+  const clickedInput = inputElement.value?.contains(target);
+  const clickedButton = buttonElement.value?.contains(target);
+  
+  if (!clickedInput && !clickedButton) {
+    confirmKeyChange();
+  }
+}
+
+// Ajouter/retirer le gestionnaire quand editingKey change
+watch(editingKey, (isEditing) => {
+  if (isEditing) {
+    // Utiliser setTimeout pour éviter que le clic d'activation ne déclenche immédiatement la fermeture
+    setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+  } else {
+    document.removeEventListener('click', handleClickOutside);
+  }
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 
 // Calculer le padding-left pour aligner les transformations avec la valeur
 const transformsPaddingLeft = computed(() => {
@@ -132,17 +164,20 @@ function confirmKeyChange() {
   if (!newKey) {
     tempKey.value = props.tree.key;
     editingKey.value = false;
+    isHovered.value = false;
     return;
   }
 
   if (!deskWithContext.sanitizeKey(newKey)) {
     tempKey.value = props.tree.key;
     editingKey.value = false;
+    isHovered.value = false;
     return;
   }
 
   if (newKey === props.tree.key) {
     editingKey.value = false;
+    isHovered.value = false;
     return;
   }
 
@@ -159,11 +194,21 @@ function confirmKeyChange() {
   }
 
   editingKey.value = false;
+  isHovered.value = false;
+  // Forcer le blur de l'input
+  if (inputFieldElement.value?.$el) {
+    inputFieldElement.value.$el.blur();
+  }
 }
 
 function cancelKeyChange() {
   tempKey.value = props.tree.key;
   editingKey.value = false;
+  isHovered.value = false;
+  // Forcer le blur de l'input
+  if (inputFieldElement.value?.$el) {
+    inputFieldElement.value.$el.blur();
+  }
 }
 
 function toggleDelete() {
@@ -307,11 +352,12 @@ function isStructuralTransform(transformIndex: number): boolean {
             @mouseenter="isHovered = true"
             @mouseleave="isHovered = false"
           >
-            <!-- Bouton Delete/Restore à gauche avec slide -->
+            <!-- Bouton Delete/Restore à gauche avec slide (apparaît au hover desktop ou en mode édition) -->
             <div
               v-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'"
+              ref="buttonElement"
               class="overflow-hidden transition-all duration-200"
-              :class="isHovered ? 'w-4 mr-1.5' : 'w-0'"
+              :class="isHovered || editingKey ? 'w-4 mr-1.5' : 'w-0'"
             >
               <Button
                 variant="ghost"
@@ -319,7 +365,7 @@ function isStructuralTransform(transformIndex: number): boolean {
                 class="h-4 w-4 p-0 shrink-0"
                 :title="tree.deleted ? 'Restore property' : 'Delete property'"
                 @click.stop="toggleDelete"
-                @mousedown.stop
+                @mousedown.prevent
               >
                 <Undo v-if="tree.deleted" class="w-3.5 h-3.5 text-muted-foreground" />
                 <Trash v-else class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
@@ -328,14 +374,17 @@ function isStructuralTransform(transformIndex: number): boolean {
 
             <div class="cursor-pointer flex items-center gap-2" @click="editingKey = true">
               <template v-if="editingKey">
-                <Input
-                  v-model="tempKey"
-                  class="h-6 px-2 py-0 text-xs"
-                  autofocus
-                  @keyup.enter="confirmKeyChange"
-                  @blur="confirmKeyChange"
-                  @keyup.esc="cancelKeyChange"
-                />
+                <div ref="inputElement">
+                  <Input
+                    ref="inputFieldElement"
+                    v-model="tempKey"
+                    class="h-6 px-2 py-0 text-xs"
+                    autofocus
+                    @keyup.enter="confirmKeyChange"
+                    @keyup.esc="cancelKeyChange"
+                    @click.stop
+                  />
+                </div>
               </template>
 
               <template v-else>
@@ -344,19 +393,52 @@ function isStructuralTransform(transformIndex: number): boolean {
             </div>
           </div>
 
-          <!-- Valeur s'affiche juste pour primitives -->
+          <!-- Valeur s'affiche juste pour primitives (caché sur mobile) -->
           <template v-if="isPrimitive">
-            <span ref="valueElement" class="ml-2 text-muted-foreground">
+            <span ref="valueElement" class="hidden md:inline ml-2 text-muted-foreground">
               {{ deskWithContext.formatValue(tree.value, tree.type) }}
             </span>
           </template>
         </div>
 
-        <!-- Select principal (partie droite) -->
+        <!-- Select principal (partie droite sur desktop) -->
         <template v-if="availableTransforms.length > 0">
           <Select :model-value="nodeSelect" @update:model-value="handleNodeTransform">
             <!-- @vue-ignore -->
-            <SelectTrigger size="xs" class="px-2 py-1 group-hover:border-primary md:min-w-[120px]">
+            <SelectTrigger size="xs" class="hidden md:flex px-2 py-1 group-hover:border-primary md:min-w-[120px]">
+              <SelectValue placeholder="+" class="text-xs">
+                {{ nodeSelect || '+' }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent class="text-xs">
+              <SelectGroup>
+                <SelectLabel>Transformations</SelectLabel>
+                <SelectItem value="None" class="text-xs">Remove all</SelectItem>
+                <SelectItem
+                  v-for="tr in availableTransforms"
+                  :key="tr.name"
+                  :value="tr.name"
+                  class="text-xs"
+                >
+                  {{ tr.name }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </template>
+      </div>
+      
+      <!-- Ligne mobile : valeur + select -->
+      <div v-if="isPrimitive || availableTransforms.length > 0" class="flex md:hidden items-center justify-between gap-2 mt-1 ml-5 pl-1.5">
+        <span v-if="isPrimitive" class="text-muted-foreground text-xs">
+          {{ deskWithContext.formatValue(tree.value, tree.type) }}
+        </span>
+        <span v-else class="flex-1"></span>
+        
+        <template v-if="availableTransforms.length > 0">
+          <Select :model-value="nodeSelect" @update:model-value="handleNodeTransform">
+            <!-- @vue-ignore -->
+            <SelectTrigger size="xs" class="px-2 py-1">
               <SelectValue placeholder="+" class="text-xs">
                 {{ nodeSelect || '+' }}
               </SelectValue>
