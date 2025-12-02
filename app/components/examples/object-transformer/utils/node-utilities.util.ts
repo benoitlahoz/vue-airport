@@ -1,5 +1,5 @@
 import type { ObjectNode, ObjectNodeType } from '..';
-import { all } from './functional.util';
+import { all, maybe } from './functional.util';
 
 /**
  * Key Validation - Pure predicates and validation
@@ -95,11 +95,13 @@ export const getKeyClasses = (node: ObjectNode): string => {
 
 // Generate unique key for v-for (with error handling)
 export const generateChildKey = (child: ObjectNode, index: number): string => {
-  try {
-    const valueStr = JSON.stringify(child.value);
-    const encoded = btoa(encodeURIComponent(valueStr).slice(0, 100));
-    return `${child.key}-${index}-${encoded}`;
-  } catch {
-    return `${child.key}-${index}-${typeof child.value}-${Date.now()}`;
-  }
+  const fallback = `${child.key}-${index}-${typeof child.value}-${Date.now()}`;
+  return maybe(
+    () => {
+      const valueStr = JSON.stringify(child.value);
+      const encoded = btoa(encodeURIComponent(valueStr).slice(0, 100));
+      return `${child.key}-${index}-${encoded}`;
+    },
+    fallback
+  )(null);
 };

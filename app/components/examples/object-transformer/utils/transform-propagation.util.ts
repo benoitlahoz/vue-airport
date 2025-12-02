@@ -1,7 +1,7 @@
 import type { ObjectNode, ObjectTransformerDesk } from '..';
 import { isStructuralResult } from './type-guards.util';
 import { buildNodeTree } from './node-builder.util';
-import { until } from './functional.util';
+import { until, pipe, not } from './functional.util';
 
 /**
  * Transform Application - Pure functions for applying transforms
@@ -20,19 +20,25 @@ export const computeStepValue = (node: ObjectNode, index: number): any => {
 };
 
 // Compute child transformed value (ignores structural transforms)
-export const computeChildTransformedValue = (child: ObjectNode): any =>
-  child.transforms.reduce((value, transform) => {
-    const result = transform.fn(value, ...(transform.params || []));
-    return isStructuralResult(result) ? value : result;
-  }, child.value);
+export const computeChildTransformedValue = (child: ObjectNode): any => {
+  if (child.transforms.length === 0) return child.value;
+  
+  const transformFns = child.transforms.map(t => (v: any) => {
+    const result = t.fn(v, ...(t.params || []));
+    return isStructuralResult(result) ? v : result;
+  });
+  
+  return pipe(...transformFns)(child.value);
+};
 
 /**
  * Value Propagation - Pure functions for propagating values
  */
 
 // Get active (non-deleted) children
+const isDeleted = (child: ObjectNode): boolean => Boolean(child.deleted);
 const activeChildren = (node: ObjectNode): ObjectNode[] =>
-  node.children?.filter((child) => !child.deleted) || [];
+  node.children?.filter(not(isDeleted)) || [];
 
 // Propagate object value
 export const propagateObjectValue = (node: ObjectNode): void => {

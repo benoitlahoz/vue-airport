@@ -2,9 +2,7 @@ import type { ObjectNode, Transform, ObjectTransformerDesk } from '..';
 
 /**
  * Transform filtering - Pure functions
- */
-
-export const filterTransformsByType = (transforms: Transform[], nodeType: string): Transform[] => {
+ */export const filterTransformsByType = (transforms: Transform[], nodeType: string): Transform[] => {
   return transforms.filter((t) => t.if({ type: nodeType } as ObjectNode));
 };
 
