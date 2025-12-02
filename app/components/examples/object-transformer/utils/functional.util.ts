@@ -118,10 +118,7 @@ export const any =
     predicates.some((p) => p(value));
 
 // Partition: split array into two based on predicate
-export const partition = <T>(
-  arr: T[],
-  predicate: (item: T) => boolean
-): [T[], T[]] => {
+export const partition = <T>(arr: T[], predicate: (item: T) => boolean): [T[], T[]] => {
   const pass: T[] = [];
   const fail: T[] = [];
   arr.forEach((item) => {

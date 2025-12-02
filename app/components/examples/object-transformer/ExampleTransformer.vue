@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import {
   ObjectTransformer,
-  ObjectTransformerPreview,
+  ObjectPreview,
+  RecipePreview,
   ObjectNode,
   TransformString,
   TransformNumber,
@@ -30,7 +31,7 @@ const data = {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4 max-h-196 overflow-auto">
     <ObjectTransformer :data="data" class="flex md:flex-row w-full">
       <TransformString />
       <TransformNumber />
@@ -41,7 +42,10 @@ const data = {
 
       <ObjectNode />
 
-      <ObjectTransformerPreview />
+      <div class="flex-1 flex flex-col gap-2 h-full">
+        <ObjectPreview />
+        <RecipePreview />
+      </div>
     </ObjectTransformer>
   </div>
 </template>

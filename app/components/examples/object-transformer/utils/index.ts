@@ -4,4 +4,5 @@ export * from './node-editing.util';
 export * from './node-transforms.util';
 export * from './node-utilities.util';
 export * from './transform-propagation.util';
+export * from './transform-recipe.util';
 export * from './type-guards.util';

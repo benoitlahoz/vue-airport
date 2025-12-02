@@ -1,6 +1,11 @@
 import type { DeskCore } from '#vue-airport';
 import type { InjectionKey, Ref } from 'vue';
 
+/**
+ * Current recipe format version
+ */
+export const CURRENT_RECIPE_VERSION = '1.0.0';
+
 export type ObjectNodeType =
   | 'string'
   | 'number'
@@ -29,10 +34,29 @@ export interface Transform {
   params?: any[];
 }
 
+export interface TransformRecipe {
+  version: string;
+  rootType: ObjectNodeType;
+  steps: TransformStep[];
+  deletedPaths: string[][];
+  renamedKeys: Array<{ path: string[]; oldKey: string; newKey: string }>;
+  requiredTransforms: string[]; // List of transform names required for this recipe
+  createdAt?: string; // ISO timestamp of recipe creation
+}
+
+export interface TransformStep {
+  path: string[];
+  originalType: ObjectNodeType;
+  transformName: string;
+  params: any[];
+  structural?: boolean;
+}
+
 export interface ObjectNodeData {
   id: string; // Unique identifier for the node
   type: ObjectNodeType;
   key?: string;
+  originalKey?: string; // Original key before rename (for recipe tracking)
   value: any;
   transforms: Transform[];
   children?: ObjectNodeData[];
@@ -45,6 +69,7 @@ export interface ObjectNodeData {
 export interface ObjectTransformerContext {
   // Tree
   tree: Ref<ObjectNodeData>;
+  originalData: Ref<any>;
   getNode: (id: string) => ObjectNodeData | null;
   // Constants
   primitiveTypes: ObjectNodeType[];
@@ -84,6 +109,12 @@ export interface ObjectTransformerContext {
   getParamConfig: (transformName: string, paramIndex: number) => any;
   formatStepValue: (node: ObjectNodeData, index: number) => string;
   isStructuralTransform: (node: ObjectNodeData, transformIndex: number) => boolean;
+  // Recipe management
+  recipe: Ref<TransformRecipe | null>;
+  buildRecipe: () => TransformRecipe;
+  applyRecipe: (data: any, recipe: TransformRecipe) => any;
+  exportRecipe: () => string;
+  importRecipe: (recipeJson: string) => void;
 }
 
 export type ObjectTransformerDesk = DeskCore<ObjectNodeData> & ObjectTransformerContext;
@@ -92,7 +123,8 @@ export const ObjectTransformerDeskKey: InjectionKey<ObjectTransformerDesk> =
   Symbol('ObjectTransformerDesk');
 
 export { default as ObjectTransformer } from './ObjectTransformer.vue';
-export { default as ObjectTransformerPreview } from './ObjectTransformerPreview.vue';
+export { default as ObjectPreview } from './ObjectPreview.vue';
+export { default as RecipePreview } from './RecipePreview.vue';
 export { default as ObjectNode } from './ObjectNode.vue';
 export { default as TransformSelect } from './TransformSelect.vue';
 export { default as TransformParam } from './TransformParam.vue';

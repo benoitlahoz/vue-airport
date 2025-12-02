@@ -21,6 +21,11 @@ import {
   getKeyClasses,
   generateChildKey,
   keyGuards,
+  buildRecipe as buildRecipeUtil,
+  applyRecipe as applyRecipeUtil,
+  exportRecipe as exportRecipeUtil,
+  importRecipe as importRecipeUtil,
+  validateRecipeTransforms as validateRecipeTransformsUtil,
 } from '.';
 
 export interface ObjectTransformerProps {
@@ -43,6 +48,7 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
     tree: ref<ObjectNodeData>(
       buildNodeTree(props.data, Array.isArray(props.data) ? 'Array' : 'Object')
     ),
+    originalData: ref(props.data),
     getNode(id: string): ObjectNodeData | null {
       // Recursive search in the tree
       const findNode = (node: ObjectNodeData): ObjectNodeData | null => {
@@ -133,6 +139,12 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
       const parent = node.parent;
       if (parent?.type === 'object' && parent.children) {
         const finalKey = autoRenameKey(parent, newKey);
+
+        // Store original key before renaming
+        if (!node.originalKey) {
+          node.originalKey = node.key;
+        }
+
         node.key = finalKey;
         node.keyModified = true;
         this.tempKey.value = finalKey;
@@ -217,12 +229,53 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
 
       return result && typeof result === 'object' && result.__structuralChange === true;
     },
+
+    // Recipe management
+    recipe: ref(null),
+    buildRecipe() {
+      const recipe = buildRecipeUtil(this.tree.value);
+      this.recipe.value = recipe;
+      return recipe;
+    },
+    applyRecipe(data: any, recipe) {
+      return applyRecipeUtil(data, recipe, this.transforms.value);
+    },
+    exportRecipe() {
+      const recipe = this.recipe.value || this.buildRecipe();
+      return exportRecipeUtil(recipe);
+    },
+    importRecipe(recipeJson: string) {
+      const recipe = importRecipeUtil(recipeJson);
+
+      // Validate that all required transforms are available
+      const missingTransforms = validateRecipeTransformsUtil(recipe, this.transforms.value);
+      if (missingTransforms.length > 0) {
+        throw new Error(
+          `Missing required transforms: ${missingTransforms.join(', ')}. ` +
+            `Please add the corresponding transform components to the ObjectTransformer.`
+        );
+      }
+
+      this.recipe.value = recipe;
+
+      // Apply recipe to original data and rebuild tree
+      const transformedData = applyRecipeUtil(
+        this.originalData.value,
+        recipe,
+        this.transforms.value
+      );
+      this.tree.value = buildNodeTree(
+        transformedData,
+        Array.isArray(transformedData) ? 'Array' : 'Object'
+      );
+    },
   },
 });
 
 watch(
   () => props.data,
   (newData) => {
+    (desk as ObjectTransformerDesk).originalData.value = newData;
     (desk as ObjectTransformerDesk).tree.value = buildNodeTree(
       newData,
       Array.isArray(newData) ? 'Array' : 'Object'
