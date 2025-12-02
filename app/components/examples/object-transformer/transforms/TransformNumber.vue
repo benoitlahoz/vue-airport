@@ -75,7 +75,7 @@ const transforms: Transform[] = [
   {
     name: 'To String',
     if: (node) => node.type === 'number',
-    fn: (v: any) => v.toString(),
+    fn: (v: any) => String(v),
   },
 ];
 

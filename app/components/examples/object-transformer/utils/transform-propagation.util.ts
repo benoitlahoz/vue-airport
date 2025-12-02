@@ -1,7 +1,8 @@
 import type { ObjectNodeData, ObjectTransformerDesk } from '..';
-import { isStructuralResult } from './type-guards.util';
+import { isStructuralResult, getTypeFromValue } from './type-guards.util';
 import { buildNodeTree } from './node-builder.util';
 import { until, pipe, not } from './functional.util';
+import { isMultiPartAction } from './structural-transform-handlers.util';
 
 /**
  * Transform Application - Pure functions for applying transforms
@@ -160,16 +161,22 @@ export const createPropagateTransform =
       // Check for structural split/arrayToProperties
       if (
         isStructuralResult(lastResult) &&
-        (lastResult.action === 'split' || lastResult.action === 'arrayToProperties') &&
+        isMultiPartAction(lastResult.action) &&
         lastResult.parts &&
         node.parent
       ) {
         handleStructuralSplit(node, lastResult.parts, lastResult.removeSource, desk);
         return;
       }
+
+      // Update node type if transformation changed the value type
+      const newType = getTypeFromValue(lastResult);
+      if (newType !== node.type) {
+        node.type = newType;
+      }
     }
 
-    // Propagate based on type
+    // Propagate based on current type (after potential update)
     propagators[node.type]?.(node);
 
     // Recursive propagation

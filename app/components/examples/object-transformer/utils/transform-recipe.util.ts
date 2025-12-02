@@ -1,5 +1,6 @@
 import type { ObjectNodeData, ObjectNodeType, Transform } from '..';
 import { CURRENT_RECIPE_VERSION } from '..';
+import { getStructuralTransformHandler } from './structural-transform-handlers.util';
 
 /**
  * Transform Recipe - A serializable representation of transformations
@@ -127,9 +128,17 @@ export const applyRecipe = (
 
   // Apply regular transformations AFTER renames (so they work on renamed keys)
   regularSteps.forEach((step) => {
-    const transform = availableTransforms.find((t) => t.name === step.transformName);
+    // Find the transform that matches BOTH name AND type
+    const transform = availableTransforms.find((t) => {
+      if (t.name !== step.transformName) return false;
+      // Check if transform applies to the original type from the recipe
+      return t.if({ type: step.originalType } as any);
+    });
+
     if (!transform) {
-      console.warn(`Transform "${step.transformName}" not found in available transforms`);
+      console.warn(
+        `Transform "${step.transformName}" for type "${step.originalType}" not found in available transforms`
+      );
       return;
     }
 
@@ -339,21 +348,14 @@ const applyTransformAtPath = (
 
     // Handle structural transforms
     if (result?.__structuralChange) {
-      if (result.action === 'split' && Array.isArray(result.parts)) {
-        // For split transforms, create new properties from parts
-        result.parts.forEach((part: any, index: number) => {
-          const newKey = `${lastKey}_${index}`;
-          current[newKey] = part;
-        });
+      const handler = getStructuralTransformHandler(result.action);
 
-        // Remove source if specified
-        if (result.removeSource) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-          delete current[lastKey];
-        }
+      if (handler) {
+        handler(current, lastKey, result);
       } else {
         console.warn(
-          `Structural transform action "${result.action}" not implemented in applyRecipe`
+          `Structural transform action "${result.action}" not registered. ` +
+            `Use registerStructuralTransformHandler to add support for this action.`
         );
       }
     } else {

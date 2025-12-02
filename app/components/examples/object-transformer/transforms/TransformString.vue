@@ -1,13 +1,31 @@
 <script setup lang="ts">
 import { useCheckIn } from 'vue-airport';
 import type { ObjectTransformerContext, Transform } from '..';
-import { ObjectTransformerDeskKey } from '..';
+import { ObjectTransformerDeskKey, registerStructuralTransformHandler } from '..';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
+
+// Register structural transform handler for 'split'
+registerStructuralTransformHandler('split', (current, lastKey, result) => {
+  if (!Array.isArray(result.parts)) return;
+
+  // Create new properties from parts
+  result.parts.forEach((part: any, index: number) => {
+    const newKey = `${lastKey}_${index}`;
+    current[newKey] = part;
+  });
+
+  // Remove source if specified
+  if (result.removeSource) {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete current[lastKey];
+  }
+});
 
 const transforms: Transform[] = [
   {
     name: 'Split',
+    structural: true, // This is a structural transform
     if: (node) => node.type === 'string',
     params: [{ key: 'delimiter', label: 'Delimiter', type: 'text', default: ' ' }],
     fn: (v: string, delimiter: string) => ({

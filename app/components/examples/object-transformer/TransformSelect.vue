@@ -18,7 +18,9 @@ import {
   applyNodeTransform,
   applyStepTransform,
   partition,
+  computeStepValue,
 } from '.';
+import { getTypeFromValue } from './utils/type-guards.util';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
 
@@ -48,19 +50,41 @@ const node = computed(() => {
   return n;
 });
 
-// Available transforms based on original type
+// Get the value to test transforms against (computed up to current step)
+const testValue = computed(() => {
+  if (!node.value) return undefined;
+
+  // If we're in step mode, compute value up to that step
+  if (props.stepIndex !== undefined) {
+    return computeStepValue(node.value, props.stepIndex);
+  }
+
+  // For the first/main node transform selector, use original value
+  return node.value.value;
+});
+
+// Get the type of the test value
+const testValueType = computed(() => {
+  if (!node.value) return 'unknown';
+
+  // For the first/main node transform selector, use ORIGINAL value type
+  if (props.stepIndex === undefined) {
+    return getTypeFromValue(node.value.value);
+  }
+
+  // For step transforms, use the updated node type (which reflects propagation)
+  return node.value.type;
+});
+
+// Available transforms based on test value type
 const availableTransforms = computed(() => {
   if (!node.value) return [];
-  return filterTransformsByType(deskWithContext.transforms.value, node.value.type);
+  return filterTransformsByType(deskWithContext.transforms.value, testValueType.value);
 });
 
 // Separate structural and non-structural transforms using partition
 const transformsPartition = computed(() =>
-  partition(availableTransforms.value, (t) => {
-    // Check if transform is structural by testing if it returns a StructuralTransformResult
-    const testResult = t.fn(node.value?.value);
-    return testResult?.__structuralChange === true;
-  })
+  partition(availableTransforms.value, (t) => t.structural === true)
 );
 
 const structuralTransforms = computed(() => transformsPartition.value[0]);

@@ -1,9 +1,21 @@
 <script setup lang="ts">
 import { useCheckIn } from 'vue-airport';
 import type { ObjectTransformerContext, Transform, StructuralTransformResult } from '..';
-import { ObjectTransformerDeskKey } from '..';
+import { ObjectTransformerDeskKey, registerStructuralTransformHandler } from '..';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
+
+// Register structural transform handler for 'arrayToProperties'
+registerStructuralTransformHandler('arrayToProperties', (current, lastKey, result) => {
+  if (!Array.isArray(result.parts)) return;
+
+  // Convert array to object with indexed keys
+  const obj: Record<string, any> = {};
+  result.parts.forEach((part: any, index: number) => {
+    obj[index.toString()] = part;
+  });
+  current[lastKey] = obj;
+});
 
 const transforms: Transform[] = [
   {
@@ -14,6 +26,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'To Object',
+    structural: true, // This is a structural transform
     if: (node) => node.type === 'array',
     fn: (v: any[]): StructuralTransformResult => ({
       __structuralChange: true,

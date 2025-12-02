@@ -291,4 +291,7 @@ watch(
   </div>
 </template>
 
-<style scoped></style>
+/** { "firstname": "John", "lastname": "DOE", "age": 30, "dob": "1993-05-15T00:00:00.000Z",
+"active": false, "city": "Marseille", "address": { "street": "123 MAIN ST", "zip": "13001",
+"custom": { "info": "some custom info", "tags": [ "tag1", "tag2" ] } }, "hobbies": "reading,
+traveling, swimming" } */

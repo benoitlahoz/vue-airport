@@ -32,6 +32,7 @@ export interface Transform {
   if: (node: ObjectNodeData) => boolean;
   fn: (value: any, ...params: any[]) => any | StructuralTransformResult;
   params?: any[];
+  structural?: boolean; // Mark if this transform is structural (returns StructuralTransformResult)
 }
 
 export interface TransformRecipe {
