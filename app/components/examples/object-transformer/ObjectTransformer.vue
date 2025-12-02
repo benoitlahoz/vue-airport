@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
-  ObjectTransformerNode,
+  TransformerNode,
   ObjectTransformerDeskKey,
   type ObjectNode,
   type ObjectNodeType,
@@ -10,238 +10,56 @@ import {
   type ObjectTransformerContext,
   type ObjectTransformerDesk,
 } from '.';
+import { buildNodeTree } from './utils/node-builder.util';
+import {
+  computeIntermediateValue,
+  computeStepValue,
+  createPropagateTransform,
+} from './utils/transform-propagation.util';
+import { getTypeFromValue } from './utils/type-guards.util';
+import {
+  sanitizeKey,
+  autoRenameKey,
+  formatValue,
+  isAddedProperty,
+  getKeyClasses,
+  generateChildKey,
+  keyGuards,
+} from './utils/node-utilities.util';
 
 export interface ObjectTransformerProps {
   data?: Record<string, any> | any[];
+  forbiddenKeys?: string[];
 }
 
 const props = withDefaults(defineProps<ObjectTransformerProps>(), {
   data: () => ({}),
+  forbiddenKeys: () => keyGuards,
 });
-
-const tree = ref<ObjectNode>(
-  buildNodeTree(props.data, Array.isArray(props.data) ? 'Array' : 'Object')
-);
-
-watch(
-  () => props.data,
-  (newData) => {
-    tree.value = buildNodeTree(newData, Array.isArray(newData) ? 'Array' : 'Object');
-  },
-  { deep: true }
-);
-
-function buildNodeTree(value: any, key?: string, parent?: ObjectNode): ObjectNode {
-  // Handle null first (before typeof checks)
-  if (value === null) {
-    return {
-      type: 'null',
-      key,
-      value: null,
-      transforms: [],
-      parent,
-    };
-  }
-
-  // Handle arrays
-  if (Array.isArray(value)) {
-    const node: ObjectNode = {
-      type: 'array',
-      key,
-      value: [],
-      transforms: [],
-      children: [],
-      parent,
-    };
-
-    node.children = value.map((item, index) => buildNodeTree(item, String(index), node));
-
-    // Build the initial value from children
-    node.value = node.children.map((c) => c.value);
-
-    return node;
-  }
-
-  // Handle Date objects
-  if (value instanceof Date) {
-    return {
-      type: 'date',
-      key,
-      value,
-      transforms: [],
-      parent,
-    };
-  }
-
-  // Handle objects (after Date check since Date is also an object)
-  if (typeof value === 'object') {
-    const node: ObjectNode = {
-      type: 'object',
-      key,
-      value: {},
-      transforms: [],
-      children: [],
-      parent,
-    };
-
-    node.children = Object.entries(value).map(([k, v]) => buildNodeTree(v, k, node));
-
-    // Build the initial value from children
-    node.value = node.children.reduce(
-      (acc, c) => {
-        acc[c.key!] = c.value;
-        return acc;
-      },
-      {} as Record<string, any>
-    );
-
-    return node;
-  }
-
-  // Handle primitives and other types
-  const typeOf = typeof value;
-  let type: ObjectNodeType;
-
-  switch (typeOf) {
-    case 'string':
-      type = 'string';
-      break;
-    case 'number':
-      type = 'number';
-      break;
-    case 'bigint':
-      type = 'bigint';
-      break;
-    case 'boolean':
-      type = 'boolean';
-      break;
-    case 'symbol':
-      type = 'symbol';
-      break;
-    case 'undefined':
-      type = 'undefined';
-      break;
-    case 'function':
-      type = 'function';
-      break;
-    default:
-      type = 'unknown';
-  }
-
-  return {
-    type,
-    key,
-    value: value,
-    transforms: [],
-    parent,
-  };
-}
-
-function isStructuralResult(result: any): boolean {
-  return result && typeof result === 'object' && result.__structuralChange === true;
-}
-
-// Helper: Calculer la valeur intermédiaire avant la dernière transformation
-function computeIntermediateValue(node: ObjectNode): any {
-  let intermediateValue = node.value;
-  for (let i = 0; i < node.transforms.length - 1; i++) {
-    const t = node.transforms[i];
-    if (!t) continue;
-    const result = t.fn(intermediateValue, ...(t.params || []));
-    // Si on rencontre une transformation structurelle avant, arrêter
-    if (isStructuralResult(result)) {
-      break;
-    }
-    intermediateValue = result;
-  }
-  return intermediateValue;
-}
-
-// Helper: Gérer le split/arrayToProperties en créant de nouveaux nœuds
-function handleStructuralSplit(
-  node: ObjectNode,
-  parts: any[],
-  removeSource: boolean,
-  desk: ObjectTransformerDesk
-) {
-  if (!node.parent) return;
-
-  const currentIndex = node.parent.children?.indexOf(node) ?? -1;
-  if (currentIndex === -1) return;
-
-  const baseKeyPrefix = (node.key || 'part') + '_';
-  const hasSplitNodes = node.parent.children!.some(
-    (child) => child !== node && child.key?.startsWith(baseKeyPrefix)
-  );
-
-  const baseKey = node.key || 'part';
-  const newNodes = parts.map((part: any, i: number) => {
-    const newKey = `${baseKey}_${i}`;
-    return buildNodeTree(part, newKey, node.parent);
-  });
-
-  if (hasSplitNodes) {
-    // Supprimer TOUS les anciens nœuds splittés
-    const filteredChildren = node.parent.children!.filter(
-      (child) => child === node || !child.key?.startsWith(baseKeyPrefix)
-    );
-
-    // Trouver la nouvelle position du nœud source
-    const newIndex = filteredChildren.indexOf(node);
-    // Insérer les nouveaux nœuds
-    const updatedChildren = [
-      ...filteredChildren.slice(0, newIndex + 1),
-      ...newNodes,
-      ...filteredChildren.slice(newIndex + 1),
-    ];
-
-    node.parent.children = updatedChildren;
-  } else {
-    // Première fois : créer les nouveaux nœuds
-    if (removeSource) {
-      node.parent.children!.splice(currentIndex, 1, ...newNodes);
-    } else {
-      node.parent.children!.splice(currentIndex + 1, 0, ...newNodes);
-    }
-  }
-
-  desk.propagateTransform(node.parent);
-}
-
-// Helper: Calculer la valeur transformée d'un enfant (ignore les structurelles)
-function computeChildTransformedValue(child: ObjectNode): any {
-  return child.transforms.reduce((v, t) => {
-    const result = t.fn(v, ...(t.params || []));
-    return isStructuralResult(result) ? v : result;
-  }, child.value);
-}
-
-// Helper: Propager pour un objet
-function propagateObjectValue(node: ObjectNode) {
-  node.value =
-    node.children
-      ?.filter((child) => !child.deleted)
-      ?.reduce(
-        (acc: any, child) => {
-          acc[child.key!] = computeChildTransformedValue(child);
-          return acc;
-        },
-        {} as Record<string, any>
-      ) || {};
-}
-
-// Helper: Propager pour un tableau
-function propagateArrayValue(node: ObjectNode) {
-  node.value =
-    node.children
-      ?.filter((child) => !child.deleted)
-      ?.map((child) => computeChildTransformedValue(child)) || [];
-}
 
 const { createDesk } = useCheckIn<ObjectNode, ObjectTransformerContext>();
 const { desk } = createDesk(ObjectTransformerDeskKey, {
   devTools: true,
   context: {
+    // Tree
+    tree: ref<ObjectNode>(
+      buildNodeTree(props.data, Array.isArray(props.data) ? 'Array' : 'Object')
+    ),
+    getNode(id: string): ObjectNode | null {
+      // Recursive search in the tree
+      const findNode = (node: ObjectNode): ObjectNode | null => {
+        if (node.id === id) return node;
+        if (node.children) {
+          for (const child of node.children) {
+            const found = findNode(child);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return findNode(this.tree.value);
+    },
+
     // Constants
     primitiveTypes: [
       'string',
@@ -260,169 +78,164 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
     addTransforms(...newTransforms: Transform[]) {
       this.transforms.value.push(...newTransforms);
     },
-    findTransform(name: string): Transform | undefined {
+    findTransform(name: string, node?: ObjectNode): Transform | undefined {
+      // If node is provided, filter by type compatibility
+      if (node) {
+        return this.transforms.value.find((t) => t.name === name && t.if(node));
+      }
       return this.transforms.value.find((t) => t.name === name);
     },
     initParams(transform: Transform) {
+      // Extract default VALUES from param configs
       return transform.params?.map((p) => p.default ?? null) || [];
     },
-    createTransformEntry(name: string) {
-      const transform = this.findTransform(name);
-      return transform ? { ...transform, params: this.initParams(transform) } : null;
+    createTransformEntry(name: string, node?: ObjectNode) {
+      const transform = this.findTransform(name, node);
+      if (!transform) return null;
+
+      // Create a copy with params as VALUES array (not configs)
+      return {
+        ...transform,
+        params: this.initParams(transform),
+      };
     },
     propagateTransform(node: ObjectNode) {
-      if (!node) return;
-
-      // Gérer les transformations structurelles
-      if (node.transforms.length > 0) {
-        const lastTransform = node.transforms[node.transforms.length - 1];
-        if (!lastTransform) return;
-
-        // Calculer la valeur intermédiaire avant la dernière transformation
-        const intermediateValue = computeIntermediateValue(node);
-
-        // Appliquer la dernière transformation
-        const lastResult = lastTransform.fn(intermediateValue, ...(lastTransform.params || []));
-
-        // Gérer les transformations structurelles (split, arrayToProperties)
-        if (
-          lastResult &&
-          typeof lastResult === 'object' &&
-          lastResult.__structuralChange &&
-          (lastResult.action === 'split' || lastResult.action === 'arrayToProperties') &&
-          lastResult.parts &&
-          node.parent
-        ) {
-          handleStructuralSplit(
-            node,
-            lastResult.parts,
-            lastResult.removeSource,
-            desk as ObjectTransformerDesk
-          );
-          return;
-        }
-      }
-
-      // Propager les valeurs pour les objets et tableaux
-      if (node.type === 'object') {
-        propagateObjectValue(node);
-      } else if (node.type === 'array') {
-        propagateArrayValue(node);
-      }
-
-      // Propager au parent
-      if (node.parent) (desk as ObjectTransformerDesk).propagateTransform(node.parent);
+      const propagate = createPropagateTransform(desk as ObjectTransformerDesk);
+      propagate(node);
     },
-    computeStepValue(node: ObjectNode, index: number) {
-      let value = node.value;
-
-      for (let i = 0; i <= index; i++) {
-        const t = node.transforms[i];
-        if (!t) continue;
-
-        const result = t.fn(value, ...(t.params || []));
-
-        // Si c'est une transformation structurelle, arrêter ici
-        if (isStructuralResult(result)) {
-          break;
-        }
-
-        // Transformation normale
-        value = result;
-      }
-      return value;
-    },
+    computeStepValue,
 
     // Nodes
-    forbiddenKeys: ref<string[]>([
-      '__proto__',
-      'prototype',
-      'constructor',
-      'toString',
-      '__defineGetter__',
-      '__defineSetter__',
-      '__lookupGetter__',
-      '__lookupSetter__',
-    ]),
-    sanitizeKey(key: string): string | null {
-      if (!key) return null;
-      if (this.forbiddenKeys.value.includes(key)) return null;
-      if (key.startsWith('__') && key.endsWith('__')) return null;
-      if (key.includes('.')) return null;
-      return key;
+    forbiddenKeys: ref<string[]>(props.forbiddenKeys || keyGuards),
+    getComputedValueType(_node: ObjectNode, value: any): ObjectNodeType {
+      return getTypeFromValue(value);
     },
-    autoRenameKey(parent: ObjectNode, base: string): string {
-      let safeBase = this.sanitizeKey(base);
-      if (!safeBase) safeBase = 'key';
 
-      if (!parent.children?.some((c) => c.key === safeBase)) {
-        return safeBase;
+    // Key editing
+    editingNode: ref<ObjectNode | null>(null),
+    tempKey: ref<string | null>(null),
+    startEditKey(node: ObjectNode) {
+      this.editingNode.value = node;
+      this.tempKey.value = node.key || null;
+    },
+    confirmEditKey(node: ObjectNode) {
+      const newKey = this.tempKey.value?.trim();
+
+      if (!newKey || !sanitizeKey(newKey)) {
+        this.tempKey.value = node.key || null;
+        this.editingNode.value = null;
+        return;
       }
 
-      let i = 1;
-      let candidate = `${safeBase}_${i}`;
-
-      while (parent.children?.some((c) => c.key === candidate)) {
-        i++;
-        candidate = `${safeBase}_${i}`;
+      if (newKey === node.key) {
+        this.editingNode.value = null;
+        return;
       }
 
-      return candidate;
+      const parent = node.parent;
+      if (parent?.type === 'object' && parent.children) {
+        const finalKey = autoRenameKey(parent, newKey);
+        node.key = finalKey;
+        node.keyModified = true;
+        this.tempKey.value = finalKey;
+        this.propagateTransform(parent);
+      }
+
+      this.editingNode.value = null;
     },
-    getNodeType(node: ObjectNode) {
-      let value = node.value;
+    cancelEditKey(node: ObjectNode) {
+      this.tempKey.value = node.key || null;
+      this.editingNode.value = null;
+    },
 
-      // Ne traiter que les transformations jusqu'à la première transformation structurelle
-      for (const t of node.transforms) {
-        // Vérifier d'abord si c'est une transformation structurelle
-        // Pour cela, on regarde si la transformation a une propriété 'structural' ou si son résultat l'indique
-        // On doit exécuter pour vérifier, mais on s'arrête immédiatement après
-        const result = t.fn(value, ...(t.params || []));
+    // Node utilities (using pure functions)
+    isAddedProperty,
+    getKeyClasses,
+    generateChildKey,
+    toggleNodeDeletion(node: ObjectNode) {
+      node.deleted = !node.deleted;
+      if (node.parent) {
+        this.propagateTransform(node.parent);
+      }
+    },
 
-        if (isStructuralResult(result)) {
-          // Transformation structurelle trouvée : arrêter ici
-          // Le type reste celui de la valeur AVANT la transformation structurelle
-          break;
+    // Transform selections
+    nodeSelections: new WeakMap<ObjectNode, string | null>(),
+    stepSelections: new WeakMap<ObjectNode, Record<number, string | null>>(),
+    getNodeSelection(node: ObjectNode): string | null {
+      // If node has no transforms, always return null
+      if (node.transforms.length === 0) {
+        this.nodeSelections.set(node, null);
+        return null;
+      }
+
+      // Always sync with the FIRST transform (index 0)
+      const firstTransformName = node.transforms[0]?.name || null;
+      this.nodeSelections.set(node, firstTransformName);
+      return firstTransformName;
+    },
+    setNodeSelection(node: ObjectNode, value: string | null) {
+      this.nodeSelections.set(node, value);
+    },
+    getStepSelection(node: ObjectNode): Record<number, string | null> {
+      if (!this.stepSelections.has(node)) {
+        this.stepSelections.set(node, {});
+      }
+
+      const currentSelections = this.stepSelections.get(node) || {};
+
+      // Clean up selections for indices beyond the number of transforms
+      const cleanedSelections: Record<number, string | null> = {};
+      Object.entries(currentSelections).forEach(([key, value]) => {
+        const idx = parseInt(key);
+        // Keep only selections for valid transform indices
+        if (idx < node.transforms.length) {
+          cleanedSelections[idx] = value;
         }
+      });
 
-        // Transformation normale : appliquer
-        value = result;
-      }
+      this.stepSelections.set(node, cleanedSelections);
+      return cleanedSelections;
+    },
+    setStepSelection(node: ObjectNode, value: Record<number, string | null>) {
+      this.stepSelections.set(node, value);
+    },
 
-      const t = typeof value;
-      if (t === 'string') return 'string';
-      if (t === 'symbol') return 'symbol';
-      if (t === 'number') return 'number';
-      if (t === 'bigint') return 'bigint';
-      if (t === 'boolean') return 'boolean';
-      if (t === 'undefined') return 'undefined';
-      if (t === 'function') return 'function';
-      if (t === null) return 'null';
-      if (Array.isArray(value)) return 'array';
-      if (value instanceof Date) return 'date';
-      if (value && typeof value === 'object') return 'object';
-      return 'unknown';
+    // Helpers
+    getParamConfig(transformName: string, paramIndex: number) {
+      return this.transforms.value.find((x) => x.name === transformName)?.params?.[paramIndex];
     },
-    getComputedValueType(node: ObjectNode, value: any): ObjectNodeType {
-      return this.getNodeType({ ...node, value });
+    formatStepValue(node: ObjectNode, index: number): string {
+      const value = this.computeStepValue(node, index);
+      const type = this.getComputedValueType(node, value);
+      return formatValue(value, type);
     },
-    formatValue(value: any, type: ObjectNodeType): string {
-      const formatters: Partial<Record<ObjectNodeType, (v: any) => string>> = {
-        date: (v) => (v instanceof Date ? v.toISOString() : String(v)),
-        function: (v) => `[Function: ${v.name || 'anonymous'}]`,
-        bigint: (v) => `${v}n`,
-        symbol: (v) => v.toString(),
-        undefined: () => 'undefined',
-        null: () => 'null',
-      };
-      return formatters[type]?.(value) ?? String(value);
+    isStructuralTransform(node: ObjectNode, transformIndex: number): boolean {
+      const t = node.transforms[transformIndex];
+      if (!t) return false;
+
+      const value = computeIntermediateValue(node);
+      const result = t.fn(value, ...(t.params || []));
+
+      return result && typeof result === 'object' && result.__structuralChange === true;
     },
   },
 });
+
+watch(
+  () => props.data,
+  (newData) => {
+    (desk as ObjectTransformerDesk).tree.value = buildNodeTree(
+      newData,
+      Array.isArray(newData) ? 'Array' : 'Object'
+    );
+  },
+  { deep: true }
+);
 </script>
 
 <template>
-  <ObjectTransformerNode :tree="tree" />
+  <TransformerNode :id="null" />
   <slot />
 </template>
 

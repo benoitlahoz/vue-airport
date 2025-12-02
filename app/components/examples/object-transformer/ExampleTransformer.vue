@@ -4,8 +4,9 @@ import {
   TransformString,
   TransformNumber,
   TransformDate,
-  TransformMisc,
   TransformBoolean,
+  TransformObject,
+  TransformArray,
 } from '.';
 
 const data = {
@@ -32,7 +33,8 @@ const data = {
     <TransformNumber />
     <TransformDate />
     <TransformBoolean />
-    <TransformMisc />
+    <TransformObject />
+    <TransformArray />
   </ObjectTransformer>
 </template>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn } from 'vue-airport';
-import type { ObjectTransformerContext, Transform } from '.';
-import { ObjectTransformerDeskKey } from '.';
+import type { ObjectTransformerContext, Transform } from '..';
+import { ObjectTransformerDeskKey } from '..';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
 

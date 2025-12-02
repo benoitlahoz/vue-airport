@@ -21,7 +21,12 @@ export interface DevToolsEvent {
 export interface DevToolsHook {
   emit(event: DevToolsEvent): void;
   registerDesk(deskId: string, metadata: Record<string, unknown>): void;
-  updateRegistry(deskId: string, registry: Map<string | number, any>): void;
+  updateRegistry(
+    deskId: string,
+    registry: Map<string | number, any>,
+    context?: Record<string, unknown>
+  ): void;
+  updateContext(deskId: string, context: Record<string, unknown>): void;
   unregisterDesk?(deskId: string): void;
 }
 
@@ -67,13 +72,32 @@ const registerDeskWithDevTools = (deskId: string, metadata: Record<string, unkno
 /**
  * Update registry state in DevTools
  */
-const updateDevToolsRegistry = (deskId: string, registry: Map<string | number, any>): void => {
+const updateDevToolsRegistry = (
+  deskId: string,
+  registry: Map<string | number, any>,
+  context?: Record<string, unknown>
+): void => {
   if (typeof window !== 'undefined' && window[HOOK_KEY]) {
     try {
-      window[HOOK_KEY].updateRegistry(deskId, registry);
+      window[HOOK_KEY].updateRegistry(deskId, registry, context);
     } catch (error) {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[vue-airport] DevTools updateRegistry failed:', error);
+      }
+    }
+  }
+};
+
+/**
+ * Update context in DevTools
+ */
+const updateDevToolsContext = (deskId: string, context: Record<string, unknown>): void => {
+  if (typeof window !== 'undefined' && window[HOOK_KEY]) {
+    try {
+      window[HOOK_KEY].updateContext(deskId, context);
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[vue-airport] DevTools updateContext failed:', error);
       }
     }
   }
@@ -115,6 +139,7 @@ export const DevTools = {
   emit: emitDevToolsEvent,
   registerDesk: registerDeskWithDevTools,
   updateRegistry: updateDevToolsRegistry,
+  updateContext: updateDevToolsContext,
   unregisterDesk: unregisterDeskWithDevTools,
   isAvailable: hasDevTools,
 };
@@ -126,7 +151,14 @@ export const NoOpDevTools = {
   registerDesk(_deskId: string, _metadata: Record<string, unknown>): void {
     // No-op
   },
-  updateRegistry(_deskId: string, _registry: Map<string | number, any>): void {
+  updateRegistry(
+    _deskId: string,
+    _registry: Map<string | number, any>,
+    _context?: Record<string, unknown>
+  ): void {
+    // No-op
+  },
+  updateContext(_deskId: string, _context: Record<string, unknown>): void {
     // No-op
   },
   unregisterDesk(_deskId: string): void {

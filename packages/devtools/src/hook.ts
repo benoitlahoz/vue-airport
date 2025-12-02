@@ -5,6 +5,7 @@ export interface DeskRegistryState {
   deskId: string;
   registry: Map<string | number, any>;
   metadata?: Record<string, unknown>;
+  context?: Record<string, unknown>;
   stats?: {
     totalCheckIns: number;
     totalCheckOuts: number;
@@ -18,7 +19,12 @@ export interface CheckInDevToolsHook {
   emit(event: AirportEvent): void;
   on(handler: (event: AirportEvent) => void): () => void;
   registerDesk(deskId: string, metadata: Record<string, unknown>): void;
-  updateRegistry(deskId: string, registry: Map<string | number, any>): void;
+  updateRegistry(
+    deskId: string,
+    registry: Map<string | number, any>,
+    context?: Record<string, unknown>
+  ): void;
+  updateContext(deskId: string, context: Record<string, unknown>): void;
   unregisterDesk(deskId: string): void;
 }
 
@@ -37,6 +43,12 @@ export function attachGlobalHook(app: App) {
   const hook: CheckInDevToolsHook = {
     events: [],
     desks,
+    updateContext(deskId: string, context: Record<string, unknown>) {
+      const desk = desks.get(deskId);
+      if (desk) {
+        desk.context = context;
+      }
+    },
     emit(event: AirportEvent) {
       this.events.push(event);
       handlers.forEach((handler) => handler(event));
@@ -84,17 +96,26 @@ export function attachGlobalHook(app: App) {
         deskId,
         registry: new Map(),
         metadata,
+        context: metadata.context as Record<string, unknown>,
         stats: { totalCheckIns: 0, totalCheckOuts: 0, totalUpdates: 0 },
       });
     },
-    updateRegistry(deskId: string, registry: Map<string | number, any>) {
+    updateRegistry(
+      deskId: string,
+      registry: Map<string | number, any>,
+      context?: Record<string, unknown>
+    ) {
       const existing = desks.get(deskId);
       if (existing) {
         existing.registry = new Map(registry); // Clone to avoid mutation issues
+        if (context !== undefined) {
+          existing.context = context;
+        }
       } else {
         desks.set(deskId, {
           deskId,
           registry: new Map(registry),
+          context,
           stats: { totalCheckIns: 0, totalCheckOuts: 0, totalUpdates: 0 },
         });
       }

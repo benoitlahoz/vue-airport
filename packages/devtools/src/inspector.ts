@@ -112,6 +112,11 @@ function getNodeState(nodeId: string) {
     return { Info: [{ key: 'status', value: 'DevTools not ready', editable: false }] };
   }
 
+  // Handle empty state
+  if (nodeId === 'empty') {
+    return { Info: [{ key: 'status', value: 'No desks registered yet', editable: false }] };
+  }
+
   // Check if it's a desk or child node
   if (nodeId.includes(':')) {
     // Child node: deskId:childId
@@ -146,31 +151,27 @@ function getNodeState(nodeId: string) {
     if (item.meta && Object.keys(item.meta).length > 0) {
       result.Metadata = Object.entries(item.meta).map(([key, value]) => ({
         key,
-        value: typeof value === 'object' ? JSON.stringify(value, null, 2) : value,
+        value: value,
         editable: false,
       }));
     }
 
     // Data section - display with better formatting
     if (item.data && Object.keys(item.data).length > 0) {
-      result.Data = Object.entries(item.data).map(([key, value]) => {
-        let displayValue = value;
-        if (typeof value === 'object' && value !== null) {
-          displayValue = JSON.stringify(value, null, 2);
-        }
-        return {
-          key,
-          value: displayValue,
-          editable: false,
-        };
-      });
+      result.Data = Object.entries(item.data).map(([key, value]) => ({
+        key,
+        value: value,
+        editable: false,
+      }));
     }
 
     return result;
   } else {
     // Desk node
     const desk = hook.desks.get(nodeId);
-    if (!desk) return {};
+    if (!desk) {
+      return { Info: [{ key: 'error', value: `Desk '${nodeId}' not found`, editable: false }] };
+    }
 
     const stats = desk.stats || {
       totalCheckIns: 0,
@@ -180,50 +181,55 @@ function getNodeState(nodeId: string) {
 
     const result: Record<string, any[]> = {
       'Basic Info': [
-        { key: 'id', value: desk.deskId, editable: false },
+        { key: 'id', value: String(desk.deskId), editable: false },
         { key: 'type', value: 'desk', editable: false },
-        { key: 'children', value: desk.registry.size, editable: false },
+        { key: 'children', value: Number(desk.registry.size), editable: false },
       ],
     };
 
     // Statistics
     result.Statistics = [
-      { key: 'total check-ins', value: stats.totalCheckIns, editable: false },
-      { key: 'total check-outs', value: stats.totalCheckOuts, editable: false },
-      { key: 'total updates', value: stats.totalUpdates, editable: false },
-      { key: 'current items', value: desk.registry.size, editable: false },
+      { key: 'total check-ins', value: Number(stats.totalCheckIns), editable: false },
+      { key: 'total check-outs', value: Number(stats.totalCheckOuts), editable: false },
+      { key: 'total updates', value: Number(stats.totalUpdates), editable: false },
+      { key: 'current items', value: Number(desk.registry.size), editable: false },
     ];
 
     // Lifecycle
+    const lifecycleData = [];
     if (desk.metadata) {
       const createdAt = desk.metadata.createdAt as string;
       if (createdAt) {
-        result.Lifecycle = [{ key: 'created at', value: createdAt, editable: false }];
-
-        if (desk.metadata.lastCheckIn) {
-          result.Lifecycle.push({
-            key: 'last check-in',
-            value: new Date(desk.metadata.lastCheckIn as number).toLocaleString(),
-            editable: false,
-          });
-        }
-
-        if (desk.metadata.lastCheckOut) {
-          result.Lifecycle.push({
-            key: 'last check-out',
-            value: new Date(desk.metadata.lastCheckOut as number).toLocaleString(),
-            editable: false,
-          });
-        }
-
-        if (desk.metadata.lastUpdate) {
-          result.Lifecycle.push({
-            key: 'last update',
-            value: new Date(desk.metadata.lastUpdate as number).toLocaleString(),
-            editable: false,
-          });
-        }
+        lifecycleData.push({ key: 'created at', value: createdAt, editable: false });
       }
+
+      if (desk.metadata.lastCheckIn) {
+        lifecycleData.push({
+          key: 'last check-in',
+          value: new Date(desk.metadata.lastCheckIn as number).toLocaleString(),
+          editable: false,
+        });
+      }
+
+      if (desk.metadata.lastCheckOut) {
+        lifecycleData.push({
+          key: 'last check-out',
+          value: new Date(desk.metadata.lastCheckOut as number).toLocaleString(),
+          editable: false,
+        });
+      }
+
+      if (desk.metadata.lastUpdate) {
+        lifecycleData.push({
+          key: 'last update',
+          value: new Date(desk.metadata.lastUpdate as number).toLocaleString(),
+          editable: false,
+        });
+      }
+    }
+
+    if (lifecycleData.length > 0) {
+      result.Lifecycle = lifecycleData;
     }
 
     // Plugins
@@ -235,17 +241,44 @@ function getNodeState(nodeId: string) {
       }));
     }
 
+    // Context
+    if (desk.context && Object.keys(desk.context).length > 0) {
+      result.Context = Object.entries(desk.context).map(([key, value]) => {
+        let displayValue = value;
+        // Handle refs and reactive objects - unwrap them
+        if (typeof value === 'object' && value !== null && 'value' in value) {
+          displayValue = (value as any).value;
+        }
+        return {
+          key,
+          value: displayValue,
+          editable: false,
+        };
+      });
+    }
+
     // Other metadata
     if (desk.metadata) {
       const otherMetadata = Object.entries(desk.metadata).filter(
         ([key]) =>
-          !['createdAt', 'lastCheckIn', 'lastCheckOut', 'lastUpdate', 'plugins'].includes(key)
+          ![
+            'createdAt',
+            'lastCheckIn',
+            'lastCheckOut',
+            'lastUpdate',
+            'lastSwitch',
+            'plugins',
+            'context',
+            'label',
+            'debug',
+            'deskId',
+          ].includes(key)
       );
 
       if (otherMetadata.length > 0) {
         result.Metadata = otherMetadata.map(([key, value]) => ({
           key,
-          value: typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value),
+          value: value,
           editable: false,
         }));
       }
