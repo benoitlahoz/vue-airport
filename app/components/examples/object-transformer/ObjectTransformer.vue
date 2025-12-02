@@ -163,11 +163,16 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
     nodeSelections: new WeakMap<ObjectNode, string | null>(),
     stepSelections: new WeakMap<ObjectNode, Record<number, string | null>>(),
     getNodeSelection(node: ObjectNode): string | null {
-      if (!this.nodeSelections.has(node)) {
-        const initial = node.transforms.length > 0 ? node.transforms.at(-1)?.name || null : null;
-        this.nodeSelections.set(node, initial);
+      // If node has no transforms, always return null
+      if (node.transforms.length === 0) {
+        this.nodeSelections.set(node, null);
+        return null;
       }
-      return this.nodeSelections.get(node) || null;
+
+      // Always sync with the FIRST transform (index 0)
+      const firstTransformName = node.transforms[0]?.name || null;
+      this.nodeSelections.set(node, firstTransformName);
+      return firstTransformName;
     },
     setNodeSelection(node: ObjectNode, value: string | null) {
       this.nodeSelections.set(node, value);
@@ -176,7 +181,21 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
       if (!this.stepSelections.has(node)) {
         this.stepSelections.set(node, {});
       }
-      return this.stepSelections.get(node) || {};
+
+      const currentSelections = this.stepSelections.get(node) || {};
+
+      // Clean up selections for indices beyond the number of transforms
+      const cleanedSelections: Record<number, string | null> = {};
+      Object.entries(currentSelections).forEach(([key, value]) => {
+        const idx = parseInt(key);
+        // Keep only selections for valid transform indices
+        if (idx < node.transforms.length) {
+          cleanedSelections[idx] = value;
+        }
+      });
+
+      this.stepSelections.set(node, cleanedSelections);
+      return cleanedSelections;
     },
     setStepSelection(node: ObjectNode, value: Record<number, string | null>) {
       this.stepSelections.set(node, value);

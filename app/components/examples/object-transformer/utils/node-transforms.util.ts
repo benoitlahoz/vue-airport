@@ -20,7 +20,11 @@ export const applyNodeTransform = (
 ): void => {
   if (!transformName || transformName === 'None') {
     node.transforms = [];
-    if (node.parent) desk.propagateTransform(node.parent);
+    // Cleanup split nodes when removing transform
+    if (node.parent) {
+      cleanupSplitNodes(node, node.parent);
+      desk.propagateTransform(node.parent);
+    }
     return;
   }
 
@@ -56,12 +60,38 @@ export const applyStepTransform = (
 ): void => {
   if (!transformName) return;
 
+  const nextIndex = stepIndex + 1;
+
   if (transformName === 'None') {
-    node.transforms.splice(stepIndex + 1);
+    // Check if we're removing a structural transform
+    const removingStructural = node.transforms
+      .slice(nextIndex)
+      .some((t, idx) => desk.isStructuralTransform(node, nextIndex + idx));
+
+    node.transforms.splice(nextIndex);
+
+    // Cleanup split nodes if we removed a structural transform
+    if (removingStructural && node.parent) {
+      cleanupSplitNodes(node, node.parent);
+    }
   } else {
+    // Check if there's already a transform at nextIndex (we're replacing)
+    const isReplacing = nextIndex < node.transforms.length;
+
+    // If replacing a structural transform, cleanup first
+    if (isReplacing && desk.isStructuralTransform(node, nextIndex) && node.parent) {
+      cleanupSplitNodes(node, node.parent);
+    }
+
     const entry = desk.createTransformEntry(transformName);
-    if (entry) {
-      node.transforms.splice(stepIndex + 1, 0, entry);
+    if (!entry) return;
+
+    if (isReplacing) {
+      // Replace existing transform
+      node.transforms[nextIndex] = entry;
+    } else {
+      // Add new transform
+      node.transforms.push(entry);
     }
   }
 

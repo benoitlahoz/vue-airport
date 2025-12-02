@@ -7,26 +7,24 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 
 const transforms: Transform[] = [
   {
-    name: 'To String',
-    if: (node) => node.type === 'array',
-    fn: (v: any) => JSON.stringify(v),
-  },
-  {
     name: 'Join',
     if: (node) => node.type === 'array',
     params: [{ key: 'separator', label: 'Separator', type: 'string', default: ', ' }],
     fn: (v: any[], separator: string) => v.join(separator),
   },
   {
-    name: 'To Object Properties',
+    name: 'To Object',
     if: (node) => node.type === 'array',
-    params: [{ key: 'removeSource', label: 'Remove source', type: 'boolean', default: false }],
-    fn: (v: any[], removeSource: boolean): StructuralTransformResult => ({
+    fn: (v: any[]): StructuralTransformResult => ({
       __structuralChange: true,
       action: 'arrayToProperties',
       parts: v,
-      removeSource,
     }),
+  },
+  {
+    name: 'To String',
+    if: (node) => node.type === 'array',
+    fn: (v: any) => JSON.stringify(v),
   },
 ];
 

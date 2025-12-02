@@ -80,7 +80,11 @@ const nodeSelect = computed({
   set: (value) => deskWithContext.setNodeSelection(tree.value, value),
 });
 const stepSelect = computed({
-  get: () => deskWithContext.getStepSelection(tree.value),
+  get: () => {
+    // Add dependency on transforms length to trigger recalculation
+    const _ = tree.value.transforms.length;
+    return deskWithContext.getStepSelection(tree.value);
+  },
   set: (value) => deskWithContext.setStepSelection(tree.value, value),
 });
 
@@ -164,6 +168,7 @@ const updateTempKey = (value: string) => {
 // Transform handlers
 const handleNodeTransform = (name: unknown) => {
   applyNodeTransform(tree.value, name as string | null, deskWithContext, nodeSelect.value);
+
   if (name === 'None') {
     nodeSelect.value = null;
     stepSelect.value = {};
@@ -176,11 +181,16 @@ const handleStepTransform = (index: number, name: unknown) => {
   applyStepTransform(tree.value, index, name as string | null, deskWithContext);
 
   if (name === 'None') {
+    // Clean up all selections after the removed index
     const newStepSelect = Object.fromEntries(
-      Object.entries(stepSelect.value).filter(([key]) => parseInt(key) < index + 1)
+      Object.entries(stepSelect.value).filter(([key]) => parseInt(key) <= index)
     );
-    newStepSelect[index + 1] = null;
     stepSelect.value = newStepSelect;
+
+    // If we removed all transforms, update nodeSelect too
+    if (tree.value.transforms.length === 0) {
+      nodeSelect.value = null;
+    }
   } else if (typeof name === 'string') {
     stepSelect.value[index + 1] = name;
   }

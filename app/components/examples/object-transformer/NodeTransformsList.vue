@@ -26,7 +26,7 @@ const stepSelect = defineModel<Record<number, string | null>>('stepSelect', { re
 <template>
   <div v-if="node.transforms.length" class="">
     <div class="md:overflow-x-auto">
-      <div v-for="(t, index) in node.transforms" :key="index" class="my-2">
+      <div v-for="(t, index) in node.transforms" :key="`${t.name}-${index}`" class="my-2">
         <div
           class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 p-2 md:p-0 border md:border-0 rounded-md md:rounded-none bg-card md:bg-transparent transition-all group hover:bg-accent/30 min-w-fit"
         >
@@ -56,6 +56,7 @@ const stepSelect = defineModel<Record<number, string | null>>('stepSelect', { re
               <!-- Select suivant -->
               <TransformSelect
                 v-if="transforms.length > 1"
+                :key="`select-${index + 1}`"
                 :model-value="stepSelect[index + 1] ?? null"
                 :transforms="transforms"
                 remove-label="Remove this & following"
