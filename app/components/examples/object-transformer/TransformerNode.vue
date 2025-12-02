@@ -154,7 +154,11 @@ const getChildKey = (child: ObjectNode, index: number) =>
 </script>
 
 <template>
-  <div class="text-xs transformer-node-root" :class="{ 'opacity-50': tree.deleted }">
+  <div
+    data-slot="transformer-node"
+    class="text-xs transformer-node-root"
+    :class="{ 'opacity-50': tree.deleted }"
+  >
     <!-- Wrapper avec scroll horizontal -->
     <div class="overflow-x-auto">
       <div

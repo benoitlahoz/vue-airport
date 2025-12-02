@@ -2,7 +2,6 @@
 import { ref } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
-  TransformerNode,
   ObjectTransformerDeskKey,
   type ObjectNode,
   type ObjectNodeType,
@@ -235,7 +234,6 @@ watch(
 </script>
 
 <template>
-  <TransformerNode :id="null" />
   <slot />
 </template>
 

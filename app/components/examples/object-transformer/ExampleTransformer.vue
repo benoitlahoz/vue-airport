@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ObjectTransformer,
+  ObjectTransformerPreview,
   TransformString,
   TransformNumber,
   TransformDate,
@@ -28,14 +29,19 @@ const data = {
 </script>
 
 <template>
-  <ObjectTransformer :data="data">
-    <TransformString />
-    <TransformNumber />
-    <TransformDate />
-    <TransformBoolean />
-    <TransformObject />
-    <TransformArray />
-  </ObjectTransformer>
+  <div class="space-y-4">
+    <ObjectTransformer :data="data">
+      <TransformString />
+      <TransformNumber />
+      <TransformDate />
+      <TransformBoolean />
+      <TransformObject />
+      <TransformArray />
+
+      <TransformerNode />
+      <ObjectTransformerPreview />
+    </ObjectTransformer>
+  </div>
 </template>
 
 <style scoped></style>
