@@ -74,8 +74,13 @@ const filterNonSplitNodes =
 const createSplitNodes = (
   parts: any[],
   baseKey: string,
-  parent?: ObjectNodeData
-): ObjectNodeData[] => parts.map((part, i) => buildNodeTree(part, `${baseKey}_${i}`, parent));
+  parent?: ObjectNodeData,
+  keys?: string[]
+): ObjectNodeData[] => 
+  parts.map((part, i) => {
+    const key = keys ? `${baseKey}_${keys[i]}` : `${baseKey}_${i}`;
+    return buildNodeTree(part, key, parent);
+  });
 
 // Insert nodes immutably
 const insertNodes = (
@@ -119,13 +124,14 @@ export const handleStructuralSplit = (
   node: ObjectNodeData,
   parts: any[],
   removeSource: boolean,
-  desk: ObjectTransformerDesk
+  desk: ObjectTransformerDesk,
+  keys?: string[]
 ): void => {
   if (!node.parent) return;
 
   const baseKey = node.key || 'part';
   const baseKeyPrefix = `${baseKey}_`;
-  const newNodes = createSplitNodes(parts, baseKey, node.parent);
+  const newNodes = createSplitNodes(parts, baseKey, node.parent, keys);
 
   node.parent.children = hasSplitNodes(node.parent, baseKeyPrefix)
     ? replaceSplitNodes(node.parent.children!, newNodes, node, baseKeyPrefix)
@@ -158,14 +164,22 @@ export const createPropagateTransform =
       const intermediateValue = computeIntermediateValue(node);
       const lastResult = lastTransform.fn(intermediateValue, ...(lastTransform.params || []));
 
-      // Check for structural split/arrayToProperties
+      // Check for structural split/arrayToProperties/stringToObject
       if (
         isStructuralResult(lastResult) &&
         isMultiPartAction(lastResult.action) &&
-        lastResult.parts &&
+        (lastResult.parts || lastResult.object) &&
         node.parent
       ) {
-        handleStructuralSplit(node, lastResult.parts, lastResult.removeSource, desk);
+        // For stringToObject, extract keys and values separately
+        if (lastResult.object) {
+          const entries = Object.entries(lastResult.object);
+          const keys = entries.map(([k]) => k);
+          const values = entries.map(([, v]) => v);
+          handleStructuralSplit(node, values, lastResult.removeSource, desk, keys);
+        } else if (lastResult.parts) {
+          handleStructuralSplit(node, lastResult.parts, lastResult.removeSource, desk);
+        }
         return;
       }
 

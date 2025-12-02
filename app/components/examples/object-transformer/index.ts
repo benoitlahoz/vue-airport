@@ -22,8 +22,9 @@ export type ObjectNodeType =
 
 export interface StructuralTransformResult {
   __structuralChange: true;
-  action: 'split' | 'merge' | 'arrayToProperties';
+  action: 'split' | 'merge' | 'arrayToProperties' | 'stringToObject';
   parts?: any[];
+  object?: any;
   removeSource?: boolean;
 }
 

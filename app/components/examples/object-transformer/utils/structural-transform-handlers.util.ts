@@ -57,6 +57,6 @@ export const getRegisteredActions = (): string[] => {
  */
 export const isMultiPartAction = (action: string): boolean => {
   // Actions that create multiple parts from a single value
-  const multiPartActions = ['split', 'arrayToProperties'];
+  const multiPartActions = ['split', 'arrayToProperties', 'stringToObject'];
   return multiPartActions.includes(action);
 };

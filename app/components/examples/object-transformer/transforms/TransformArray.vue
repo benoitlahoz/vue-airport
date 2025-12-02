@@ -25,6 +25,27 @@ const transforms: Transform[] = [
     fn: (v: any[], separator: string) => v.join(separator),
   },
   {
+    name: 'Unique',
+    if: (node) => node.type === 'array',
+    fn: (v: any[]) => Array.from(new Set(v)),
+  },
+  {
+    name: 'Filter Nulls',
+    if: (node) => node.type === 'array',
+    fn: (v: any[]) => v.filter((item) => item != null),
+  },
+  {
+    name: 'Filter Undefined',
+    if: (node) => node.type === 'array',
+    fn: (v: any[]) => v.filter((item) => item !== undefined),
+  },
+  {
+    name: 'Filter By Value',
+    if: (node) => node.type === 'array',
+    params: [{ key: 'value', label: 'Value', type: 'text', default: '' }],
+    fn: (v: any[], value: any) => v.filter((item) => item === value),
+  },
+  {
     name: 'To Object',
     structural: true, // This is a structural transform
     if: (node) => node.type === 'array',

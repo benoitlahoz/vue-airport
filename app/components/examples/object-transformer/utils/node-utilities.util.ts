@@ -80,10 +80,12 @@ export const formatValue = (value: any, type: ObjectNodeType): string => {
  * Node Properties - Pure utilities for node inspection
  */
 
-// Check if property was added (from split)
+// Check if property was added (from structural transforms like split or stringToObject)
 export const isAddedProperty = (node: ObjectNodeData): boolean => {
   const key = node.key;
-  return key ? /_\d+$/.test(key) : false;
+  if (!key) return false;
+  // Match patterns: _0, _1, ... (from split) or _object, _original, etc. (from stringToObject)
+  return /_\d+$/.test(key) || /_[a-zA-Z]+$/.test(key);
 };
 
 // Get CSS classes based on node state
