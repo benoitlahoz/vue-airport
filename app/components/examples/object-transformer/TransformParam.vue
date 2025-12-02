@@ -33,6 +33,11 @@ watch(
   }
 );
 
+// Watch local value changes and emit updates (WITHOUT triggering change event)
+watch(localValue, (newValue) => {
+  emit('update:modelValue', newValue);
+});
+
 function handleInput(value: any, immediate = false) {
   localValue.value = value;
   emit('update:modelValue', value);
@@ -52,26 +57,46 @@ function handleInput(value: any, immediate = false) {
     }, 300);
   }
 }
+
+// Handle blur for text inputs - emit change immediately
+function handleBlur() {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
+  emit('change');
+}
+
+// Handle number change - emit immediately
+function handleNumberChange() {
+  emit('change');
+}
+
+// Prevent keyboard events from bubbling up to parent components (like Select)
+function handleKeydown(event: KeyboardEvent) {
+  event.stopPropagation();
+}
 </script>
 
 <template>
   <div data-slot="transform-param">
     <Input
       v-if="config?.type === 'text'"
-      :model-value="localValue"
+      v-model="localValue"
       :placeholder="config?.label"
       class="h-6 px-2 py-0"
       style="font-size: var(--text-xs)"
-      @input="handleInput(($event.target as HTMLInputElement).value)"
+      @keydown="handleKeydown"
+      @blur="handleBlur"
     />
 
     <Input
       v-else-if="config?.type === 'number'"
-      :model-value="localValue"
+      v-model="localValue"
       type="number"
       :placeholder="config?.label"
       class="h-6 px-2 py-0 text-xs"
-      @input="handleInput(parseFloat(($event.target as HTMLInputElement).value), true)"
+      @keydown="handleKeydown"
+      @change="handleNumberChange"
     />
 
     <div v-else-if="config?.type === 'boolean'" class="flex items-center gap-1">
