@@ -84,11 +84,18 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
       return this.transforms.value.find((t) => t.name === name);
     },
     initParams(transform: Transform) {
+      // Extract default VALUES from param configs
       return transform.params?.map((p) => p.default ?? null) || [];
     },
     createTransformEntry(name: string, node?: ObjectNode) {
       const transform = this.findTransform(name, node);
-      return transform ? { ...transform, params: this.initParams(transform) } : null;
+      if (!transform) return null;
+
+      // Create a copy with params as VALUES array (not configs)
+      return {
+        ...transform,
+        params: this.initParams(transform),
+      };
     },
     propagateTransform(node: ObjectNode) {
       const propagate = createPropagateTransform(desk as ObjectTransformerDesk);
