@@ -33,8 +33,8 @@ const stepSelect = defineModel<Record<number, string | null>>('stepSelect', { re
           <!-- Valeur transformée -->
           <span
             class="text-muted-foreground text-xs"
-            :style="{ paddingLeft: isPrimitive ? paddingLeft : '0px' }"
-            :class="{ 'max-md:pl-0!': isPrimitive }"
+            :style="{ paddingLeft: paddingLeft }"
+            :class="{ 'max-md:pl-0!': true }"
           >
             {{ formatStepValue(index) }}
           </span>

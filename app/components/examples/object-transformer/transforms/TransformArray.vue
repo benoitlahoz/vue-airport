@@ -12,6 +12,12 @@ const transforms: Transform[] = [
     fn: (v: any) => JSON.stringify(v),
   },
   {
+    name: 'Join',
+    if: (node) => node.type === 'array',
+    params: [{ key: 'separator', label: 'Separator', type: 'string', default: ', ' }],
+    fn: (v: any[], separator: string) => v.join(separator),
+  },
+  {
     name: 'To Object Properties',
     if: (node) => node.type === 'array',
     params: [{ key: 'removeSource', label: 'Remove source', type: 'boolean', default: false }],

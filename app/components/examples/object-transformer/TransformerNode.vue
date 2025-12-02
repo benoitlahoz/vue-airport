@@ -111,14 +111,29 @@ onUnmounted(() => {
 
 // Layout helpers
 const valueElement = ref<HTMLElement | null>(null);
+const firstChildElement = ref<HTMLElement | null>(null);
 const transformsPaddingLeft = computed(() => {
-  if (!valueElement.value || !isPrimitive.value) return '0px';
-  const rect = valueElement.value.getBoundingClientRect();
-  const containerEl = valueElement.value.closest('.text-xs');
-  if (!containerEl) return '0px';
-  const containerRect = containerEl.getBoundingClientRect();
-  const offset = rect.left - containerRect.left;
-  return `${offset}px`;
+  // Pour les primitives, utiliser valueElement
+  if (isPrimitive.value && valueElement.value) {
+    const rect = valueElement.value.getBoundingClientRect();
+    const containerEl = valueElement.value.closest('.text-xs');
+    if (!containerEl) return '0px';
+    const containerRect = containerEl.getBoundingClientRect();
+    const offset = rect.left - containerRect.left;
+    return `${offset}px`;
+  }
+
+  // Pour les objects/arrays, utiliser le premier enfant
+  if (!isPrimitive.value && firstChildElement.value) {
+    const rect = firstChildElement.value.getBoundingClientRect();
+    const containerEl = firstChildElement.value.closest('.transformer-node-root');
+    if (!containerEl) return '0px';
+    const containerRect = containerEl.getBoundingClientRect();
+    const offset = rect.left - containerRect.left;
+    return `${offset}px`;
+  }
+
+  return '0px';
 });
 
 // Editing helpers
@@ -189,11 +204,11 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
 </script>
 
 <template>
-  <div class="text-xs" :class="{ 'opacity-50': tree.deleted }">
+  <div class="text-xs transformer-node-root" :class="{ 'opacity-50': tree.deleted }">
     <!-- Wrapper avec scroll horizontal -->
     <div class="overflow-x-auto">
       <div
-        class="flex items-center justify-between gap-2 my-2 transition-all group hover:bg-accent/30 min-w-fit"
+        class="flex items-center justify-between gap-2 my-1 ml-2 transition-all group hover:bg-accent/30 min-w-fit"
       >
         <!-- Partie gauche : chevron + delete + key + value -->
         <div class="flex items-center gap-2">
@@ -213,6 +228,7 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
 
           <!-- Conteneur pour bouton + nom avec hover commun -->
           <div
+            ref="firstChildElement"
             class="flex items-center transition-all group-hover:border-l-2 group-hover:border-primary group-hover:pl-2.5 -ml-0.5 pl-1.5"
             @mouseenter="isHovered = true"
             @mouseleave="!editingKey && (isHovered = false)"
@@ -268,7 +284,7 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
     </div>
 
     <!-- Enfants récursifs AVANT les transformations pour object/array -->
-    <div v-if="tree.children?.length && isOpen" class="ml-4 border-l border-border pl-0">
+    <div v-if="tree.children?.length && isOpen" class="ml-3.5 border-l border-border pl-0">
       <TransformerNode
         v-for="(child, index) in tree.children"
         :id="child.id"
