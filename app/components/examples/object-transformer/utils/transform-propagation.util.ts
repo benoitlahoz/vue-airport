@@ -1,5 +1,5 @@
 import type { ObjectNodeData, ObjectTransformerDesk } from '..';
-import { isStructuralResult, getTypeFromValue } from './type-guards.util';
+import { isStructuralResult } from './type-guards.util';
 import { buildNodeTree } from './node-builder.util';
 import { until, pipe, not } from './functional.util';
 import { isMultiPartAction } from './structural-transform-handlers.util';
@@ -30,6 +30,40 @@ export const computeChildTransformedValue = (child: ObjectNodeData): any => {
   });
 
   return pipe(...transformFns)(child.value);
+};
+
+// Compute final transformed value (for objects/arrays with children, first rebuilds from children)
+export const computeFinalTransformedValue = (node: ObjectNodeData): any => {
+  // If no transforms, return the value
+  if (!node.transforms || node.transforms.length === 0) return node.value;
+
+  // Build the base value
+  let baseValue = node.value;
+  
+  // If node has children, rebuild value from transformed children
+  if (node.children && node.children.length > 0) {
+    const children = activeChildren(node);
+    
+    if (node.type === 'object') {
+      baseValue = children.reduce(
+        (acc, child) => ({
+          ...acc,
+          [child.key!]: computeChildTransformedValue(child),
+        }),
+        {} as Record<string, any>
+      );
+    } else if (node.type === 'array') {
+      baseValue = children.map(computeChildTransformedValue);
+    }
+  }
+
+  // Apply transforms on the base value (ignoring structural results)
+  const transformFns = node.transforms.map((t) => (v: any) => {
+    const result = t.fn(v, ...(t.params || []));
+    return isStructuralResult(result) ? v : result;
+  });
+
+  return pipe(...transformFns)(baseValue);
 };
 
 /**
@@ -182,15 +216,9 @@ export const createPropagateTransform =
         }
         return;
       }
-
-      // Update node type if transformation changed the value type
-      const newType = getTypeFromValue(lastResult);
-      if (newType !== node.type) {
-        node.type = newType;
-      }
     }
 
-    // Propagate based on current type (after potential update)
+    // Propagate based on current type (rebuild value from children)
     propagators[node.type]?.(node);
 
     // Recursive propagation

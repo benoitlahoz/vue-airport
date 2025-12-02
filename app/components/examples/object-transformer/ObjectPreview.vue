@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import type { ObjectNodeData, ObjectTransformerContext } from '.';
-import { ObjectTransformerDeskKey, computeChildTransformedValue } from '.';
+import { ObjectTransformerDeskKey, computeFinalTransformedValue } from '.';
 import { Button } from '@/components/ui/button';
 import { Copy, Check } from 'lucide-vue-next';
 
@@ -16,7 +16,21 @@ const buildFinalObject = (node: ObjectNodeData): any => {
   // Si le node est deleted, l'ignorer
   if (node.deleted) return undefined;
 
-  // Si le node a des enfants, les utiliser (priorité sur les transformations)
+  // Si le node a des transformations qui changent le type, utiliser la valeur transformée
+  // (ex: object -> string avec "To String")
+  if (node.transforms && node.transforms.length > 0) {
+    const transformedValue = computeFinalTransformedValue(node);
+    const transformedType = typeof transformedValue;
+    const originalType = node.type;
+    
+    // Si la transformation a changé le type (ex: object -> string), 
+    // retourner la valeur transformée directement
+    if (transformedType !== originalType && transformedType !== 'object') {
+      return transformedValue;
+    }
+  }
+
+  // Si le node a des enfants, les utiliser pour reconstruire la structure
   // Les transformations structurales créent des enfants dans l'arbre
   if (node.children && node.children.length > 0) {
     // Pour les objects, construire récursivement
@@ -43,7 +57,7 @@ const buildFinalObject = (node: ObjectNodeData): any => {
 
   // Si le node a des transformations (et pas d'enfants), utiliser la valeur transformée
   if (node.transforms && node.transforms.length > 0) {
-    return computeChildTransformedValue(node);
+    return computeFinalTransformedValue(node);
   }
 
   // Sinon retourner la valeur brute
