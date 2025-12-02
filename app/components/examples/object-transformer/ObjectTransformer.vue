@@ -24,15 +24,17 @@ import {
   isAddedProperty,
   getKeyClasses,
   generateChildKey,
-  forbiddenKeys,
+  keyGuards,
 } from './utils/node-utilities.util';
 
 export interface ObjectTransformerProps {
   data?: Record<string, any> | any[];
+  forbiddenKeys?: string[];
 }
 
 const props = withDefaults(defineProps<ObjectTransformerProps>(), {
   data: () => ({}),
+  forbiddenKeys: () => keyGuards,
 });
 
 const { createDesk } = useCheckIn<ObjectNode, ObjectTransformerContext>();
@@ -104,7 +106,7 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
     computeStepValue,
 
     // Nodes
-    forbiddenKeys: ref<string[]>(forbiddenKeys),
+    forbiddenKeys: ref<string[]>(props.forbiddenKeys || keyGuards),
     getComputedValueType(_node: ObjectNode, value: any): ObjectNodeType {
       return getTypeFromValue(value);
     },

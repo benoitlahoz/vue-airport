@@ -5,7 +5,7 @@ import { all } from './functional.util';
  * Key Validation - Pure predicates and validation
  */
 
-export const forbiddenKeys = [
+export const keyGuards = [
   '__proto__',
   'prototype',
   'constructor',
@@ -18,7 +18,7 @@ export const forbiddenKeys = [
 
 // Validation predicates
 const isNotEmpty = (key: string): boolean => Boolean(key);
-const isNotForbidden = (key: string): boolean => !forbiddenKeys.includes(key);
+const isNotForbidden = (key: string): boolean => !keyGuards.includes(key);
 const isNotDunderWrapped = (key: string): boolean => !(key.startsWith('__') && key.endsWith('__'));
 const hasNoDots = (key: string): boolean => !key.includes('.');
 

@@ -90,20 +90,21 @@ export const ObjectTransformerDeskKey: InjectionKey<ObjectTransformerDesk> =
 
 export { default as ObjectTransformer } from './ObjectTransformer.vue';
 export { default as TransformerNode } from './TransformerNode.vue';
-export { default as TransformerParamInput } from './TransformerParamInput.vue';
+export { default as TransformerParam } from './TransformerParam.vue';
 
 // UI Components
-export { default as TransformNodeKey } from './TransformNodeKey.vue';
-export { default as TransformNodeActions } from './TransformNodeActions.vue';
-export { default as TransformSelect } from './TransformSelect.vue';
-export { default as TransformStepList } from './TransformStepList.vue';
+export { default as NodeKeyEditor } from './NodeKeyEditor.vue';
+export { default as NodeActions } from './NodeActions.vue';
+export { default as TransformSelect } from './transforms/TransformSelect.vue';
+export { default as NodeTransformsList } from './NodeTransformsList.vue';
 
 // Transforms
-export { default as TransformString } from './TransformString.vue';
-export { default as TransformNumber } from './TransformNumber.vue';
-export { default as TransformDate } from './TransformDate.vue';
-export { default as TransformBoolean } from './TransformBoolean.vue';
-export { default as TransformMisc } from './TransformMisc.vue';
+export { default as TransformString } from './transforms/TransformString.vue';
+export { default as TransformNumber } from './transforms/TransformNumber.vue';
+export { default as TransformDate } from './transforms/TransformDate.vue';
+export { default as TransformBoolean } from './transforms/TransformBoolean.vue';
+export { default as TransformObject } from './transforms/TransformObject.vue';
+export { default as TransformArray } from './transforms/TransformArray.vue';
 
 // Utils
 export * from './utils/node-editing.util';

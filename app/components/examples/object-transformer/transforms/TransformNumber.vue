@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn } from 'vue-airport';
-import type { ObjectTransformerContext, Transform } from '.';
-import { ObjectTransformerDeskKey } from '.';
+import type { ObjectTransformerContext, Transform } from '..';
+import { ObjectTransformerDeskKey } from '..';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
 
@@ -71,6 +71,11 @@ const transforms: Transform[] = [
     name: 'To Date',
     if: (node) => node.type === 'number',
     fn: (v: any) => new Date(v),
+  },
+  {
+    name: 'To String',
+    if: (node) => node.type === 'number',
+    fn: (v: any) => v.toString(),
   },
 ];
 

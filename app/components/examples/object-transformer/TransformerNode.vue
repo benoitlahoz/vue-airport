@@ -3,10 +3,10 @@ import { computed, ref, watch, onUnmounted } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import {
   TransformerNode,
-  TransformNodeKey,
-  TransformNodeActions,
+  NodeKeyEditor,
+  NodeActions,
   TransformSelect,
-  TransformStepList,
+  NodeTransformsList,
   type ObjectNode,
   type ObjectTransformerContext,
   ObjectTransformerDeskKey,
@@ -222,7 +222,7 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
               v-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'"
               ref="buttonElement"
             >
-              <TransformNodeActions
+              <NodeActions
                 :node="tree"
                 :is-visible="isHovered || editingKey"
                 @toggle="toggleDelete"
@@ -231,7 +231,7 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
 
             <!-- NodeKey Component -->
             <div ref="inputElement">
-              <TransformNodeKey
+              <NodeKeyEditor
                 v-model:input-ref="inputFieldElement"
                 :node="tree"
                 :is-editing="editingKey"
@@ -277,10 +277,10 @@ const toggleDelete = () => deskWithContext.toggleNodeDeletion(tree.value);
     </div>
 
     <!-- Séparateur si enfants et transformations -->
-    <Separator v-if="tree.children?.length && tree.transforms.length" class="my-2" />
+    <Separator v-if="tree.children?.length && tree.transforms.length" class="my-2 md:hidden" />
 
     <!-- Transformations + paramètres (APRÈS les enfants) -->
-    <TransformStepList
+    <NodeTransformsList
       v-if="tree.transforms.length"
       v-model:step-select="stepSelect"
       :node="tree"

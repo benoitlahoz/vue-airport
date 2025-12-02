@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectLabel,
 } from '@/components/ui/select';
-import type { Transform } from './index';
+import type { Transform } from '../index';
 
 interface Props {
   modelValue: string | null;

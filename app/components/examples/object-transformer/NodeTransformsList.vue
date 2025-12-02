@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import TransformerParamInput from './TransformerParamInput.vue';
-import TransformSelect from './TransformSelect.vue';
+import TransformerParamInput from './TransformerParam.vue';
+import TransformSelect from './transforms/TransformSelect.vue';
 import type { ObjectNode, Transform } from './index';
 
 interface Props {
@@ -34,7 +34,7 @@ const stepSelect = defineModel<Record<number, string | null>>('stepSelect', { re
           <span
             class="text-muted-foreground text-xs"
             :style="{ paddingLeft: isPrimitive ? paddingLeft : '0px' }"
-            :class="{ 'md:pl-0': !isPrimitive }"
+            :class="{ 'max-md:pl-0!': isPrimitive }"
           >
             {{ formatStepValue(index) }}
           </span>

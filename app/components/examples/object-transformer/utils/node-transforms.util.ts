@@ -30,7 +30,7 @@ export const applyNodeTransform = (
 
   if (!shouldAdd && !shouldChange) return;
 
-  // Nettoyer les split nodes si nécessaire
+  // Cleanup split nodes if changing transform
   if (shouldChange && node.parent) {
     cleanupSplitNodes(node, node.parent);
   }
