@@ -110,7 +110,6 @@ export { default as TransformObject } from './transforms/TransformObject.vue';
 export { default as TransformArray } from './transforms/TransformArray.vue';
 
 // Utils
-export * from './utils/node-editing.util';
-export * from './utils/node-transforms.util';
+export * from './utils';
 
 export type { ObjectTransformerProps } from './ObjectTransformer.vue';

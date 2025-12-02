@@ -31,7 +31,7 @@ const data = {
 
 <template>
   <div class="space-y-4">
-    <ObjectTransformer :data="data" class="flex flex-row w-full">
+    <ObjectTransformer :data="data" class="flex md:flex-row w-full">
       <TransformString />
       <TransformNumber />
       <TransformDate />

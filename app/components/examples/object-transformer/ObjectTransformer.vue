@@ -9,15 +9,11 @@ import {
   type Transform,
   type ObjectTransformerContext,
   type ObjectTransformerDesk,
-} from '.';
-import { buildNodeTree } from './utils/node-builder.util';
-import {
+  buildNodeTree,
   computeIntermediateValue,
   computeStepValue,
   createPropagateTransform,
-} from './utils/transform-propagation.util';
-import { getTypeFromValue } from './utils/type-guards.util';
-import {
+  getTypeFromValue,
   sanitizeKey,
   autoRenameKey,
   formatValue,
@@ -25,7 +21,7 @@ import {
   getKeyClasses,
   generateChildKey,
   keyGuards,
-} from './utils/node-utilities.util';
+} from '.';
 
 export interface ObjectTransformerProps {
   data?: Record<string, any> | any[];

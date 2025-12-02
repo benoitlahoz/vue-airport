@@ -1,22 +1,6 @@
 import type { ObjectNodeData } from '..';
 
 /**
- * Click outside handling - Pure functions
- */
-
-export const createClickOutsideChecker = (
-  inputElement: HTMLElement | null,
-  buttonElement: HTMLElement | null
-) => {
-  return (event: MouseEvent): boolean => {
-    const target = event.target as Node;
-    const clickedInput = inputElement?.contains(target);
-    const clickedButton = buttonElement?.contains(target);
-    return !clickedInput && !clickedButton;
-  };
-};
-
-/**
  * Key editing state helpers
  */
 

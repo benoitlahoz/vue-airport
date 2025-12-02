@@ -3,9 +3,7 @@ import { computed } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import TransformerParamInput from './TransformParam.vue';
 import type { ObjectNodeData, ObjectTransformerContext } from '.';
-import { ObjectTransformerDeskKey, TransformSelect } from '.';
-import { filterTransformsByType } from './utils/node-transforms.util';
-import { getNodeType } from './utils/type-guards.util';
+import { ObjectTransformerDeskKey, TransformSelect, filterTransformsByType, getNodeType } from '.';
 
 interface Props {
   nodeId: string;

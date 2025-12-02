@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue';
+import { computed, ref } from 'vue';
+import { onClickOutside } from '@vueuse/core';
 import { useCheckIn } from 'vue-airport';
 import {
   ObjectNode,
@@ -11,11 +12,9 @@ import {
   type ObjectNodeData,
   type ObjectTransformerContext,
   ObjectTransformerDeskKey,
-  createClickOutsideChecker,
 } from '.';
 import { Separator } from '@/components/ui/separator';
-import { isPrimitive as isPrimitiveType } from './utils/type-guards.util';
-import { formatValue } from './utils/node-utilities.util';
+import { isPrimitive as isPrimitiveType, formatValue } from '.';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
 
@@ -58,26 +57,20 @@ const inputFieldElement = ref<any>(null);
 const inputElement = ref<HTMLElement | null>(null);
 const buttonElement = ref<HTMLElement | null>(null);
 
-const handleClickOutside = (event: MouseEvent) => {
-  if (!editingKey.value) return;
-  const checker = createClickOutsideChecker(inputElement.value, buttonElement.value);
-  if (checker(event)) {
-    deskWithContext.confirmEditKey(tree.value);
-    isHovered.value = false;
+onClickOutside(
+  inputElement,
+  () => {
+    if (editingKey.value) {
+      deskWithContext.confirmEditKey(tree.value);
+      isHovered.value = false;
+    }
   }
-};
-
-watch(editingKey, (isEditing) => {
-  if (isEditing) {
-    setTimeout(() => document.addEventListener('click', handleClickOutside), 0);
-  } else {
-    document.removeEventListener('click', handleClickOutside);
+  /*
+  {
+    ignore: [buttonElement],
   }
-});
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
+    */
+);
 
 // Layout helpers
 const valueElement = ref<HTMLElement | null>(null);
@@ -93,7 +86,7 @@ const transformsPaddingLeft = computed(() => {
     return `${offset}px`;
   }
 
-  // Pour les objects/arrays, utiliser le premier enfant
+  // For non-primitives, use firstChildElement
   if (!isPrimitive.value && firstChildElement.value) {
     const rect = firstChildElement.value.getBoundingClientRect();
     const containerEl = firstChildElement.value.closest('.object-node-root');
@@ -117,23 +110,23 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
     class="text-xs object-node-root flex-1"
     :class="{ 'opacity-50': tree.deleted }"
   >
-    <!-- Wrapper avec scroll horizontal -->
+    <!-- Wrapper with horizontal scroll -->
     <div class="overflow-x-auto">
       <div
         class="flex items-center justify-between gap-2 my-1 ml-2 transition-all group hover:bg-accent/30 min-w-fit"
       >
-        <!-- Partie gauche : chevron + delete + key + value -->
+        <!-- Left part: chevron + delete + key + value -->
         <div class="flex items-center gap-2">
           <NodeOpen :node-id="nodeId" />
 
-          <!-- Conteneur pour bouton + nom avec hover commun -->
+          <!-- Container for button + name with common hover -->
           <div
             ref="firstChildElement"
             class="flex items-center transition-all group-hover:border-l-2 group-hover:border-primary group-hover:pl-2.5 -ml-0.5 pl-1.5"
             @mouseenter="isHovered = true"
             @mouseleave="!editingKey && (isHovered = false)"
           >
-            <!-- Bouton Delete/Restore -->
+            <!-- Delete/Restore -->
             <div
               v-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'"
               ref="buttonElement"
@@ -146,7 +139,7 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
               <NodeKeyEditor v-model:input-ref="inputFieldElement" :node-id="nodeId" />
             </div>
 
-            <!-- Value (lecture seule) - masquée pour object/array -->
+            <!-- Value (read-only) - hidden for object/array -->
             <span
               v-if="tree.type !== 'object' && tree.type !== 'array'"
               ref="valueElement"
@@ -158,7 +151,7 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
           </div>
         </div>
 
-        <!-- Partie droite : select de transformation -->
+        <!-- Right part: transformation select -->
         <div class="shrink-0 md:ml-auto">
           <TransformSelect :node-id="nodeId" />
         </div>

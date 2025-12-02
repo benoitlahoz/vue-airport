@@ -3,8 +3,7 @@ import { computed } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import { Input } from '@/components/ui/input';
 import type { ObjectNodeData, ObjectTransformerContext } from '.';
-import { ObjectTransformerDeskKey } from '.';
-import { shouldStartEdit, canConfirmEdit } from './utils/node-editing.util';
+import { ObjectTransformerDeskKey, shouldStartEdit, canConfirmEdit } from '.';
 
 interface Props {
   nodeId: string;

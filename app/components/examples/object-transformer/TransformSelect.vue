@@ -140,7 +140,7 @@ const handleTransformChange = (name: unknown) => {
   <div data-slot="transform-select">
     <Select v-if="node" :model-value="currentSelection" @update:model-value="handleTransformChange">
       <SelectTrigger
-        class="h-auto max-h-6 px-2 py-0.5 text-xs group-hover:border-primary min-w-[120px]"
+        class="h-auto max-h-6 px-2 py-0.5 text-xs group-hover:border-primary md:min-w-[120px]"
       >
         <SelectValue :placeholder="placeholder" class="text-xs">
           {{ currentSelection || placeholder }}
