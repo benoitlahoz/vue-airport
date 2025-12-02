@@ -18,7 +18,6 @@ import {
   applyNodeTransform,
   applyStepTransform,
   partition,
-  computeStepValue,
 } from '.';
 import { getTypeFromValue } from './utils/type-guards.util';
 
@@ -48,19 +47,6 @@ const node = computed(() => {
     console.warn('TransformerSelect: Node not found:', props.nodeId);
   }
   return n;
-});
-
-// Get the value to test transforms against (computed up to current step)
-const testValue = computed(() => {
-  if (!node.value) return undefined;
-
-  // If we're in step mode, compute value up to that step
-  if (props.stepIndex !== undefined) {
-    return computeStepValue(node.value, props.stepIndex);
-  }
-
-  // For the first/main node transform selector, use original value
-  return node.value.value;
 });
 
 // Get the type of the test value
