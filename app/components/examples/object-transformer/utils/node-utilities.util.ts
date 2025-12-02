@@ -27,7 +27,11 @@ export const sanitizeKey = (key: string): string | null =>
   all(isNotEmpty, isNotForbidden, isNotDunderWrapped, hasNoDots)(key) ? key : null;
 
 // Generate unique key using tail recursion
-const findUniqueKey = (existingKeys: Set<string>, baseKey: string, counter: number): string => {
+export const findUniqueKey = (
+  existingKeys: Set<string>,
+  baseKey: string,
+  counter: number
+): string => {
   const candidate = `${baseKey}_${counter}`;
   return existingKeys.has(candidate)
     ? findUniqueKey(existingKeys, baseKey, counter + 1)
@@ -44,7 +48,13 @@ export const autoRenameKey = (parent: ObjectNodeData, base: string): string => {
       .filter((k): k is string => Boolean(k)) || []
   );
 
-  return existingKeys.has(safeBase) ? findUniqueKey(existingKeys, safeBase, 1) : safeBase;
+  console.log('[autoRenameKey]', { base, safeBase, existingKeys: Array.from(existingKeys) });
+
+  const result = existingKeys.has(safeBase) ? findUniqueKey(existingKeys, safeBase, 1) : safeBase;
+
+  console.log('[autoRenameKey] Result:', result);
+
+  return result;
 };
 
 // Handle conflicts when restoring a soft deleted node
@@ -112,10 +122,11 @@ export const formatValue = (value: any, type: ObjectNodeType): string => {
 
 // Check if property was added (from structural transforms like split or stringToObject)
 export const isAddedProperty = (node: ObjectNodeData): boolean => {
-  const key = node.key;
-  if (!key) return false;
+  // Check the original key (before any renames) to determine if it was added by a transformation
+  const keyToCheck = node.originalKey || node.key;
+  if (!keyToCheck) return false;
   // Match patterns: _0, _1, ... (from split) or _object, _original, etc. (from stringToObject)
-  return /_\d+$/.test(key) || /_[a-zA-Z]+$/.test(key);
+  return /_\d+$/.test(keyToCheck) || /_[a-zA-Z]+$/.test(keyToCheck);
 };
 
 // Get CSS classes based on node state

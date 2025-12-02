@@ -26,18 +26,21 @@ export interface ModelRule {
 export const extractModelRules = (node: ObjectNodeData, path: string[] = []): ModelRule[] => {
   const rules: ModelRule[] = [];
 
+  // Determine if this is the root node (path is empty)
+  const isRoot = path.length === 0;
+
   // Use originalKey in path if property was renamed (to find it in other objects)
   const keyForPath = node.key && node.originalKey && node.keyModified ? node.originalKey : node.key;
 
-  // Build current path
-  const currentPath = keyForPath && path.length > 0 ? [...path, keyForPath] : path;
+  // Build current path - add this node's key only if it's not the root
+  const currentPath = keyForPath && !isRoot ? [...path, keyForPath] : path;
 
   // Extract rule for this node if it has modifications (transformations, deletion, or rename)
   const hasModifications = node.transforms.length > 0 || node.deleted || node.keyModified;
 
   // Only extract rules for properties that have actual modifications
-  // Skip the root container (which has no key)
-  if (node.key && hasModifications) {
+  // Skip the root container
+  if (!isRoot && node.key && hasModifications) {
     // Use originalKey in path if property was renamed, so we can find it in other objects
     const keyInPath = node.originalKey && node.keyModified ? node.originalKey : node.key;
 
@@ -61,20 +64,37 @@ export const extractModelRules = (node: ObjectNodeData, path: string[] = []): Mo
       };
     }
 
-    console.warn(`📝 [extractModelRules] Found rule for ${keyInPath}:`, rule);
     rules.push(rule);
   }
 
   // Recursively extract rules from children
   if (node.children) {
     node.children.forEach((child) => {
-      // Skip root node key in path
-      const nextPath = node.key && path.length === 0 ? [] : currentPath;
+      // For the root node (no key), pass empty path
+      // For all other nodes, pass currentPath which includes this node's key
+      const nextPath = node.key ? currentPath : [];
       rules.push(...extractModelRules(child, nextPath));
     });
   }
 
   return rules;
+};
+
+/**
+ * Deep clone that preserves Date objects
+ */
+const deepClone = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (obj instanceof Date) return new Date(obj.getTime());
+  if (Array.isArray(obj)) return obj.map(deepClone);
+
+  const cloned: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deepClone(obj[key]);
+    }
+  }
+  return cloned;
 };
 
 /**
@@ -85,7 +105,7 @@ export const applyRuleToObject = (
   rule: ModelRule,
   availableTransforms: Transform[]
 ): any => {
-  const result = JSON.parse(JSON.stringify(obj)); // Deep clone
+  const result = deepClone(obj); // Deep clone preserving Dates
 
   // Navigate to the parent of the target property
   let current: any = result;
@@ -210,8 +230,6 @@ export const applyModelRulesToArray = (
   templateIndex: number,
   includeTemplate = false
 ): any[] => {
-  console.warn('🚀 [applyModelRulesToArray] Called - items:', items.length, 'rules:', rules.length);
-
   if (!Array.isArray(items) || items.length === 0) return items;
 
   const template = items[templateIndex];
@@ -219,18 +237,14 @@ export const applyModelRulesToArray = (
   const result = items.map((item, index) => {
     // Skip the template object itself unless includeTemplate is true
     if (index === templateIndex && !includeTemplate) {
-      console.warn(`⏭️ [applyModelRulesToArray] Skipping template at index ${index}`);
       return item;
     }
-
-    console.warn(`🔧 [applyModelRulesToArray] Processing item ${index}`);
 
     // First, merge with template to ensure all properties exist
     const normalized = mergeWithTemplate(item, template);
 
     // Then apply transformations
     const transformed = applyModelRulesToObject(normalized, rules, availableTransforms);
-    console.warn(`✨ [applyModelRulesToArray] Item ${index} transformed:`, transformed);
 
     return transformed;
   });

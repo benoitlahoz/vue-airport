@@ -17,6 +17,7 @@ import {
   getTypeFromValue,
   sanitizeKey,
   autoRenameKey,
+  findUniqueKey,
   handleRestoreConflict,
   formatValue,
   isAddedProperty,
@@ -183,16 +184,81 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
 
       const parent = node.parent;
       if (parent?.type === 'object' && parent.children) {
-        const finalKey = autoRenameKey(parent, newKey);
+        // Check if we're restoring to original key
+        const isRestoringToOriginal = node.originalKey === newKey;
 
-        // Store original key before renaming
-        if (!node.originalKey) {
-          node.originalKey = node.key;
+        console.log('[confirmEditKey]', {
+          nodeKey: node.key,
+          newKey,
+          originalKey: node.originalKey,
+          isRestoringToOriginal,
+          parentChildren: parent.children.map((c) => ({
+            key: c.key,
+            originalKey: c.originalKey,
+            deleted: c.deleted,
+          })),
+        });
+
+        // Find conflicting node (same key but different node)
+        const conflictingNode = parent.children.find(
+          (c) => c !== node && c.key === newKey && !c.deleted
+        );
+
+        console.log(
+          '[confirmEditKey] conflictingNode:',
+          conflictingNode
+            ? {
+                key: conflictingNode.key,
+                originalKey: conflictingNode.originalKey,
+                keyModified: conflictingNode.keyModified,
+              }
+            : null
+        );
+
+        if (conflictingNode && isRestoringToOriginal) {
+          // We're restoring to original key - rename the conflicting node instead
+
+          // Store original key of conflicting node BEFORE changing it
+          if (!conflictingNode.originalKey) {
+            conflictingNode.originalKey = conflictingNode.key;
+          }
+
+          const existingKeys = new Set(
+            parent.children
+              .filter((c) => !c.deleted && c !== conflictingNode)
+              .map((c) => c.key)
+              .filter((k): k is string => Boolean(k))
+          );
+          const uniqueKey = findUniqueKey(existingKeys, newKey, 1);
+
+          console.log('[confirmEditKey] Renaming conflicting node to:', uniqueKey);
+
+          conflictingNode.key = uniqueKey;
+          conflictingNode.keyModified = true;
+
+          // Restore this node to original key
+          node.key = newKey;
+          node.keyModified = false; // No longer modified since we're back to original
+          node.originalKey = undefined; // Clear original key
+
+          // Propagate both nodes to update recipe
+          if (conflictingNode.transforms && conflictingNode.transforms.length > 0) {
+            this.propagateTransform(conflictingNode);
+          }
+        } else {
+          // Normal rename - use autoRenameKey to avoid conflicts
+          const finalKey = autoRenameKey(parent, newKey);
+
+          // Store original key before renaming (only if not already stored)
+          if (!node.originalKey && node.key !== finalKey) {
+            node.originalKey = node.key;
+          }
+
+          node.key = finalKey;
+          node.keyModified = true;
         }
 
-        node.key = finalKey;
-        node.keyModified = true;
-        this.tempKey.value = finalKey;
+        this.tempKey.value = node.key;
         this.propagateTransform(parent);
         this.triggerTreeUpdate(); // Trigger reactivity
       }

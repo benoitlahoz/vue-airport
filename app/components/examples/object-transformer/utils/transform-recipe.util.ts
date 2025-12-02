@@ -100,6 +100,37 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
 };
 
 /**
+ * Deep clone that preserves Date objects and parses ISO date strings
+ */
+const deepClone = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') {
+    // Try to parse ISO date strings into Date objects
+    if (typeof obj === 'string') {
+      // More permissive ISO 8601 date detection
+      const isoDateRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
+      if (isoDateRegex.test(obj)) {
+        const parsed = new Date(obj);
+        // Check if the parsed date is valid
+        if (!isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+    }
+    return obj;
+  }
+  if (obj instanceof Date) return new Date(obj.getTime());
+  if (Array.isArray(obj)) return obj.map(deepClone);
+
+  const cloned: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deepClone(obj[key]);
+    }
+  }
+  return cloned;
+};
+
+/**
  * Apply a recipe to new data
  */
 export const applyRecipe = (
@@ -107,51 +138,41 @@ export const applyRecipe = (
   recipe: TransformRecipe,
   availableTransforms: Transform[]
 ): any => {
-  // Clone the data to avoid mutations
-  const result = JSON.parse(JSON.stringify(data));
+  // Clone the data to avoid mutations - preserve Dates
+  const result = deepClone(data);
 
-  // Separate structural and non-structural transformations
-  const structuralSteps = recipe.steps.filter((s) => s.structural);
-  const regularSteps = recipe.steps.filter((s) => !s.structural);
-
-  // Apply structural transformations first (they create new keys)
-  structuralSteps.forEach((step) => {
-    const transform = availableTransforms.find((t) => t.name === step.transformName);
-    if (!transform) {
-      console.warn(`Transform "${step.transformName}" not found in available transforms`);
-      return;
+  // Group steps by path to maintain transformation order
+  const stepsByPath = new Map<string, TransformStep[]>();
+  recipe.steps.forEach((step) => {
+    const pathKey = JSON.stringify(step.path);
+    if (!stepsByPath.has(pathKey)) {
+      stepsByPath.set(pathKey, []);
     }
-
-    applyTransformAtPath(result, step.path, transform, step.params);
+    stepsByPath.get(pathKey)!.push(step);
   });
 
-  // Apply deletions BEFORE renames (to avoid deleting renamed properties)
+  // Apply transformations in order for each path
+  // This ensures regular transforms are applied before structural ones
+  stepsByPath.forEach((steps) => {
+    steps.forEach((step) => {
+      const transform = availableTransforms.find((t) => t.name === step.transformName);
+      if (!transform) {
+        console.warn(`Transform "${step.transformName}" not found in available transforms`);
+        return;
+      }
+
+      applyTransformAtPath(result, step.path, transform, step.params);
+    });
+  });
+
+  // Apply deletions AFTER transforms (to delete transformed results if needed)
   recipe.deletedPaths.forEach((path) => {
     deleteAtPath(result, path);
   });
 
-  // Apply key renames AFTER structural transforms and deletions
+  // Apply key renames AFTER transforms and deletions
   recipe.renamedKeys.forEach(({ path, oldKey, newKey }) => {
     renameKeyAtPath(result, path, oldKey, newKey);
-  });
-
-  // Apply regular transformations AFTER renames (so they work on renamed keys)
-  regularSteps.forEach((step) => {
-    // Find the transform that matches BOTH name AND type
-    const transform = availableTransforms.find((t) => {
-      if (t.name !== step.transformName) return false;
-      // Check if transform applies to the original type from the recipe
-      return t.if({ type: step.originalType } as any);
-    });
-
-    if (!transform) {
-      console.warn(
-        `Transform "${step.transformName}" for type "${step.originalType}" not found in available transforms`
-      );
-      return;
-    }
-
-    applyTransformAtPath(result, step.path, transform, step.params);
   });
 
   return result;
@@ -298,25 +319,36 @@ const deleteAtPath = (obj: any, path: string[]): void => {
  * Helper: Rename a key at a specific path
  */
 const renameKeyAtPath = (obj: any, path: string[], oldKey: string, newKey: string): void => {
+  console.log('[renameKeyAtPath]', { path, oldKey, newKey });
+
   if (path.length === 0) {
     if (obj[oldKey] !== undefined) {
+      console.log('[renameKeyAtPath] Renaming at root:', oldKey, '→', newKey);
       obj[newKey] = obj[oldKey];
       // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete obj[oldKey];
+    } else {
+      console.log('[renameKeyAtPath] Key not found at root:', oldKey);
     }
     return;
   }
 
   let current = obj;
   for (const segment of path) {
-    if (current[segment] === undefined) return;
+    if (current[segment] === undefined) {
+      console.log('[renameKeyAtPath] Path segment not found:', segment);
+      return;
+    }
     current = current[segment];
   }
 
   if (current[oldKey] !== undefined) {
+    console.log('[renameKeyAtPath] Renaming:', oldKey, '→', newKey, 'value:', current[oldKey]);
     current[newKey] = current[oldKey];
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete current[oldKey];
+  } else {
+    console.log('[renameKeyAtPath] Key not found:', oldKey);
   }
 };
 

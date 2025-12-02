@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import type { ObjectNodeData, ObjectTransformerContext } from '.';
-import { ObjectTransformerDeskKey, computeChildTransformedValue, applyModelRulesToArray } from '.';
+import { ObjectTransformerDeskKey, computeChildTransformedValue } from '.';
 import { Button } from '@/components/ui/button';
 import { Copy, Check } from 'lucide-vue-next';
 
@@ -11,51 +11,42 @@ const { desk } = checkIn(ObjectTransformerDeskKey);
 
 const isCopied = ref(false);
 
-// Debug: watch treeVersion changes
-if (desk) {
-  watch(
-    () => desk.treeVersion.value,
-    (newVal, oldVal) => {
-      console.warn('⚠️ [ObjectPreview] treeVersion changed:', oldVal, '->', newVal);
-    }
-  );
-}
-
 // Fonction récursive pour construire l'objet final
 const buildFinalObject = (node: ObjectNodeData): any => {
   // Si le node est deleted, l'ignorer
   if (node.deleted) return undefined;
 
-  // Si le node a des transformations, utiliser la valeur transformée
-  // (car les transformations peuvent changer le type, ex: array.join() -> string)
+  // Si le node a des enfants, les utiliser (priorité sur les transformations)
+  // Les transformations structurales créent des enfants dans l'arbre
+  if (node.children && node.children.length > 0) {
+    // Pour les objects, construire récursivement
+    if (node.type === 'object') {
+      const result: Record<string, any> = {};
+      node.children.forEach((child) => {
+        if (!child.deleted && child.key) {
+          const value = buildFinalObject(child);
+          if (value !== undefined) {
+            result[child.key] = value;
+          }
+        }
+      });
+      return result;
+    }
+
+    // Pour les arrays, construire récursivement
+    if (node.type === 'array') {
+      return node.children
+        .filter((child) => !child.deleted)
+        .map((child) => buildFinalObject(child));
+    }
+  }
+
+  // Si le node a des transformations (et pas d'enfants), utiliser la valeur transformée
   if (node.transforms && node.transforms.length > 0) {
     return computeChildTransformedValue(node);
   }
 
-  // Si c'est une primitive ou pas d'enfants, retourner la valeur
-  if (!node.children || node.children.length === 0) {
-    return node.value;
-  }
-
-  // Pour les objects, construire récursivement
-  if (node.type === 'object') {
-    const result: Record<string, any> = {};
-    node.children.forEach((child) => {
-      if (!child.deleted && child.key) {
-        const value = buildFinalObject(child);
-        if (value !== undefined) {
-          result[child.key] = value;
-        }
-      }
-    });
-    return result;
-  }
-
-  // Pour les arrays, construire récursivement
-  if (node.type === 'array') {
-    return node.children.filter((child) => !child.deleted).map((child) => buildFinalObject(child));
-  }
-
+  // Sinon retourner la valeur brute
   return node.value;
 };
 
@@ -63,34 +54,24 @@ const finalObject = computed(() => {
   if (!desk) return null;
 
   // Track treeVersion to trigger reactivity
-  const version = desk.treeVersion.value;
-  console.warn('🔄 [finalObject] Computing, treeVersion:', version);
+  void desk.treeVersion.value;
 
-  // En mode model, on veut voir l'array complet avec les transformations du template appliquées
+  console.log(
+    '[ObjectPreview] Mode:',
+    desk.mode.value,
+    'isArray:',
+    Array.isArray(desk.originalData.value)
+  );
+
+  // En mode model, appliquer la recipe à tous les objets de l'array
   if (desk.mode.value === 'model' && Array.isArray(desk.originalData.value)) {
-    console.warn('📊 [finalObject] MODE MODEL');
+    const recipe = desk.buildRecipe();
 
-    // Build the transformed template from the tree
-    const transformedTemplate = buildFinalObject(desk.tree.value);
+    console.log('[ObjectPreview] Recipe:', recipe);
 
-    // Extract rules from template
-    const rules = desk.extractModelRules();
-    console.warn('📋 [finalObject] Extracted rules:', rules);
-
-    // Apply rules to all items in the array (excluding template for now)
-    const transformedArray = applyModelRulesToArray(
-      desk.originalData.value,
-      rules,
-      desk.transforms.value,
-      desk.templateIndex.value,
-      false // Don't include template, we'll use transformedTemplate instead
-    );
-
-    // Replace the template item with the fully transformed version
-    transformedArray[desk.templateIndex.value] = transformedTemplate;
-    console.warn('✅ [finalObject] Result:', transformedArray);
-
-    return transformedArray;
+    return desk.originalData.value.map((item) => {
+      return desk.applyRecipe(item, recipe);
+    });
   }
 
   // En mode object, afficher l'objet transformé normalement

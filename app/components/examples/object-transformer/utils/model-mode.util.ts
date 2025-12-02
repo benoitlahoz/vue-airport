@@ -75,9 +75,22 @@ export const mergeWithTemplate = (target: any, template: any): any => {
     return [];
   }
 
-  // If template is a Date, return undefined if target is not a Date
+  // If template is a Date, try to preserve/restore the Date
   if (template instanceof Date) {
-    return target instanceof Date ? target : undefined;
+    if (target instanceof Date) {
+      return target; // Already a Date
+    }
+    // Try to parse ISO string back to Date - more permissive ISO 8601 detection
+    if (typeof target === 'string') {
+      const isoDateRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
+      if (isoDateRegex.test(target)) {
+        const parsed = new Date(target);
+        if (!isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+    }
+    return undefined; // Can't convert to Date
   }
 
   const merged = { ...target };
