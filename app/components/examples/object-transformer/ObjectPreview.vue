@@ -31,7 +31,7 @@ const finalObject = computed(() => {
 
 const formattedJson = computed(() => {
   if (!finalObject.value) return '';
-  
+
   try {
     // Use custom replacer to show undefined values as null (JSON.stringify ignores undefined)
     return JSON.stringify(

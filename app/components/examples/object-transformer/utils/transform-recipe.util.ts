@@ -39,7 +39,12 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     // Track transformations - only for nodes with keys (not root)
     // Important: Capture transforms BEFORE checking deleted status
     if (node.transforms && node.transforms.length > 0 && node.key) {
-      console.log('[buildRecipe] Found transforms on node:', node.key, 'transforms:', node.transforms);
+      console.log(
+        '[buildRecipe] Found transforms on node:',
+        node.key,
+        'transforms:',
+        node.transforms
+      );
       node.transforms.forEach((transform) => {
         steps.push({
           path: [...path, node.key!],
@@ -142,38 +147,29 @@ export const applyRecipe = (
   // Clone the data to avoid mutations - preserve Dates
   const result = deepClone(data);
 
-  // Group steps by path to maintain transformation order
-  const stepsByPath = new Map<string, TransformStep[]>();
-  recipe.steps.forEach((step) => {
-    const pathKey = JSON.stringify(step.path);
-    if (!stepsByPath.has(pathKey)) {
-      stepsByPath.set(pathKey, []);
-    }
-    stepsByPath.get(pathKey)!.push(step);
-  });
+  // Sort steps by path depth (deepest first) to ensure child transforms are applied before parent transforms
+  // This is critical: if you transform children then stringify parent, you want the stringified result to include transformed children
+  const sortedSteps = [...recipe.steps].sort((a, b) => b.path.length - a.path.length);
 
-  // Apply transformations in order for each path
-  // This ensures regular transforms are applied before structural ones
-  stepsByPath.forEach((steps) => {
-    steps.forEach((step) => {
-      // Find transform that matches both name AND is compatible with the original type
-      // Create a mock node with the original type to test the transform's condition
-      const mockNode = { type: step.originalType, path: step.path };
-      
-      const transform = availableTransforms.find((t) => {
-        if (t.name !== step.transformName) return false;
-        // Check if transform's condition accepts this node type
-        if (t.if && !t.if(mockNode as any)) return false;
-        return true;
-      });
-      
-      if (!transform) {
-        console.warn(`Transform "${step.transformName}" not found for type "${step.originalType}"`);
-        return;
-      }
+  // Apply transformations from deepest paths to shallowest
+  sortedSteps.forEach((step) => {
+    // Find transform that matches both name AND is compatible with the original type
+    // Create a mock node with the original type to test the transform's condition
+    const mockNode = { type: step.originalType, path: step.path };
 
-      applyTransformAtPath(result, step.path, transform, step.params);
+    const transform = availableTransforms.find((t) => {
+      if (t.name !== step.transformName) return false;
+      // Check if transform's condition accepts this node type
+      if (t.if && !t.if(mockNode as any)) return false;
+      return true;
     });
+
+    if (!transform) {
+      console.warn(`Transform "${step.transformName}" not found for type "${step.originalType}"`);
+      return;
+    }
+
+    applyTransformAtPath(result, step.path, transform, step.params);
   });
 
   // Apply deletions AFTER transforms (to delete transformed results if needed)
@@ -351,7 +347,8 @@ const renameKeyAtPath = (obj: any, path: string[], oldKey: string, newKey: strin
     delete current[oldKey];
   }
 }; /**
- * Helper: Apply a transform at a specific path
+ * Apply a transform at a specific path
+ * Uses the same logic as the UI: applies transforms sequentially until a structural one
  */
 const applyTransformAtPath = (
   obj: any,
@@ -381,7 +378,7 @@ const applyTransformAtPath = (
     const inputValue = current[lastKey];
     const result = transform.fn(inputValue, ...params);
 
-    // Handle structural transforms
+    // Handle structural transforms using registered handlers (same as UI)
     if (result?.__structuralChange) {
       const handler = getStructuralTransformHandler(result.action);
 
@@ -394,6 +391,7 @@ const applyTransformAtPath = (
         );
       }
     } else {
+      // Non-structural transform: simply replace the value (same as UI)
       current[lastKey] = result;
     }
   }
