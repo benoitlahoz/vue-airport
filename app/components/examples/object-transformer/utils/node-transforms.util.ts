@@ -1,4 +1,4 @@
-import type { ObjectNode, Transform, ObjectTransformerDesk } from '..';
+import type { ObjectNodeData, Transform, ObjectTransformerDesk } from '..';
 
 /**
  * Transform filtering - Pure functions
@@ -6,7 +6,7 @@ import type { ObjectNode, Transform, ObjectTransformerDesk } from '..';
   transforms: Transform[],
   nodeType: string
 ): Transform[] => {
-  return transforms.filter((t) => t.if({ type: nodeType } as ObjectNode));
+  return transforms.filter((t) => t.if({ type: nodeType } as ObjectNodeData));
 };
 
 /**
@@ -14,7 +14,7 @@ import type { ObjectNode, Transform, ObjectTransformerDesk } from '..';
  */
 
 export const applyNodeTransform = (
-  node: ObjectNode,
+  node: ObjectNodeData,
   transformName: string | null,
   desk: ObjectTransformerDesk,
   currentSelection: string | null
@@ -26,6 +26,7 @@ export const applyNodeTransform = (
       cleanupSplitNodes(node, node.parent);
       desk.propagateTransform(node.parent);
     }
+    desk.triggerTreeUpdate(); // Trigger reactivity
     return;
   }
 
@@ -33,7 +34,9 @@ export const applyNodeTransform = (
   const shouldChange =
     currentSelection && currentSelection !== '+' && currentSelection !== transformName;
 
-  if (!shouldAdd && !shouldChange) return;
+  if (!shouldAdd && !shouldChange) {
+    return;
+  }
 
   // Cleanup split nodes if changing transform
   if (shouldChange && node.parent) {
@@ -41,7 +44,9 @@ export const applyNodeTransform = (
   }
 
   const entry = desk.createTransformEntry(transformName, node);
-  if (!entry) return;
+  if (!entry) {
+    return;
+  }
 
   if (shouldAdd) {
     node.transforms.push(entry);
@@ -51,10 +56,11 @@ export const applyNodeTransform = (
 
   desk.propagateTransform(node);
   if (node.parent) desk.propagateTransform(node.parent);
+  desk.triggerTreeUpdate(); // Trigger reactivity
 };
 
 export const applyStepTransform = (
-  node: ObjectNode,
+  node: ObjectNodeData,
   stepIndex: number,
   transformName: string | null,
   desk: ObjectTransformerDesk
@@ -98,13 +104,14 @@ export const applyStepTransform = (
 
   desk.propagateTransform(node);
   if (node.parent) desk.propagateTransform(node.parent);
+  desk.triggerTreeUpdate(); // Trigger reactivity
 };
 
 /**
  * Helper for split nodes cleanup
  */
 
-const cleanupSplitNodes = (node: ObjectNode, parent: ObjectNode): void => {
+const cleanupSplitNodes = (node: ObjectNodeData, parent: ObjectNodeData): void => {
   const baseKeyPrefix = (node.key || 'part') + '_';
   const hasSplitNodes = parent.children!.some(
     (child) => child !== node && child.key?.startsWith(baseKeyPrefix)

@@ -9,27 +9,60 @@ const transforms: Transform[] = [
   {
     name: 'Negate',
     if: (node) => node.type === 'boolean',
-    fn: (v: boolean) => !v,
+    fn: (v: boolean) => {
+      if (typeof v !== 'boolean') return v;
+      return !v;
+    },
   },
   {
     name: 'To String',
     if: (node) => node.type === 'boolean',
-    fn: (v: boolean) => String(v),
+    fn: (v: boolean) => {
+      if (typeof v !== 'boolean') return v;
+      return String(v);
+    },
   },
   {
     name: 'To Number',
     if: (node) => node.type === 'boolean',
-    fn: (v: boolean) => (v ? 1 : 0),
+    fn: (v: boolean) => {
+      if (typeof v !== 'boolean') return v;
+      return v ? 1 : 0;
+    },
   },
   {
     name: 'To Yes/No',
     if: (node) => node.type === 'boolean',
-    fn: (v: boolean) => (v ? 'Yes' : 'No'),
+    fn: (v: boolean) => {
+      if (typeof v !== 'boolean') return v;
+      return v ? 'Yes' : 'No';
+    },
   },
   {
     name: 'To On/Off',
     if: (node) => node.type === 'boolean',
-    fn: (v: boolean) => (v ? 'On' : 'Off'),
+    fn: (v: boolean) => {
+      if (typeof v !== 'boolean') return v;
+      return v ? 'On' : 'Off';
+    },
+  },
+  {
+    name: 'To Object',
+    structural: true,
+    if: (node) => node.type === 'boolean',
+    fn: (v: boolean) => {
+      const boolValue = typeof v === 'string' ? v === 'true' : v;
+      if (typeof boolValue !== 'boolean') return v;
+
+      return {
+        __structuralChange: true,
+        action: 'toObject' as const,
+        object: {
+          object: { value: boolValue },
+        },
+        removeSource: false,
+      };
+    },
   },
 ];
 

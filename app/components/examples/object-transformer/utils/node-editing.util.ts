@@ -1,27 +1,20 @@
-import type { ObjectNode } from '..';
-
-/**
- * Click outside handling - Pure functions
- */
-
-export const createClickOutsideChecker = (
-  inputElement: HTMLElement | null,
-  buttonElement: HTMLElement | null
-) => {
-  return (event: MouseEvent): boolean => {
-    const target = event.target as Node;
-    const clickedInput = inputElement?.contains(target);
-    const clickedButton = buttonElement?.contains(target);
-    return !clickedInput && !clickedButton;
-  };
-};
+import type { ObjectNodeData } from '..';
 
 /**
  * Key editing state helpers
  */
 
-export const shouldStartEdit = (node: ObjectNode, editingNode: ObjectNode | null): boolean => {
-  return editingNode === null;
+export const shouldStartEdit = (
+  node: ObjectNodeData,
+  editingNode: ObjectNodeData | null
+): boolean => {
+  // Don't allow editing if another node is being edited
+  if (editingNode !== null) return false;
+
+  // Don't allow editing array indices (children of array nodes)
+  if (node.parent?.type === 'array') return false;
+
+  return true;
 };
 
 export const canConfirmEdit = (

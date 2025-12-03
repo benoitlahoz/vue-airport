@@ -1,4 +1,4 @@
-import type { ObjectNode, ObjectNodeType } from '..';
+import type { ObjectNodeData, ObjectNodeType } from '..';
 import { all, maybe } from './functional.util';
 
 /**
@@ -27,20 +27,63 @@ export const sanitizeKey = (key: string): string | null =>
   all(isNotEmpty, isNotForbidden, isNotDunderWrapped, hasNoDots)(key) ? key : null;
 
 // Generate unique key using tail recursion
-const findUniqueKey = (existingKeys: Set<string>, baseKey: string, counter: number): string => {
+export const findUniqueKey = (
+  existingKeys: Set<string>,
+  baseKey: string,
+  counter: number
+): string => {
   const candidate = `${baseKey}_${counter}`;
   return existingKeys.has(candidate)
     ? findUniqueKey(existingKeys, baseKey, counter + 1)
     : candidate;
 };
 
-export const autoRenameKey = (parent: ObjectNode, base: string): string => {
+export const autoRenameKey = (parent: ObjectNodeData, base: string): string => {
   const safeBase = sanitizeKey(base) || 'key';
+  // Exclude soft deleted nodes from existing keys check
   const existingKeys = new Set(
-    parent.children?.map((c) => c.key).filter((k): k is string => Boolean(k)) || []
+    parent.children
+      ?.filter((c) => !c.deleted)
+      .map((c) => c.key)
+      .filter((k): k is string => Boolean(k)) || []
   );
 
   return existingKeys.has(safeBase) ? findUniqueKey(existingKeys, safeBase, 1) : safeBase;
+};
+
+// Handle conflicts when restoring a soft deleted node
+export const handleRestoreConflict = (
+  parent: ObjectNodeData,
+  restoredNode: ObjectNodeData
+): void => {
+  if (!restoredNode.key || !parent.children) return;
+
+  // Find any active node with the same key (but not the node being restored)
+  // This includes both added properties AND nodes that were renamed to this key
+  const conflictingNode = parent.children.find(
+    (c) => c !== restoredNode && c.key === restoredNode.key && !c.deleted
+  );
+
+  if (conflictingNode) {
+    // The conflicting node needs to be renamed to avoid the conflict
+    // If it was an added property or was renamed to this key, give it a unique key
+    const existingKeys = new Set(
+      parent.children
+        .filter((c) => !c.deleted)
+        .map((c) => c.key)
+        .filter((k): k is string => Boolean(k)) || []
+    );
+
+    // Use the restoredNode's key as base to find alternatives (e.g., name -> name_1)
+    const newKey = findUniqueKey(existingKeys, restoredNode.key!, 1);
+    conflictingNode.key = newKey;
+    conflictingNode.keyModified = true;
+
+    // If the conflicting node doesn't have an originalKey yet, set it now
+    if (!conflictingNode.originalKey) {
+      conflictingNode.originalKey = restoredNode.key!;
+    }
+  }
 };
 
 /**
@@ -80,21 +123,24 @@ export const formatValue = (value: any, type: ObjectNodeType): string => {
  * Node Properties - Pure utilities for node inspection
  */
 
-// Check if property was added (from split)
-export const isAddedProperty = (node: ObjectNode): boolean => {
-  const key = node.key;
-  return key ? /_\d+$/.test(key) : false;
+// Check if property was added (from structural transforms like split or stringToObject)
+export const isAddedProperty = (node: ObjectNodeData): boolean => {
+  // Check the original key (before any renames) to determine if it was added by a transformation
+  const keyToCheck = node.originalKey || node.key;
+  if (!keyToCheck) return false;
+  // Match patterns: _0, _1, ... (from split) or _object, _original, etc. (from stringToObject)
+  return /_\d+$/.test(keyToCheck) || /_[a-zA-Z]+$/.test(keyToCheck);
 };
 
 // Get CSS classes based on node state
-export const getKeyClasses = (node: ObjectNode): string => {
+export const getKeyClasses = (node: ObjectNodeData): string => {
   if (isAddedProperty(node)) return 'font-semibold text-blue-600';
   if (node.keyModified) return 'font-semibold text-yellow-600';
   return 'font-semibold';
 };
 
 // Generate unique key for v-for (with error handling)
-export const generateChildKey = (child: ObjectNode, index: number): string => {
+export const generateChildKey = (child: ObjectNodeData, index: number): string => {
   const fallback = `${child.key}-${index}-${typeof child.value}-${Date.now()}`;
   return maybe(() => {
     const valueStr = JSON.stringify(child.value);

@@ -27,8 +27,9 @@ const transforms: Transform[] = [
     params: [{ key: 'days', label: 'Days', type: 'number', default: 1 }],
     fn: (v: any, days: number) => {
       if (!(v instanceof Date)) return v;
+      const daysToAdd = typeof days === 'number' ? days : 1;
       const date = new Date(v);
-      date.setDate(date.getDate() + days);
+      date.setDate(date.getDate() + daysToAdd);
       return date;
     },
   },
@@ -38,8 +39,9 @@ const transforms: Transform[] = [
     params: [{ key: 'days', label: 'Days', type: 'number', default: 1 }],
     fn: (v: any, days: number) => {
       if (!(v instanceof Date)) return v;
+      const daysToSubtract = typeof days === 'number' ? days : 1;
       const date = new Date(v);
-      date.setDate(date.getDate() - days);
+      date.setDate(date.getDate() - daysToSubtract);
       return date;
     },
   },
@@ -62,6 +64,23 @@ const transforms: Transform[] = [
     name: 'Get Day',
     if: (node) => node.type === 'date',
     fn: (v: any) => (v instanceof Date ? v.getDate() : v), // Day of the month
+  },
+  {
+    name: 'To Object',
+    structural: true,
+    if: (node) => node.type === 'date',
+    fn: (v: any) => {
+      if (!(v instanceof Date)) return v;
+
+      return {
+        __structuralChange: true,
+        action: 'toObject' as const,
+        object: {
+          object: { value: v },
+        },
+        removeSource: false,
+      };
+    },
   },
 ];
 

@@ -10,72 +10,115 @@ const transforms: Transform[] = [
     name: 'Add',
     if: (node) => node.type === 'number',
     params: [{ key: 'amount', label: 'Amount', type: 'number', default: 1 }],
-    fn: (v: any, amount: number) => v + amount,
+    fn: (v: any, amount: number) => {
+      if (typeof v !== 'number') return v;
+      const amt = typeof amount === 'number' ? amount : 1;
+      return v + amt;
+    },
   },
   {
     name: 'Subtract',
     if: (node) => node.type === 'number',
     params: [{ key: 'amount', label: 'Amount', type: 'number', default: 1 }],
-    fn: (v: any, amount: number) => v - amount,
+    fn: (v: any, amount: number) => {
+      if (typeof v !== 'number') return v;
+      const amt = typeof amount === 'number' ? amount : 1;
+      return v - amt;
+    },
   },
   {
     name: 'Multiply',
     if: (node) => node.type === 'number',
     params: [{ key: 'factor', label: 'Factor', type: 'number', default: 2 }],
-    fn: (v: any, factor: number) => v * factor,
+    fn: (v: any, factor: number) => {
+      if (typeof v !== 'number') return v;
+      const f = typeof factor === 'number' ? factor : 2;
+      return v * f;
+    },
   },
   {
     name: 'Divide',
     if: (node) => node.type === 'number',
     params: [{ key: 'divisor', label: 'Divisor', type: 'number', default: 2 }],
-    fn: (v: any, divisor: number) => v / divisor,
+    fn: (v: any, divisor: number) => {
+      if (typeof v !== 'number') return v;
+      const d = typeof divisor === 'number' && divisor !== 0 ? divisor : 2;
+      return v / d;
+    },
   },
   {
     name: 'Round',
     if: (node) => node.type === 'number',
-    fn: (v: any) => Math.round(v),
+    fn: (v: any) => (typeof v === 'number' ? Math.round(v) : v),
   },
   {
     name: 'Ceil',
     if: (node) => node.type === 'number',
-    fn: (v: any) => Math.ceil(v),
+    fn: (v: any) => (typeof v === 'number' ? Math.ceil(v) : v),
   },
   {
     name: 'Floor',
     if: (node) => node.type === 'number',
-    fn: (v: any) => Math.floor(v),
+    fn: (v: any) => (typeof v === 'number' ? Math.floor(v) : v),
   },
   {
     name: 'Absolute',
     if: (node) => node.type === 'number',
-    fn: (v: any) => Math.abs(v),
+    fn: (v: any) => (typeof v === 'number' ? Math.abs(v) : v),
   },
   {
     name: 'Negate',
     if: (node) => node.type === 'number',
-    fn: (v: any) => -v,
+    fn: (v: any) => (typeof v === 'number' ? -v : v),
   },
   {
     name: 'Power',
     if: (node) => node.type === 'number',
     params: [{ key: 'exponent', label: 'Exponent', type: 'number', default: 2 }],
-    fn: (v: any, exponent: number) => Math.pow(v, exponent),
+    fn: (v: any, exponent: number) => {
+      if (typeof v !== 'number') return v;
+      const exp = typeof exponent === 'number' ? exponent : 2;
+      return Math.pow(v, exp);
+    },
   },
   {
     name: 'Modulo',
     if: (node) => node.type === 'number',
     params: [{ key: 'modulus', label: 'Modulus', type: 'number', default: 2 }],
-    fn: (v: any, modulus: number) => v % modulus,
+    fn: (v: any, modulus: number) => {
+      if (typeof v !== 'number') return v;
+      const mod = typeof modulus === 'number' && modulus !== 0 ? modulus : 2;
+      return v % mod;
+    },
   },
   {
     name: 'To Date',
     if: (node) => node.type === 'number',
-    fn: (v: any) => new Date(v),
+    fn: (v: any) => (typeof v === 'number' ? new Date(v) : v),
   },
   {
     name: 'To String',
     if: (node) => node.type === 'number',
-    fn: (v: any) => v.toString(),
+    fn: (v: any) => (typeof v === 'number' ? String(v) : v),
+  },
+  {
+    name: 'To Object',
+    structural: true,
+    if: (node) => node.type === 'number',
+    fn: (v: number) => {
+      // Convert to number if it's a string representation
+      const numValue = typeof v === 'string' ? Number(v) : v;
+      if (typeof numValue !== 'number' || isNaN(numValue)) return v;
+
+      return {
+        __structuralChange: true,
+        action: 'toObject' as const,
+        object: {
+          object: { value: numValue },
+        },
+        removeSource: false,
+      };
+    },
   },
 ];
 

@@ -3,8 +3,8 @@ import { computed } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import { Button } from '@/components/ui/button';
 import { Undo, Trash } from 'lucide-vue-next';
-import type { ObjectNode, ObjectTransformerContext } from './index';
-import { ObjectTransformerDeskKey } from './index';
+import type { ObjectNodeData, ObjectTransformerContext } from '.';
+import { ObjectTransformerDeskKey } from '.';
 
 interface Props {
   nodeId: string;
@@ -13,20 +13,25 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { checkIn } = useCheckIn<ObjectNode, ObjectTransformerContext>();
+const { checkIn } = useCheckIn<ObjectNodeData, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
 
-const node = computed(() => desk!.getNode(props.nodeId));
+if (!desk) {
+  throw new Error('ObjectTransformer desk not found');
+}
+
+const node = computed(() => desk.getNode(props.nodeId));
 
 const toggleDelete = () => {
   if (!node.value) return;
-  desk!.toggleNodeDeletion(node.value);
+  desk.toggleNodeDeletion(node.value);
 };
 </script>
 
 <template>
   <div
     v-if="node"
+    data-slot="node-actions"
     class="overflow-hidden transition-all duration-200"
     :class="isVisible ? 'w-4 mr-1.5' : 'w-0'"
   >
