@@ -7,14 +7,19 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 
 // Register structural transform handler for 'arrayToProperties'
 registerStructuralTransformHandler('arrayToProperties', (current, lastKey, result) => {
-  if (!Array.isArray(result.parts)) return;
+  if (!result.object) return;
 
-  // Convert array to object with indexed keys
-  const obj: Record<string, any> = {};
-  result.parts.forEach((part: any, index: number) => {
-    obj[index.toString()] = part;
+  // Create new properties from the object (same pattern as stringToObject)
+  Object.entries(result.object).forEach(([key, value]) => {
+    const newKey = `${lastKey}_${key}`;
+    current[newKey] = value;
   });
-  current[lastKey] = obj;
+
+  // Remove source if specified
+  if (result.removeSource) {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete current[lastKey];
+  }
 });
 
 const transforms: Transform[] = [
@@ -67,10 +72,20 @@ const transforms: Transform[] = [
     if: (node) => node.type === 'array',
     fn: (v: any[]): StructuralTransformResult => {
       if (!Array.isArray(v)) return v as any;
+      
+      // Convert array to object with indexed keys
+      const obj: Record<string, any> = {};
+      v.forEach((part: any, index: number) => {
+        obj[index.toString()] = part;
+      });
+      
       return {
         __structuralChange: true,
         action: 'arrayToProperties',
-        parts: v,
+        object: {
+          object: obj,
+        },
+        removeSource: false,
       };
     },
   },
