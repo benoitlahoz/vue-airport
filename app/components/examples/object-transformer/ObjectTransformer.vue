@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, type HTMLAttributes } from 'vue';
+import { ref, triggerRef, type HTMLAttributes } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import { cn } from '@/lib/utils';
 import {
@@ -64,9 +64,8 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
     tree: ref<ObjectNodeData>(
       buildNodeTree(initialData, Array.isArray(props.data) ? 'Array' : 'Object')
     ),
-    treeVersion: ref(0), // Increment this to trigger reactivity
     triggerTreeUpdate() {
-      this.treeVersion.value++;
+      triggerRef(this.tree);
     },
     originalData: ref(props.data),
     getNode(id: string): ObjectNodeData | null {
@@ -328,8 +327,6 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
 
     // Recipe management
     recipe: computed(() => {
-      // Depend on treeVersion to recompute when tree changes
-      const _version = (desk as ObjectTransformerDesk).treeVersion.value;
       return buildRecipeUtil((desk as ObjectTransformerDesk).tree.value);
     }),
     buildRecipe() {

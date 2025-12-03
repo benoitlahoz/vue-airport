@@ -73,7 +73,6 @@ export interface ObjectNodeData {
 export interface ObjectTransformerContext {
   // Tree
   tree: Ref<ObjectNodeData>;
-  treeVersion: Ref<number>;
   triggerTreeUpdate: () => void;
   originalData: Ref<any>;
   getNode: (id: string) => ObjectNodeData | null;

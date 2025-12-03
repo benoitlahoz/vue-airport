@@ -141,12 +141,12 @@ export const applyRecipe = (
   // Clone the data to avoid mutations - preserve Dates
   const result = deepClone(data);
 
-  // Sort steps by path depth (deepest first) to ensure child transforms are applied before parent transforms
-  // This is critical: if you transform children then stringify parent, you want the stringified result to include transformed children
-  const sortedSteps = [...recipe.steps].sort((a, b) => b.path.length - a.path.length);
-
-  // Apply transformations from deepest paths to shallowest
-  sortedSteps.forEach((step) => {
+  // IMPORTANT: Apply steps in the ORDER they were recorded in the tree
+  // This is critical for structural transforms that create new paths:
+  // - "To Object" on name creates name_object with child name_object/name
+  // - "Split" on name_object/name must be applied AFTER name_object is created
+  // The tree traversal records steps in correct dependency order (parent before children)
+  recipe.steps.forEach((step) => {
     // Find transform that matches both name AND is compatible with the original type
     // Create a mock node with the original type to test the transform's condition
     const mockNode = { type: step.originalType, path: step.path };

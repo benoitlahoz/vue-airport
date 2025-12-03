@@ -11,22 +11,74 @@ const { desk } = checkIn(ObjectTransformerDeskKey);
 
 const isCopied = ref(false);
 
+// Fonction récursive pour construire la valeur finale avec support des transformations structurelles imbriquées
+const buildFinalValue = (node: ObjectNodeData): any => {
+  if (node.deleted) return undefined;
+
+  // Si le node a des enfants (résultat de transformations structurelles), construire depuis les enfants
+  if (node.children && node.children.length > 0) {
+    const activeChildren = node.children.filter((child) => !child.deleted);
+
+    if (node.type === 'object' || activeChildren.some((c) => c.key)) {
+      // Construire un objet depuis les enfants (récursif)
+      const obj = activeChildren.reduce(
+        (acc, child) => {
+          const value = buildFinalValue(child); // Récursion
+          if (value !== undefined && child.key) {
+            acc[child.key] = value;
+          }
+          return acc;
+        },
+        {} as Record<string, any>
+      );
+
+      // Appliquer les transformations non-structurelles sur l'objet
+      return applyNonStructuralTransforms(obj, node.transforms);
+    }
+
+    if (node.type === 'array') {
+      const arr = activeChildren.map(buildFinalValue).filter((v) => v !== undefined);
+      return applyNonStructuralTransforms(arr, node.transforms);
+    }
+  }
+
+  // Pour les primitives sans enfants, appliquer toutes les transformations
+  return applyNonStructuralTransforms(node.value, node.transforms);
+};
+
+// Appliquer uniquement les transformations non-structurelles
+const applyNonStructuralTransforms = (value: any, transforms: any[] | undefined): any => {
+  if (!transforms || transforms.length === 0) return value;
+
+  let result = value;
+  for (const transform of transforms) {
+    const transformResult = transform.fn(result, ...(transform.params || []));
+    // Ignorer les résultats structurels (déjà gérés par les enfants)
+    if (
+      !transformResult ||
+      typeof transformResult !== 'object' ||
+      !transformResult.__structuralChange
+    ) {
+      result = transformResult;
+    }
+  }
+  return result;
+};
+
 const finalObject = computed(() => {
   if (!desk) return null;
 
-  // Track treeVersion to trigger reactivity
-  void desk.treeVersion.value;
-
-  // Build recipe from current tree state
-  const recipe = desk.buildRecipe();
+  // Accès direct à tree.value pour établir la dépendance réactive
+  void desk.tree.value;
 
   // En mode model, appliquer la recipe à tous les objets de l'array
   if (desk.mode.value === 'model' && Array.isArray(desk.originalData.value)) {
+    const recipe = desk.buildRecipe();
     return desk.originalData.value.map((item) => desk.applyRecipe(item, recipe));
   }
 
-  // En mode object, appliquer la recipe à l'objet original
-  return desk.applyRecipe(desk.originalData.value, recipe);
+  // En mode object, construire récursivement depuis l'arbre
+  return buildFinalValue(desk.tree.value);
 });
 
 const formattedJson = computed(() => {
