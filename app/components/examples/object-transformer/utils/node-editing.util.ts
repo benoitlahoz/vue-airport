@@ -11,6 +11,9 @@ export const shouldStartEdit = (
   // Don't allow editing if another node is being edited
   if (editingNode !== null) return false;
 
+  // Don't allow editing the root node (its key "Array" or "Object" is not exported)
+  if (!node.parent) return false;
+
   // Don't allow editing array indices (children of array nodes)
   if (node.parent?.type === 'array') return false;
 

@@ -126,9 +126,16 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
               <NodeKeyEditor v-model:input-ref="inputFieldElement" :node-id="nodeId" />
             </div>
 
-            <!-- Value (read-only) - hidden for object/array -->
+            <!-- Value (read-only) -->
             <span
-              v-if="tree.type !== 'object' && tree.type !== 'array'"
+              v-if="tree.type === 'array'"
+              ref="valueElement"
+              class="ml-2 text-muted-foreground italic"
+            >
+              Array({{ tree.children?.length || 0 }})
+            </span>
+            <span
+              v-else-if="tree.type !== 'object'"
               ref="valueElement"
               class="ml-2 text-muted-foreground"
             >

@@ -19,8 +19,14 @@ const buildFinalValue = (node: ObjectNodeData): any => {
   if (node.children && node.children.length > 0) {
     const activeChildren = node.children.filter((child) => !child.deleted);
 
+    // Construire un array si le type est explicitement 'array'
+    if (node.type === 'array') {
+      const arr = activeChildren.map(buildFinalValue).filter((v) => v !== undefined);
+      return applyNonStructuralTransforms(arr, node.transforms);
+    }
+
+    // Sinon, construire un objet (pour type 'object' ou transformations structurelles)
     if (node.type === 'object' || activeChildren.some((c) => c.key)) {
-      // Construire un objet depuis les enfants (récursif)
       const obj = activeChildren.reduce(
         (acc, child) => {
           const value = buildFinalValue(child); // Récursion
@@ -34,11 +40,6 @@ const buildFinalValue = (node: ObjectNodeData): any => {
 
       // Appliquer les transformations non-structurelles sur l'objet
       return applyNonStructuralTransforms(obj, node.transforms);
-    }
-
-    if (node.type === 'array') {
-      const arr = activeChildren.map(buildFinalValue).filter((v) => v !== undefined);
-      return applyNonStructuralTransforms(arr, node.transforms);
     }
   }
 

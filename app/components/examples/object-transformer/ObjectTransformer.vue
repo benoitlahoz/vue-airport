@@ -62,7 +62,7 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
   context: {
     // Tree
     tree: ref<ObjectNodeData>(
-      buildNodeTree(initialData, Array.isArray(props.data) ? 'Array' : 'Object')
+      buildNodeTree(initialData, Array.isArray(initialData) ? 'Array' : 'Object')
     ),
     triggerTreeUpdate() {
       triggerRef(this.tree);
@@ -92,7 +92,7 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
       const data = getDataForMode(this.originalData.value, newMode, this.templateIndex.value);
       this.tree.value = buildNodeTree(
         data,
-        Array.isArray(this.originalData.value) ? 'Array' : 'Object'
+        Array.isArray(data) ? 'Array' : 'Object'
       );
     },
     templateIndex: ref<number>(initialTemplateIndex),
@@ -432,9 +432,15 @@ watch(
   () => props.data,
   (newData) => {
     (desk as ObjectTransformerDesk).originalData.value = newData;
+    
+    // Respect current mode when rebuilding tree
+    const currentMode = (desk as ObjectTransformerDesk).mode.value;
+    const currentTemplateIndex = (desk as ObjectTransformerDesk).templateIndex.value;
+    const dataForTree = getDataForMode(newData, currentMode, currentTemplateIndex);
+    
     (desk as ObjectTransformerDesk).tree.value = buildNodeTree(
-      newData,
-      Array.isArray(newData) ? 'Array' : 'Object'
+      dataForTree,
+      Array.isArray(dataForTree) ? 'Array' : 'Object'
     );
   },
   { deep: true }

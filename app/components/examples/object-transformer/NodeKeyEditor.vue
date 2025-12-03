@@ -24,6 +24,18 @@ const isEditing = computed(() => desk.editingNode.value === node.value);
 const tempKey = computed(() => desk.tempKey.value);
 const keyClasses = computed(() => (node.value ? desk.getKeyClasses(node.value) : ''));
 
+// Check if this is an array element (parent is array type)
+const isArrayElement = computed(() => node.value?.parent?.type === 'array');
+
+// Format display key: [index] for array elements, regular key for object properties
+const displayKey = computed(() => {
+  if (!node.value?.key) return '';
+  if (isArrayElement.value) {
+    return `[${node.value.key}]`;
+  }
+  return node.value.key;
+});
+
 const inputRef = defineModel<InstanceType<typeof Input> | null>('inputRef');
 
 const startEdit = () => {
@@ -35,6 +47,8 @@ const startEdit = () => {
 
 const canEdit = computed(() => {
   if (!node.value) return false;
+  // Array elements cannot be edited (their indices are fixed)
+  if (isArrayElement.value) return false;
   return shouldStartEdit(node.value, null);
 });
 
@@ -76,6 +90,6 @@ const cancelEdit = () => {
       @keyup.esc="cancelEdit()"
       @click.stop
     />
-    <span v-else :class="keyClasses">{{ node.key }}</span>
+    <span v-else :class="keyClasses">{{ displayKey }}</span>
   </div>
 </template>
