@@ -14,7 +14,11 @@ const props = defineProps<Props>();
 const { checkIn } = useCheckIn<ObjectNodeData, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
 
-const node = computed(() => desk!.getNode(props.nodeId));
+if (!desk) {
+  throw new Error('ObjectTransformer desk not found');
+}
+
+const node = computed(() => desk.getNode(props.nodeId));
 
 const isOpen = computed({
   get: () => node.value?.isOpen ?? true,

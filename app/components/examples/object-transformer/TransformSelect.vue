@@ -43,9 +43,6 @@ const deskWithContext = desk as DeskWithContext;
 // Get node
 const node = computed(() => {
   const n = deskWithContext.getNode(props.nodeId);
-  if (!n) {
-    console.warn('TransformerSelect: Node not found:', props.nodeId);
-  }
   return n;
 });
 

@@ -82,8 +82,10 @@ const handleFileUpload = async (event: Event) => {
     // Reset input
     if (input) input.value = '';
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Failed to import recipe:', error);
-    alert(`Failed to import recipe: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // TODO: Add toast notification here
+    alert(`Failed to import recipe: ${message}`);
   }
 };
 </script>

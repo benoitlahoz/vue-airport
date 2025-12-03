@@ -22,43 +22,65 @@ const transforms: Transform[] = [
     name: 'Join',
     if: (node) => node.type === 'array',
     params: [{ key: 'separator', label: 'Separator', type: 'string', default: ', ' }],
-    fn: (v: any[], separator: string) => v.join(separator),
+    fn: (v: any[], separator: string) => {
+      if (!Array.isArray(v)) return v;
+      const sep = typeof separator === 'string' ? separator : ', ';
+      return v.join(sep);
+    },
   },
   {
     name: 'Unique',
     if: (node) => node.type === 'array',
-    fn: (v: any[]) => Array.from(new Set(v)),
+    fn: (v: any[]) => {
+      if (!Array.isArray(v)) return v;
+      return Array.from(new Set(v));
+    },
   },
   {
     name: 'Filter Nulls',
     if: (node) => node.type === 'array',
-    fn: (v: any[]) => v.filter((item) => item != null),
+    fn: (v: any[]) => {
+      if (!Array.isArray(v)) return v;
+      return v.filter((item) => item != null);
+    },
   },
   {
     name: 'Filter Undefined',
     if: (node) => node.type === 'array',
-    fn: (v: any[]) => v.filter((item) => item !== undefined),
+    fn: (v: any[]) => {
+      if (!Array.isArray(v)) return v;
+      return v.filter((item) => item !== undefined);
+    },
   },
   {
     name: 'Filter By Value',
     if: (node) => node.type === 'array',
     params: [{ key: 'value', label: 'Value', type: 'text', default: '' }],
-    fn: (v: any[], value: any) => v.filter((item) => item === value),
+    fn: (v: any[], value: any) => {
+      if (!Array.isArray(v)) return v;
+      return v.filter((item) => item === value);
+    },
   },
   {
     name: 'To Object',
     structural: true, // This is a structural transform
     if: (node) => node.type === 'array',
-    fn: (v: any[]): StructuralTransformResult => ({
-      __structuralChange: true,
-      action: 'arrayToProperties',
-      parts: v,
-    }),
+    fn: (v: any[]): StructuralTransformResult => {
+      if (!Array.isArray(v)) return v as any;
+      return {
+        __structuralChange: true,
+        action: 'arrayToProperties',
+        parts: v,
+      };
+    },
   },
   {
     name: 'To String',
     if: (node) => node.type === 'array',
-    fn: (v: any) => JSON.stringify(v),
+    fn: (v: any) => {
+      if (!Array.isArray(v)) return v;
+      return JSON.stringify(v);
+    },
   },
 ];
 

@@ -1,5 +1,5 @@
 import type { DeskCore } from '#vue-airport';
-import type { InjectionKey, Ref } from 'vue';
+import type { ComputedRef, InjectionKey, Ref } from 'vue';
 
 /**
  * Current recipe format version
@@ -121,7 +121,7 @@ export interface ObjectTransformerContext {
   formatStepValue: (node: ObjectNodeData, index: number) => string;
   isStructuralTransform: (node: ObjectNodeData, transformIndex: number) => boolean;
   // Recipe management
-  recipe: Ref<TransformRecipe | null>;
+  recipe: ComputedRef<TransformRecipe>;
   buildRecipe: () => TransformRecipe;
   applyRecipe: (data: any, recipe: TransformRecipe) => any;
   exportRecipe: () => string;

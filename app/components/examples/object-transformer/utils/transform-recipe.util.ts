@@ -39,12 +39,6 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     // Track transformations - only for nodes with keys (not root)
     // Important: Capture transforms BEFORE checking deleted status
     if (node.transforms && node.transforms.length > 0 && node.key) {
-      console.log(
-        '[buildRecipe] Found transforms on node:',
-        node.key,
-        'transforms:',
-        node.transforms
-      );
       node.transforms.forEach((transform) => {
         steps.push({
           path: [...path, node.key!],
@@ -165,11 +159,25 @@ export const applyRecipe = (
     });
 
     if (!transform) {
-      console.warn(`Transform "${step.transformName}" not found for type "${step.originalType}"`);
+      if (import.meta.env.DEV) {
+        console.warn(
+          `Transform "${step.transformName}" not found for type "${step.originalType}" at path ${step.path.join('.')}`
+        );
+      }
       return;
     }
 
-    applyTransformAtPath(result, step.path, transform, step.params);
+    try {
+      applyTransformAtPath(result, step.path, transform, step.params);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error(
+          `Error applying transform "${step.transformName}" at path ${step.path.join('.')}:`,
+          error
+        );
+      }
+      // Continue with other transforms even if one fails
+    }
   });
 
   // Apply deletions AFTER transforms (to delete transformed results if needed)
@@ -270,9 +278,15 @@ export const importRecipe = (recipeJson: string): TransformRecipe => {
     }
 
     // Version is different, attempt migration
-    console.log(`Migrating recipe from version ${recipe.version} to ${CURRENT_RECIPE_VERSION}...`);
+    if (import.meta.env.DEV) {
+      console.log(
+        `Migrating recipe from version ${recipe.version} to ${CURRENT_RECIPE_VERSION}...`
+      );
+    }
     const migratedRecipe = migrateRecipe(recipe);
-    console.log('Migration successful');
+    if (import.meta.env.DEV) {
+      console.log('Migration successful');
+    }
 
     return migratedRecipe;
   } catch (error) {

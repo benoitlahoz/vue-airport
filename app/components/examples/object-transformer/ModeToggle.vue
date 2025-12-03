@@ -4,25 +4,24 @@ import { useCheckIn } from 'vue-airport';
 import { Button } from '@/components/ui/button';
 import { type ObjectNodeData, type ObjectTransformerContext, ObjectTransformerDeskKey } from '.';
 
-type DeskWithContext = typeof desk & ObjectTransformerContext;
-
 const { checkIn } = useCheckIn<ObjectNodeData, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
-const deskWithContext = desk as DeskWithContext;
 
-const mode = computed(() => deskWithContext.mode.value);
-const templateIndex = computed(() => deskWithContext.templateIndex.value);
-const isArray = computed(() => Array.isArray(deskWithContext.originalData.value));
-const arrayLength = computed(() =>
-  isArray.value ? (deskWithContext.originalData.value as any[]).length : 0
-);
+if (!desk) {
+  throw new Error('ObjectTransformer desk not found');
+}
+
+const mode = computed(() => desk.mode.value);
+const templateIndex = computed(() => desk.templateIndex.value);
+const isArray = computed(() => Array.isArray(desk.originalData.value));
+const arrayLength = computed(() => (isArray.value ? (desk.originalData.value as any[]).length : 0));
 
 const setMode = (newMode: 'object' | 'model') => {
-  deskWithContext.setMode(newMode);
+  desk.setMode(newMode);
 };
 
 const setTemplateIndex = (index: number) => {
-  deskWithContext.setTemplateIndex(index);
+  desk.setTemplateIndex(index);
 };
 </script>
 

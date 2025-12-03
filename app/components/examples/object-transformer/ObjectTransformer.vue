@@ -142,8 +142,6 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
       const transform = this.findTransform(name, node);
       if (!transform) return null;
 
-      console.log('[createTransformEntry]', name, 'has fn:', typeof transform.fn, transform.fn);
-
       // Create a copy with params as VALUES array (not configs)
       return {
         ...transform,
@@ -329,18 +327,19 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
     },
 
     // Recipe management
-    recipe: ref(null),
+    recipe: computed(() => {
+      // Depend on treeVersion to recompute when tree changes
+      const _version = (desk as ObjectTransformerDesk).treeVersion.value;
+      return buildRecipeUtil((desk as ObjectTransformerDesk).tree.value);
+    }),
     buildRecipe() {
-      const recipe = buildRecipeUtil(this.tree.value);
-      this.recipe.value = recipe;
-      return recipe;
+      return this.recipe.value;
     },
     applyRecipe(data: any, recipe) {
       return applyRecipeUtil(data, recipe, this.transforms.value);
     },
     exportRecipe() {
-      const recipe = this.recipe.value || this.buildRecipe();
-      return exportRecipeUtil(recipe);
+      return exportRecipeUtil(this.recipe.value);
     },
     importRecipe(recipeJson: string) {
       const recipe = importRecipeUtil(recipeJson);
@@ -354,9 +353,8 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
         );
       }
 
-      this.recipe.value = recipe;
-
       // Apply recipe to original data and rebuild tree
+      // The recipe will be automatically recomputed from the new tree via the computed property
       const transformedData = applyRecipeUtil(
         this.originalData.value,
         recipe,

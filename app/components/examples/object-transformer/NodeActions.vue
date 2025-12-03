@@ -16,11 +16,15 @@ const props = defineProps<Props>();
 const { checkIn } = useCheckIn<ObjectNodeData, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
 
-const node = computed(() => desk!.getNode(props.nodeId));
+if (!desk) {
+  throw new Error('ObjectTransformer desk not found');
+}
+
+const node = computed(() => desk.getNode(props.nodeId));
 
 const toggleDelete = () => {
   if (!node.value) return;
-  desk!.toggleNodeDeletion(node.value);
+  desk.toggleNodeDeletion(node.value);
 };
 </script>
 

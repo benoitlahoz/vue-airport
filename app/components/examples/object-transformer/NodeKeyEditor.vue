@@ -14,36 +14,40 @@ const props = defineProps<Props>();
 const { checkIn } = useCheckIn<ObjectNodeData, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
 
+if (!desk) {
+  throw new Error('ObjectTransformer desk not found');
+}
+
 // Get node from desk
-const node = computed(() => desk!.getNode(props.nodeId));
-const isEditing = computed(() => desk!.editingNode.value === node.value);
-const tempKey = computed(() => desk!.tempKey.value);
-const keyClasses = computed(() => (node.value ? desk!.getKeyClasses(node.value) : ''));
+const node = computed(() => desk.getNode(props.nodeId));
+const isEditing = computed(() => desk.editingNode.value === node.value);
+const tempKey = computed(() => desk.tempKey.value);
+const keyClasses = computed(() => (node.value ? desk.getKeyClasses(node.value) : ''));
 
 const inputRef = defineModel<InstanceType<typeof Input> | null>('inputRef');
 
 const startEdit = () => {
   if (!node.value) return;
-  if (shouldStartEdit(node.value, desk!.editingNode.value)) {
-    desk!.startEditKey(node.value);
+  if (shouldStartEdit(node.value, desk.editingNode.value)) {
+    desk.startEditKey(node.value);
   }
 };
 
 const updateTempKey = (value: string) => {
-  desk!.tempKey.value = value;
+  desk.tempKey.value = value;
 };
 
 const confirmEdit = () => {
   if (!node.value) return;
   if (canConfirmEdit(tempKey.value, node.value.key)) {
-    desk!.confirmEditKey(node.value);
+    desk.confirmEditKey(node.value);
   }
   inputRef.value?.$el?.blur();
 };
 
 const cancelEdit = () => {
   if (!node.value) return;
-  desk!.cancelEditKey(node.value);
+  desk.cancelEditKey(node.value);
   inputRef.value?.$el?.blur();
 };
 </script>

@@ -45,19 +45,32 @@ const transforms: Transform[] = [
     structural: true, // This is a structural transform
     if: (node) => node.type === 'string',
     params: [{ key: 'delimiter', label: 'Delimiter', type: 'text', default: ' ' }],
-    fn: (v: string, delimiter: string) => ({
-      __structuralChange: true,
-      action: 'split' as const,
-      parts: v.split(delimiter),
-      removeSource: false,
-    }),
+    fn: (v: string, delimiter: string) => {
+      if (typeof v !== 'string') return v;
+      if (typeof delimiter !== 'string') delimiter = ' ';
+      return {
+        __structuralChange: true,
+        action: 'split' as const,
+        parts: v.split(delimiter),
+        removeSource: false,
+      };
+    },
   },
-  { name: 'Uppercase', if: (node) => node.type === 'string', fn: (v: any) => v.toUpperCase() },
-  { name: 'Lowercase', if: (node) => node.type === 'string', fn: (v: any) => v.toLowerCase() },
+  {
+    name: 'Uppercase',
+    if: (node) => node.type === 'string',
+    fn: (v: any) => (typeof v === 'string' ? v.toUpperCase() : v),
+  },
+  {
+    name: 'Lowercase',
+    if: (node) => node.type === 'string',
+    fn: (v: any) => (typeof v === 'string' ? v.toLowerCase() : v),
+  },
   {
     name: 'Capitalized',
     if: (node) => node.type === 'string',
-    fn: (v: any) => v.charAt(0).toUpperCase() + v.slice(1).toLowerCase(),
+    fn: (v: any) =>
+      typeof v === 'string' ? v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() : v,
   },
   {
     name: 'Replace',
@@ -66,24 +79,37 @@ const transforms: Transform[] = [
       { key: 'search', label: 'Search', type: 'text', default: '' },
       { key: 'replace', label: 'Replace', type: 'text', default: '' },
     ],
-    fn: (v: string, s: string, r: string) => v.replaceAll(s, r),
+    fn: (v: string, s: string, r: string) => {
+      if (typeof v !== 'string') return v;
+      if (typeof s !== 'string') s = '';
+      if (typeof r !== 'string') r = '';
+      return v.replaceAll(s, r);
+    },
   },
   {
     name: 'Trim',
     if: (node) => node.type === 'string',
-    fn: (v: any) => v.trim(),
+    fn: (v: any) => (typeof v === 'string' ? v.trim() : v),
   },
   {
     name: 'Append',
     if: (node) => node.type === 'string',
     params: [{ key: 'suffix', label: 'Suffix', type: 'text', default: '' }],
-    fn: (v: string, s: string) => v + s,
+    fn: (v: string, s: string) => {
+      if (typeof v !== 'string') return v;
+      if (typeof s !== 'string') s = '';
+      return v + s;
+    },
   },
   {
     name: 'Prepend',
     if: (node) => node.type === 'string',
     params: [{ key: 'prefix', label: 'Prefix', type: 'text', default: '' }],
-    fn: (v: string, p: string) => p + v,
+    fn: (v: string, p: string) => {
+      if (typeof v !== 'string') return v;
+      if (typeof p !== 'string') p = '';
+      return p + v;
+    },
   },
   {
     name: 'Substring',
@@ -92,48 +118,62 @@ const transforms: Transform[] = [
       { key: 'start', label: 'Start Index', type: 'number', default: 0 },
       { key: 'end', label: 'End Index', type: 'number', default: undefined },
     ],
-    fn: (v: string, start: number, end?: number) => v.substring(start, end),
+    fn: (v: string, start: number, end?: number) => {
+      if (typeof v !== 'string') return v;
+      const startIdx = typeof start === 'number' ? start : 0;
+      const endIdx = typeof end === 'number' ? end : undefined;
+      return v.substring(startIdx, endIdx);
+    },
   },
   {
     name: 'Repeat',
     if: (node) => node.type === 'string',
     params: [{ key: 'count', label: 'Count', type: 'number', default: 1 }],
-    fn: (v: string, count: number) => v.repeat(count),
+    fn: (v: string, count: number) => {
+      if (typeof v !== 'string') return v;
+      const repeatCount = typeof count === 'number' && count > 0 ? Math.floor(count) : 1;
+      return v.repeat(repeatCount);
+    },
   },
   {
     name: 'Remove Spaces',
     if: (node) => node.type === 'string',
-    fn: (v: string) => v.replace(/\s+/g, ''),
+    fn: (v: string) => (typeof v === 'string' ? v.replace(/\s+/g, '') : v),
   },
   {
     name: 'Remove Multiple Spaces',
     if: (node) => node.type === 'string',
-    fn: (v: string) => v.replace(/\s+/g, ' '),
+    fn: (v: string) => (typeof v === 'string' ? v.replace(/\s+/g, ' ') : v),
   },
   {
     name: 'Reverse',
     if: (node) => node.type === 'string',
-    fn: (v: string) => v.split('').reverse().join(''),
+    fn: (v: string) => (typeof v === 'string' ? v.split('').reverse().join('') : v),
   },
   {
     name: 'To Number',
     if: (node) => node.type === 'string',
     fn: (v: string) => {
-      return Number(v);
+      if (typeof v !== 'string') return v;
+      const num = Number(v);
+      return isNaN(num) ? v : num;
     },
   },
   {
     name: 'To Object',
     structural: true,
     if: (node) => node.type === 'string',
-    fn: (v: string) => ({
-      __structuralChange: true,
-      action: 'stringToObject' as const,
-      object: {
-        object: { name: v },
-      },
-      removeSource: false,
-    }),
+    fn: (v: string) => {
+      if (typeof v !== 'string') return v;
+      return {
+        __structuralChange: true,
+        action: 'stringToObject' as const,
+        object: {
+          object: { name: v },
+        },
+        removeSource: false,
+      };
+    },
   },
 ];
 

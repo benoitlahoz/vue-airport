@@ -37,7 +37,6 @@ const tree = computed(() => {
   }
   const node = deskWithContext.getNode(props.id);
   if (!node) {
-    console.warn('Node not found:', props.id);
     return deskWithContext.tree.value;
   }
   return node;
@@ -55,22 +54,13 @@ const inputFieldElement = ref<any>(null);
 
 // Click outside handling
 const inputElement = ref<HTMLElement | null>(null);
-const buttonElement = ref<HTMLElement | null>(null);
 
-onClickOutside(
-  inputElement,
-  () => {
-    if (editingKey.value) {
-      deskWithContext.confirmEditKey(tree.value);
-      isHovered.value = false;
-    }
+onClickOutside(inputElement, () => {
+  if (editingKey.value) {
+    deskWithContext.confirmEditKey(tree.value);
+    isHovered.value = false;
   }
-  /*
-  {
-    ignore: [buttonElement],
-  }
-    */
-);
+});
 
 // Layout helpers
 const valueElement = ref<HTMLElement | null>(null);
@@ -127,10 +117,7 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
             @mouseleave="!editingKey && (isHovered = false)"
           >
             <!-- Delete/Restore -->
-            <div
-              v-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'"
-              ref="buttonElement"
-            >
+            <div v-if="tree.parent?.type === 'object' || tree.parent?.type === 'array'">
               <NodeActions :node-id="nodeId" :is-visible="isHovered || editingKey" />
             </div>
 
