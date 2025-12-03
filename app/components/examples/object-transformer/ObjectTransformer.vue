@@ -187,8 +187,15 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
         const isRestoringToOriginal = node.originalKey === newKey;
 
         // Find conflicting node (same key but different node)
+        // Ignore deleted nodes in conflict detection
         const conflictingNode = parent.children.find(
           (c) => c !== node && c.key === newKey && !c.deleted
+        );
+
+        // Also check if there's a deleted node with this key
+        // If we're renaming to a deleted node's key, we should take over that position
+        const deletedNodeWithKey = parent.children.find(
+          (c) => c !== node && c.key === newKey && c.deleted
         );
 
         if (conflictingNode && isRestoringToOriginal) {
@@ -221,15 +228,26 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
           }
         } else {
           // Normal rename - use autoRenameKey to avoid conflicts
-          const finalKey = autoRenameKey(parent, newKey);
+          const oldKey = node.key;
+
+          // If there's a deleted node with the target key, we're taking over that key
+          // The deleted node will need to be auto-renamed if it's ever restored
+          const finalKey = deletedNodeWithKey ? newKey : autoRenameKey(parent, newKey);
 
           // Store original key before renaming (only if not already stored)
-          if (!node.originalKey && node.key !== finalKey) {
-            node.originalKey = node.key;
+          if (!node.originalKey && oldKey !== finalKey) {
+            node.originalKey = oldKey;
           }
 
           node.key = finalKey;
           node.keyModified = true;
+
+          // IMPORTANT: When renaming a node with children (like name_object -> name),
+          // we need to update the originalKey of all descendants so the recipe
+          // can track the path changes correctly
+          if (node.children && node.children.length > 0) {
+            this.updateDescendantPaths(node, oldKey, finalKey);
+          }
         }
 
         this.tempKey.value = node.key;
@@ -238,6 +256,33 @@ const { desk } = createDesk(ObjectTransformerDeskKey, {
       }
 
       this.editingNode.value = null;
+    },
+
+    // Update paths for all descendants when parent key changes
+    updateDescendantPaths(
+      parent: ObjectNodeData,
+      oldParentKey: string | undefined,
+      newParentKey: string
+    ) {
+      if (!parent.children) return;
+
+      const traverse = (node: ObjectNodeData) => {
+        // Update this node's path tracking
+        // The originalKey should reflect the path from the root, not just the immediate parent
+        // So we don't change it here - buildRecipe will use the current tree structure
+
+        // Recursively process children
+        if (node.children) {
+          node.children.forEach((child) => traverse(child));
+        }
+
+        // Propagate transforms to update the recipe with new paths
+        if (node.transforms && node.transforms.length > 0) {
+          this.propagateTransform(node);
+        }
+      };
+
+      parent.children.forEach((child) => traverse(child));
     },
     cancelEditKey(node: ObjectNodeData) {
       this.tempKey.value = node.key || null;

@@ -58,22 +58,31 @@ export const handleRestoreConflict = (
 ): void => {
   if (!restoredNode.key || !parent.children) return;
 
-  // Find any added property with the same key (but not the node being restored)
+  // Find any active node with the same key (but not the node being restored)
+  // This includes both added properties AND nodes that were renamed to this key
   const conflictingNode = parent.children.find(
-    (c) => c !== restoredNode && c.key === restoredNode.key && !c.deleted && isAddedProperty(c)
+    (c) => c !== restoredNode && c.key === restoredNode.key && !c.deleted
   );
 
   if (conflictingNode) {
-    // Rename the added property by finding a unique key
+    // The conflicting node needs to be renamed to avoid the conflict
+    // If it was an added property or was renamed to this key, give it a unique key
     const existingKeys = new Set(
       parent.children
         .filter((c) => !c.deleted)
         .map((c) => c.key)
         .filter((k): k is string => Boolean(k)) || []
     );
-    const newKey = findUniqueKey(existingKeys, conflictingNode.key!, 1);
+
+    // Use the restoredNode's key as base to find alternatives (e.g., name -> name_1)
+    const newKey = findUniqueKey(existingKeys, restoredNode.key!, 1);
     conflictingNode.key = newKey;
     conflictingNode.keyModified = true;
+
+    // If the conflicting node doesn't have an originalKey yet, set it now
+    if (!conflictingNode.originalKey) {
+      conflictingNode.originalKey = restoredNode.key!;
+    }
   }
 };
 

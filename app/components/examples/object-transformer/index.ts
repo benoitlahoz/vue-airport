@@ -60,7 +60,10 @@ export interface ObjectNodeData {
   id: string; // Unique identifier for the node
   type: ObjectNodeType;
   key?: string;
-  originalKey?: string; // Original key before rename (for recipe tracking)
+  originalKey?: string; // Current expected key (updated when parent is renamed)
+  firstKey?: string; // The very first key when node was created (never changes)
+  splitSourceId?: string; // ID of the node that created this node via split
+  splitIndex?: number; // Index in the split array (0, 1, 2...)
   value: any;
   transforms: Transform[];
   children?: ObjectNodeData[];

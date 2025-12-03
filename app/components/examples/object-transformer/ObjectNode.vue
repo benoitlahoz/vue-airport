@@ -139,7 +139,7 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
         </div>
 
         <!-- Right part: transformation select -->
-        <div class="shrink-0 md:ml-auto">
+        <div v-if="tree.parent" class="shrink-0 md:ml-auto">
           <TransformSelect :node-id="nodeId" />
         </div>
       </div>

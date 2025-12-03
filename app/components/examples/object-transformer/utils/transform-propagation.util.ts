@@ -95,25 +95,58 @@ export const propagateArrayValue = (node: ObjectNodeData): void => {
  * Structural Split Handling - Manage split/arrayToProperties transformations
  */
 
-// Check if split nodes exist
-const hasSplitNodes = (parent: ObjectNodeData, baseKeyPrefix: string): boolean =>
-  parent.children?.some((child) => child.key?.startsWith(baseKeyPrefix)) || false;
-
-// Filter non-split nodes
-const filterNonSplitNodes =
-  (baseKeyPrefix: string) => (child: ObjectNodeData, sourceNode: ObjectNodeData) =>
-    child === sourceNode || !child.key?.startsWith(baseKeyPrefix);
-
 // Create split nodes
 const createSplitNodes = (
   parts: any[],
   baseKey: string,
   parent?: ObjectNodeData,
-  keys?: string[]
+  keys?: string[],
+  existingNodes?: ObjectNodeData[],
+  sourceNodeId?: string
 ): ObjectNodeData[] =>
   parts.map((part, i) => {
     const key = keys ? `${baseKey}_${keys[i]}` : `${baseKey}_${i}`;
-    return buildNodeTree(part, key, parent);
+
+    // Try to reuse existing node if available
+    if (existingNodes && existingNodes[i]) {
+      const existing = existingNodes[i];
+      
+      // Update the existing node instead of creating a new one
+      existing.value = part;
+      existing.type = typeof part as any;
+      
+      // firstKey never changes - it's the key at first creation
+      // If not set yet, set it now (for backward compatibility)
+      if (!existing.firstKey) {
+        existing.firstKey = existing.key || key;
+      }
+      
+      // originalKey = what the key WOULD be if not manually renamed
+      // Update it to reflect new parent name
+      existing.originalKey = key;
+      
+      // IMPORTANT: Only update key if NOT manually renamed
+      // This preserves "firstname", "lastname" etc.
+      if (!existing.keyModified) {
+        existing.key = key;
+      }
+      
+      // Keep the same id, transforms, splitSourceId, splitIndex, etc.
+      return existing;
+    }
+
+    // Create new node
+    const node = buildNodeTree(part, key, parent);
+    
+    // IMPORTANT: Set originalKey and firstKey on creation
+    node.originalKey = key;
+    node.firstKey = key; // The very first key, never changes
+    // Track the source node and index for reliable matching
+    if (sourceNodeId !== undefined) {
+      node.splitSourceId = sourceNodeId;
+      node.splitIndex = i;
+    }
+    return node;
   });
 
 // Insert nodes immutably
@@ -134,25 +167,6 @@ const insertNodes = (
     : [...before, sourceNode, ...newNodes, ...after];
 };
 
-// Replace existing split nodes
-const replaceSplitNodes = (
-  children: ObjectNodeData[],
-  newNodes: ObjectNodeData[],
-  sourceNode: ObjectNodeData,
-  baseKeyPrefix: string
-): ObjectNodeData[] => {
-  const filteredChildren = children.filter((child) =>
-    filterNonSplitNodes(baseKeyPrefix)(child, sourceNode)
-  );
-  const newIndex = filteredChildren.indexOf(sourceNode);
-
-  return [
-    ...filteredChildren.slice(0, newIndex + 1),
-    ...newNodes,
-    ...filteredChildren.slice(newIndex + 1),
-  ];
-};
-
 // Handle structural split
 export const handleStructuralSplit = (
   node: ObjectNodeData,
@@ -164,12 +178,44 @@ export const handleStructuralSplit = (
   if (!node.parent) return;
 
   const baseKey = node.key || 'part';
-  const baseKeyPrefix = `${baseKey}_`;
-  const newNodes = createSplitNodes(parts, baseKey, node.parent, keys);
 
-  node.parent.children = hasSplitNodes(node.parent, baseKeyPrefix)
-    ? replaceSplitNodes(node.parent.children!, newNodes, node, baseKeyPrefix)
-    : insertNodes(node.parent.children!, newNodes, node, removeSource);
+  // Check if split nodes already exist by looking for nodes with matching splitSourceId
+  const existingSplitNodes =
+    node.parent.children?.filter((child) => child.splitSourceId === node.id) || [];
+
+  if (existingSplitNodes.length > 0) {
+    // Sort by splitIndex to maintain order
+    existingSplitNodes.sort((a, b) => (a.splitIndex || 0) - (b.splitIndex || 0));
+
+    // Reuse existing nodes by passing them to createSplitNodes
+    const updatedNodes = createSplitNodes(
+      parts,
+      baseKey,
+      node.parent,
+      keys,
+      existingSplitNodes,
+      node.id
+    );
+
+    // Update children array: remove old split nodes and insert updated ones
+    const nonSplitChildren = node.parent.children!.filter((child) => {
+      // Keep the source node
+      if (child === node) return true;
+      // Remove nodes that were part of the split (they're in updatedNodes now)
+      return child.splitSourceId !== node.id;
+    });
+
+    const sourceIndex = nonSplitChildren.indexOf(node);
+    node.parent.children = [
+      ...nonSplitChildren.slice(0, sourceIndex + 1),
+      ...updatedNodes,
+      ...nonSplitChildren.slice(sourceIndex + 1),
+    ];
+  } else {
+    // First time creating split nodes
+    const newNodes = createSplitNodes(parts, baseKey, node.parent, keys, undefined, node.id);
+    node.parent.children = insertNodes(node.parent.children!, newNodes, node, removeSource);
+  }
 
   desk.propagateTransform(node.parent);
 };

@@ -32,16 +32,26 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
   const deletedPaths: string[][] = [];
   const renamedKeys: Array<{ path: string[]; oldKey: string; newKey: string }> = [];
 
-  const traverse = (node: ObjectNodeData, path: string[] = [], isRoot: boolean = true) => {
-    // Build current path - skip root node key (Object/Array), include all others
-    const currentPath = !isRoot && node.key ? [...path, node.key] : path;
+  const traverse = (
+    node: ObjectNodeData,
+    originalPath: string[] = [], // Path using originalKey (for transforms/deletions)
+    renamePath: string[] = [], // Path using current key (for renames)
+    isRoot: boolean = true
+  ) => {
+    // Build paths - skip root node key (Object/Array), include all others
+    const originalKeyToUse = node.originalKey || node.key;
+    const currentKeyToUse = node.key;
 
-    // Track transformations - only for nodes with keys (not root)
-    // Important: Capture transforms BEFORE checking deleted status
-    if (node.transforms && node.transforms.length > 0 && node.key) {
+    const currentOriginalPath =
+      !isRoot && originalKeyToUse ? [...originalPath, originalKeyToUse] : originalPath;
+    const currentRenamePath =
+      !isRoot && currentKeyToUse ? [...renamePath, currentKeyToUse] : renamePath;
+
+    // Track transformations - use originalPath to reference source data
+    if (node.transforms && node.transforms.length > 0 && originalKeyToUse) {
       node.transforms.forEach((transform) => {
         steps.push({
-          path: [...path, node.key!],
+          path: [...originalPath, originalKeyToUse], // Use original key path
           originalType: node.type,
           transformName: transform.name,
           params: transform.params || [],
@@ -50,30 +60,28 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
       });
     }
 
-    // Track deleted nodes
+    // Track deleted nodes - use originalPath
     if (node.deleted) {
-      // Only add to deletedPaths if it has a key (not root)
-      if (node.key) {
-        deletedPaths.push([...path, node.key]);
+      const hasActiveChildren = node.children && node.children.some((child) => !child.deleted);
+
+      if (originalKeyToUse && !hasActiveChildren) {
+        deletedPaths.push([...originalPath, originalKeyToUse]);
       }
-      // Still process children even if node is deleted
-      // This captures transformations on split results before deletion
     }
 
-    // Track renamed keys
-    if (node.keyModified && node.key && node.originalKey && node.originalKey !== node.key) {
+    // Track renamed keys - use renamePath (reflects current renamed structure)
+    if (node.keyModified && node.key && node.firstKey && node.firstKey !== node.key) {
       renamedKeys.push({
-        path: path,
-        oldKey: node.originalKey,
-        newKey: node.key,
+        path: renamePath, // Parent path using CURRENT keys (after renames)
+        oldKey: node.firstKey, // The original key at creation time
+        newKey: node.key, // The custom key
       });
     }
 
-    // Recurse through children - always traverse, even for deleted nodes
+    // Recurse through children
     if (node.children) {
       node.children.forEach((child) => {
-        // Pass currentPath to all children, they are never root
-        traverse(child, currentPath, false);
+        traverse(child, currentOriginalPath, currentRenamePath, false);
       });
     }
   };
@@ -88,7 +96,7 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     (p) => JSON.parse(p)
   );
 
-  return {
+  const recipe = {
     version: '1.0.0',
     rootType: tree.type,
     steps,
@@ -97,6 +105,8 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     requiredTransforms,
     createdAt: new Date().toISOString(),
   };
+
+  return recipe;
 };
 
 /**
@@ -186,7 +196,11 @@ export const applyRecipe = (
   });
 
   // Apply key renames AFTER transforms and deletions
-  recipe.renamedKeys.forEach(({ path, oldKey, newKey }) => {
+  // IMPORTANT: Sort renames by path depth (parents before children)
+  // This ensures parent keys are renamed before we try to navigate through them to rename children
+  const sortedRenames = [...recipe.renamedKeys].sort((a, b) => a.path.length - b.path.length);
+  
+  sortedRenames.forEach(({ path, oldKey, newKey }) => {
     renameKeyAtPath(result, path, oldKey, newKey);
   });
 
