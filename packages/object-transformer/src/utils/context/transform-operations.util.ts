@@ -39,14 +39,6 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
 
       if (!transform) return null;
 
-      console.log('[DEBUG] createTransformEntry:', {
-        name,
-        foundTransform: !!transform,
-        transformFn: transform.fn.toString().substring(0, 100),
-        structural: (transform as any).structural,
-        nodeType: node?.type,
-      });
-
       // Create a copy with params as VALUES array (not configs)
       return {
         ...transform,

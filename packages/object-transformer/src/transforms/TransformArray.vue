@@ -54,20 +54,30 @@ const transforms: Transform[] = [
     name: 'To Object',
     structural: true, // This is a structural transform
     if: (node) => node.type === 'array',
-    fn: (v: any[]): StructuralTransformResult => {
-      if (!Array.isArray(v)) return v as any;
+    fn: (v: any): StructuralTransformResult => {
+      // Accept any value type after intermediate transformations
+      // Convert to object with indexed keys if it's an array, otherwise wrap the value
+      if (Array.isArray(v)) {
+        const obj: Record<string, any> = {};
+        v.forEach((part: any, index: number) => {
+          obj[index.toString()] = part;
+        });
+        return {
+          __structuralChange: true,
+          action: 'arrayToProperties',
+          object: {
+            object: obj,
+          },
+          removeSource: false,
+        };
+      }
 
-      // Convert array to object with indexed keys
-      const obj: Record<string, any> = {};
-      v.forEach((part: any, index: number) => {
-        obj[index.toString()] = part;
-      });
-
+      // If not an array after transformations, wrap it
       return {
         __structuralChange: true,
-        action: 'arrayToProperties',
+        action: 'toObject' as const,
         object: {
-          object: obj,
+          object: { value: v },
         },
         removeSource: false,
       };

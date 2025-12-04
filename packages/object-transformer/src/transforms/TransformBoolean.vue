@@ -51,15 +51,13 @@ const transforms: Transform[] = [
     name: 'To Object',
     structural: true,
     if: (node) => node.type === 'boolean',
-    fn: (v: boolean) => {
-      const boolValue = typeof v === 'string' ? v === 'true' : v;
-      if (typeof boolValue !== 'boolean') return v;
-
+    fn: (v: any) => {
+      // Accept any value type after intermediate transformations
       return {
         __structuralChange: true,
         action: 'toObject' as const,
         object: {
-          object: { value: boolValue },
+          object: { value: v },
         },
         removeSource: false,
       };

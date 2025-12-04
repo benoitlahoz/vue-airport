@@ -138,8 +138,8 @@ const transforms: Transform[] = [
     name: 'To Object',
     structural: true,
     if: (node) => node.type === 'string',
-    fn: (v: string) => {
-      if (typeof v !== 'string') return v;
+    fn: (v: any) => {
+      // Accept any value type after intermediate transformations
       return {
         __structuralChange: true,
         action: 'toObject' as const,

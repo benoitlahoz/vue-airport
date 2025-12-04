@@ -71,8 +71,7 @@ const transforms: Transform[] = [
     structural: true,
     if: (node) => node.type === 'date',
     fn: (v: any) => {
-      if (!(v instanceof Date)) return v;
-
+      // Accept any value type after intermediate transformations
       return {
         __structuralChange: true,
         action: 'toObject' as const,
