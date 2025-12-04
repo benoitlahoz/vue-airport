@@ -192,6 +192,17 @@ export const handleStructuralSplit = (
   desk: ObjectTransformerDesk,
   keys?: string[]
 ): void => {
+  console.log('[DEBUG] handleStructuralSplit called:', {
+    nodeKey: node.key,
+    nodeId: node.id,
+    partsCount: parts.length,
+    parts,
+    keys,
+    removeSource,
+    hasParent: !!node.parent,
+    parentKey: node.parent?.key,
+  });
+
   if (!node.parent) return;
 
   const baseKey = node.key || 'part';
@@ -231,7 +242,15 @@ export const handleStructuralSplit = (
   } else {
     // First time creating split nodes
     const newNodes = createSplitNodes(parts, baseKey, node.parent, keys, undefined, node.id);
+    console.log('[DEBUG] Created new split nodes:', {
+      newNodesCount: newNodes.length,
+      newNodes: newNodes.map((n) => ({ key: n.key, type: n.type, value: n.value })),
+    });
     node.parent.children = insertNodes(node.parent.children!, newNodes, node, removeSource);
+    console.log('[DEBUG] After insertNodes:', {
+      parentChildrenCount: node.parent.children?.length,
+      parentChildren: node.parent.children?.map((c) => ({ key: c.key, type: c.type })),
+    });
   }
 
   desk.propagateTransform(node.parent);
@@ -265,7 +284,31 @@ export const createPropagateTransform =
       if (!lastTransform) return;
 
       const intermediateValue = computeIntermediateValue(node);
+      console.log('[DEBUG] Before calling fn:', {
+        nodeKey: node.key,
+        transformName: lastTransform.name,
+        intermediateValue,
+        fnType: typeof lastTransform.fn,
+        params: lastTransform.params,
+      });
       const lastResult = lastTransform.fn(intermediateValue, ...(lastTransform.params || []));
+      console.log('[DEBUG] After calling fn:', {
+        lastResult,
+        typeofResult: typeof lastResult,
+        isObject: typeof lastResult === 'object',
+        hasStructuralChange: lastResult?.__structuralChange,
+      });
+
+      console.log('[DEBUG] Transform result:', {
+        nodeKey: node.key,
+        transformName: lastTransform.name,
+        lastResult,
+        isStructuralResult: isStructuralResult(lastResult),
+        isMultiPartAction: isMultiPartAction(lastResult.action, desk),
+        hasParts: !!lastResult.parts,
+        hasObject: !!lastResult.object,
+        hasParent: !!node.parent,
+      });
 
       // Check for structural split/arrayToProperties/toObject
       if (
@@ -274,12 +317,27 @@ export const createPropagateTransform =
         (lastResult.parts || lastResult.object) &&
         node.parent
       ) {
+        console.log('[DEBUG] Structural transform detected:', {
+          action: lastResult.action,
+          hasObject: !!lastResult.object,
+          hasParts: !!lastResult.parts,
+          nodeKey: node.key,
+          parentKey: node.parent.key,
+          parentHasChildren: !!node.parent.children,
+          parentChildrenCount: node.parent.children?.length,
+        });
+
         // For toObject, extract keys and values separately
         if (lastResult.object) {
           const entries = Object.entries(lastResult.object);
           const keys = entries.map(([k]) => k);
           const values = entries.map(([, v]) => v);
+          console.log('[DEBUG] toObject entries:', { entries, keys, values });
           handleStructuralSplit(node, values, lastResult.removeSource, desk, keys);
+          console.log('[DEBUG] After handleStructuralSplit:', {
+            parentChildrenCount: node.parent.children?.length,
+            parentChildren: node.parent.children?.map((c) => ({ key: c.key, type: c.type })),
+          });
         } else if (lastResult.parts) {
           handleStructuralSplit(node, lastResult.parts, lastResult.removeSource, desk);
         }

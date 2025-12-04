@@ -75,8 +75,8 @@ const handleParamChange = () => {
         </div>
       </div>
 
-      <!-- Ligne de transformation : valeur + select -->
-      <div class="transform-row-wrapper">
+      <!-- Ligne de transformation : valeur + select (seulement si pas structurel) -->
+      <div v-if="!isStructuralTransform(index)" class="transform-row-wrapper">
         <!-- Colonne 1: Vide -->
         <div class="transform-spacer"></div>
 
@@ -87,9 +87,9 @@ const handleParamChange = () => {
             {{ formatStepValue(index) }}
           </span>
 
-          <!-- Select suivant (si pas structurel et pas dernier) -->
+          <!-- Select suivant -->
           <TransformSelect
-            v-if="!isStructuralTransform(index) && transforms.length > 1"
+            v-if="transforms.length > 1"
             :key="`select-${index + 1}`"
             :node-id="nodeId"
             :step-index="index"

@@ -31,9 +31,21 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
       return transform.params?.map((p) => p.default ?? null) || [];
     },
 
-    createTransformEntry(name: string, _node?: ObjectNodeData) {
-      const transform = context.transforms.value.find((t) => t.name === name);
+    createTransformEntry(name: string, node?: ObjectNodeData) {
+      // If node is provided, filter by type compatibility
+      const transform = node
+        ? context.transforms.value.find((t) => t.name === name && t.if(node))
+        : context.transforms.value.find((t) => t.name === name);
+
       if (!transform) return null;
+
+      console.log('[DEBUG] createTransformEntry:', {
+        name,
+        foundTransform: !!transform,
+        transformFn: transform.fn.toString().substring(0, 100),
+        structural: (transform as any).structural,
+        nodeType: node?.type,
+      });
 
       // Create a copy with params as VALUES array (not configs)
       return {
