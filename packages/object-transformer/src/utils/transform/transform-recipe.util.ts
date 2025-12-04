@@ -94,7 +94,7 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
         // For regular source nodes, use firstKey or originalKey
         oldKey = getFirstKeyCompat(node) || getOriginalKeyCompat(node);
       }
-      
+
       if (oldKey && oldKey !== node.key) {
         // A node is a structural result if:
         // 1. It has splitSourceId (it was created by a structural transform), OR
@@ -138,6 +138,52 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     (p) => JSON.parse(p)
   );
 
+  // 🔧 FIX: Filter out restored nodes from deletedPaths
+  // Collect all active (non-deleted) node paths to exclude from deletedPaths
+  const activeNodePaths = new Set<string>();
+
+  const collectActiveNodes = (
+    node: ObjectNodeData,
+    path: string[] = [],
+    isRoot: boolean = true,
+    parentIsArrayRoot: boolean = false
+  ) => {
+    const isStructuralNode = !!node.splitSourceId;
+    const originalKeyToUse = isStructuralNode
+      ? getFirstKeyCompat(node) || node.key
+      : getOriginalKeyCompat(node) || node.key;
+
+    const shouldSkipInPath = parentIsArrayRoot && /^\d+$/.test(originalKeyToUse || '');
+
+    // If node is NOT deleted and has a key, add its path to activeNodePaths
+    if (!node.deleted && originalKeyToUse && !shouldSkipInPath && !isRoot) {
+      activeNodePaths.add(JSON.stringify([...path, originalKeyToUse]));
+    }
+
+    const currentPath =
+      !isRoot && originalKeyToUse && !shouldSkipInPath ? [...path, originalKeyToUse] : path;
+
+    if (node.children) {
+      const childrenToProcess =
+        isRoot && node.type === 'array' && node.children.length > 0
+          ? [node.children[0]!]
+          : node.children;
+
+      const isArrayRoot = isRoot && node.type === 'array';
+      childrenToProcess.forEach((child) => {
+        const nextPath = node.key ? currentPath : [];
+        collectActiveNodes(child, nextPath, false, isArrayRoot);
+      });
+    }
+  };
+
+  collectActiveNodes(tree);
+
+  // Filter deletedPaths to exclude paths that correspond to active (restored) nodes
+  const filteredDeletedPaths = uniqueDeletedPaths.filter(
+    (deletedPath) => !activeNodePaths.has(JSON.stringify(deletedPath))
+  );
+
   // Deduplicate renamedKeys - keep only the last rename for each oldKey + path combination
   // This handles successive renames (e.g., age_object -> age -> foo should only keep age_object -> foo)
   const deduplicatedRenames: typeof renamedKeys = [];
@@ -154,7 +200,7 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     version: '1.0.0',
     rootType: tree.type,
     steps,
-    deletedPaths: uniqueDeletedPaths,
+    deletedPaths: filteredDeletedPaths, // Use filtered paths to exclude restored nodes
     renamedKeys: deduplicatedRenames,
     requiredTransforms,
     createdAt: new Date().toISOString(),
@@ -214,12 +260,8 @@ const applySingleRecipe = (
 ): any => {
   // 🟡 OPTIMIZATION: Use copy-on-write cloning for better performance
   // Build set of paths that will be modified
-  const modifiedPaths = buildModifiedPaths(
-    recipe.steps,
-    recipe.deletedPaths,
-    recipe.renamedKeys
-  );
-  
+  const modifiedPaths = buildModifiedPaths(recipe.steps, recipe.deletedPaths, recipe.renamedKeys);
+
   // Clone only the branches that will be modified
   const result = copyOnWriteClone(data, modifiedPaths);
 
@@ -597,7 +639,7 @@ const applyTransformAtPath = (
 
   // 🟢 OPTIMIZATION: Navigate to target in a single pass
   let current = obj;
-  
+
   for (let i = 0; i < path.length - 1; i++) {
     const segment = path[i];
     if (!segment || current[segment] === undefined) return;

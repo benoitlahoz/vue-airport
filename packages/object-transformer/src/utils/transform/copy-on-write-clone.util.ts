@@ -77,7 +77,7 @@ const parseISODate = (value: any): any => {
 
 /**
  * Copy-on-write clone: only clone paths that will be modified
- * 
+ *
  * @param obj - Object to clone
  * @param modifiedPaths - Set of paths that will be modified
  * @param currentPath - Current path during traversal (for internal use)
@@ -100,8 +100,8 @@ export const copyOnWriteClone = (
   const willBeModified = modifiedPaths.has(pathKey);
 
   // If this path won't be modified, check if any children will be
-  const hasModifiedChildren = Array.from(modifiedPaths).some((path) => 
-    path.startsWith(pathKey) && path !== pathKey
+  const hasModifiedChildren = Array.from(modifiedPaths).some(
+    (path) => path.startsWith(pathKey) && path !== pathKey
   );
 
   // If neither this path nor its children are modified, return as-is

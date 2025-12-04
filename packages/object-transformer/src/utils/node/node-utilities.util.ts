@@ -1,6 +1,11 @@
 import type { ObjectNodeData, ObjectNodeType } from '../../types';
 import { all, maybe } from 'vue-airport';
-import { getOriginalKey, isKeyModified, getKeyMetadata, markKeyAsModified } from './node-key-metadata.util';
+import {
+  getOriginalKey,
+  isKeyModified,
+  getKeyMetadata,
+  markKeyAsModified,
+} from './node-key-metadata.util';
 
 /**
  * Key Validation - Pure predicates and validation
@@ -77,14 +82,20 @@ export const handleRestoreConflict = (
 
     // Use the restoredNode's key as base to find alternatives (e.g., name -> name_1)
     const newKey = findUniqueKey(existingKeys, restoredNode.key!, 1);
+
+    // Store the CURRENT key as the original before renaming
+    // This is important for the recipe system to track the rename correctly
+    const conflictingMetadata = getKeyMetadata(conflictingNode);
+    const currentKey = conflictingNode.key;
+
+    // Update the node's key to the new unique name
     conflictingNode.key = newKey;
     markKeyAsModified(conflictingNode);
 
-    // If the conflicting node doesn't have an originalKey yet, set it now
-    const conflictingMetadata = getKeyMetadata(conflictingNode);
-    if (!conflictingMetadata.original) {
-      conflictingMetadata.original = restoredNode.key!;
-    }
+    // Set original to the CURRENT key (before the automatic rename)
+    // This ensures the recipe captures: "rename from 'name' to 'name_1'"
+    // instead of trying to use an older original key like 'name_object'
+    conflictingMetadata.original = currentKey;
   }
 };
 

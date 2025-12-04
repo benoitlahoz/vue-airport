@@ -58,9 +58,7 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
       if (!candidates) return null;
 
       // If node is provided, filter by type compatibility
-      const transform = node
-        ? candidates.find((t) => t.if(node))
-        : candidates[0];
+      const transform = node ? candidates.find((t) => t.if(node)) : candidates[0];
 
       if (!transform) return null;
 
