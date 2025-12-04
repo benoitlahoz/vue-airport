@@ -137,15 +137,18 @@ const cancelEdit = () => {
   padding: 0 0.5rem;
   font-size: 0.75rem;
   line-height: 1rem;
-  border: 1px solid var(--object-node-muted);
-  border-radius: 0.25rem;
-  background: transparent;
+  border: 1px solid var(--object-node-input-border);
+  border-radius: 0.375rem;
+  background-color: var(--object-node-input-bg);
   color: inherit;
   outline: none;
+  transition-property: border-color, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
 .node-key-input:focus {
-  border-color: var(--object-node-primary);
-  box-shadow: 0 0 0 1px var(--object-node-primary);
+  border-color: var(--object-node-input-ring);
+  box-shadow: 0 0 0 3px oklch(from var(--object-node-input-ring) l c h / 0.1);
 }
 </style>

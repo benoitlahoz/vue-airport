@@ -192,13 +192,19 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
 :root {
   --object-node-indent-width: 0.85rem;
   --object-node-row-gap: 0.5rem;
-  --object-node-row-my: 0.5rem;
+  --object-node-row-my: 0.25rem;
   --object-node-primary: oklch(0.6723 0.1606 244.9955);
   --object-node-primary-foreground: oklch(1 0 0);
   --object-node-muted: oklch(0.8422 0.0039 247.8581);
   --object-node-muted-foreground: oklch(0.5637 0.0078 247.9662);
-  --object-node-accent: oklch(0.9392 0.0166 250.8453);
+  --object-node-accent: oklch(0.9647 0.0078 247.8581);
   --object-node-accent-foreground: oklch(0.6723 0.1606 244.9955);
+
+  /* Input & Select variables (using accent colors) */
+  --object-node-input-border: var(--object-node-accent);
+  --object-node-input-bg: var(--object-node-accent);
+  --object-node-input-ring: var(--object-node-accent-foreground);
+  --object-node-input-ring-offset: var(--object-node-accent);
 }
 
 :root.dark {
@@ -206,8 +212,14 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
   --object-node-primary-foreground: oklch(1 0 0);
   --object-node-muted: oklch(0.3628 0.0138 256.8435);
   --object-node-muted-foreground: oklch(0.65 0.0128 248.5103);
-  --object-node-accent: oklch(0.1928 0.0331 242.5459);
+  --object-node-accent: oklch(0.2392 0.0166 250.8453);
   --object-node-accent-foreground: oklch(0.6692 0.1607 245.011);
+
+  /* Input & Select variables (using accent colors) */
+  --object-node-input-border: var(--object-node-accent);
+  --object-node-input-bg: var(--object-node-accent);
+  --object-node-input-ring: var(--object-node-accent-foreground);
+  --object-node-input-ring-offset: var(--object-node-accent);
 }
 
 /* Main container */
