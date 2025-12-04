@@ -90,7 +90,7 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
         @mouseleave="isHovered = false"
       >
         <!-- Colonne 1, Ligne 1: Chevron + Actions + Key -->
-        <div class="object-node-row">
+        <div class="object-node-row object-node-main-row">
           <div class="object-node-left-section">
             <!-- Chevron space (always reserved) -->
             <div class="object-node-chevron">
@@ -116,7 +116,7 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
         </div>
 
         <!-- Colonne 2, Ligne 1: Value + Transform select -->
-        <div class="object-node-right-section">
+        <div class="object-node-right-section object-node-main-right">
           <!-- Value (read-only) -->
           <span v-if="tree.type === 'array'" class="object-node-value-array">
             Array({{ tree.children?.length || 0 }})
@@ -218,16 +218,19 @@ const getChildKey = (child: ObjectNodeData, index: number) =>
   gap: 0;
 }
 
-.object-node-grid:hover .object-node-row,
-.object-node-grid:hover .object-node-right-section {
+.object-node-grid:hover .object-node-main-row,
+.object-node-grid:hover .object-node-main-right,
+.object-node-grid:hover .transform-spacer,
+.object-node-grid:hover .transform-item-content {
   background-color: oklch(from var(--object-node-primary) l c h / 0.1);
 }
 
-.object-node-grid:hover .object-node-row {
+.object-node-grid:hover .object-node-main-row,
+.object-node-grid:hover .transform-spacer {
   border-left: 2px solid var(--object-node-primary);
 }
 
-.object-node-grid.object-node-row-with-chevron:hover .object-node-row {
+.object-node-grid.object-node-row-with-chevron:hover .object-node-main-row {
   padding-left: 0.625rem;
 }
 

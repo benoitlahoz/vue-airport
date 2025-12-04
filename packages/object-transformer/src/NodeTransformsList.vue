@@ -46,8 +46,12 @@ const handleParamChange = () => {
 
 <template>
   <template v-if="node?.transforms.length">
-    <!-- Chaque transformation = 2 éléments de grille (col 1 vide, col 2 contenu) -->
-    <template v-for="(t, index) in node.transforms" :key="`${t.name}-${index}`">
+    <!-- Chaque transformation = wrapper avec display:contents contenant 2 éléments de grille -->
+    <div
+      v-for="(t, index) in node.transforms"
+      :key="`${t.name}-${index}`"
+      class="transform-row-wrapper"
+    >
       <!-- Colonne 1: Vide -->
       <div class="transform-spacer"></div>
 
@@ -96,12 +100,33 @@ const handleParamChange = () => {
           </div>
         </template>
       </div>
-    </template>
+    </div>
   </template>
 </template>
 
 <style>
 /* NodeTransformsList styles - using ObjectNode variables */
+
+/* Wrapper pour chaque ligne de transformation - display:contents pour participer à la grille parent */
+.transform-row-wrapper {
+  display: contents;
+}
+
+/* Mettre en valeur la valeur transformée quand sa ligne est hoverée */
+.transform-row-wrapper:hover .transform-value {
+  color: var(--object-node-primary-foreground);
+}
+
+.transform-spacer {
+  grid-column: 1;
+  padding-top: var(--object-node-row-my);
+  padding-bottom: var(--object-node-row-my);
+  padding-left: 0.375rem;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
 .transforms-list-wrapper {
   overflow-x: auto;
 }
@@ -112,27 +137,25 @@ const handleParamChange = () => {
 }
 
 .transform-item-content {
+  grid-column: 2;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border: 1px solid var(--object-node-muted);
-  border-radius: 0.375rem;
-  background-color: var(--object-node-accent);
-  transition-property: background-color;
+  align-items: center;
+  gap: var(--object-node-row-gap);
+  padding-top: var(--object-node-row-my);
+  padding-bottom: var(--object-node-row-my);
+  padding-right: 0.375rem;
+  transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
-  min-width: fit-content;
-}
-
-.transform-item-content:hover {
-  background-color: oklch(from var(--object-node-accent) calc(l * 0.98) c h);
 }
 
 .transform-value {
   color: var(--object-node-muted-foreground);
   font-size: 0.75rem;
   line-height: 1rem;
+  transition-property: color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
 .transform-controls {
@@ -157,18 +180,7 @@ const handleParamChange = () => {
     min-height: 1.5rem;
     padding-top: var(--object-node-row-my);
     padding-bottom: var(--object-node-row-my);
-    border-left-width: 2px;
-    border-left-color: transparent;
-    border-top: 0;
-    border-right: 0;
-    border-bottom: 0;
-    border-radius: 0;
     background-color: transparent;
-  }
-
-  .transform-item-content:hover {
-    background-color: oklch(from var(--object-node-primary) l c h / 0.1);
-    border-left-color: var(--object-node-primary);
   }
 
   .transform-value {
