@@ -157,6 +157,10 @@ const handleParamChange = () => {
   padding-bottom: var(--object-node-row-my);
   padding-right: 0.375rem;
   padding-left: 0.5rem;
+  background-color: transparent;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
 .transform-param-item {
