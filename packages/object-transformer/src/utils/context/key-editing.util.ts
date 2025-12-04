@@ -35,27 +35,11 @@ export function createKeyEditingMethods(context: KeyEditingContext) {
         // Check if we're restoring to original key
         const isRestoringToOriginal = node.originalKey === newKey;
 
-        console.log('[confirmEditKey] Rename attempt:', {
-          nodeKey: node.key,
-          newKey,
-          originalKey: node.originalKey,
-          firstKey: node.firstKey,
-          isRestoringToOriginal,
-        });
-
         // Find conflicting node (same key but different node)
         // Ignore deleted nodes in conflict detection
         const conflictingNode = parent.children.find(
           (c) => c !== node && c.key === newKey && !c.deleted
         );
-
-        if (conflictingNode) {
-          console.log('[confirmEditKey] Found conflicting node:', {
-            conflictKey: conflictingNode.key,
-            conflictOriginalKey: conflictingNode.originalKey,
-            conflictFirstKey: conflictingNode.firstKey,
-          });
-        }
 
         // Also check if there's a deleted node with this key
         // If we're renaming to a deleted node's key, we need to auto-rename the deleted node
@@ -116,11 +100,6 @@ export function createKeyEditingMethods(context: KeyEditingContext) {
             deletedNodeWithKey.keyModified = true;
             // Mark as auto-renamed to distinguish from user renames
             (deletedNodeWithKey as any).autoRenamed = true;
-
-            console.log('[confirmEditKey] Auto-renamed deleted node:', {
-              oldKey: newKey,
-              newKey: uniqueKey,
-            });
           }
 
           // Re-check for conflicts after renaming deleted node

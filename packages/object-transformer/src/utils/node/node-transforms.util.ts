@@ -32,22 +32,12 @@ export const applyNodeTransform = (
   const shouldChange =
     currentSelection && currentSelection !== '+' && currentSelection !== transformName;
 
-  console.log('[applyNodeTransform]', {
-    node: node.key,
-    transformName,
-    currentSelection,
-    shouldAdd,
-    shouldChange,
-    currentTransforms: node.transforms.map((t) => t.name),
-  });
-
   if (!shouldAdd && !shouldChange) {
     return;
   }
 
   // Cleanup split nodes if changing transform
   if (shouldChange && node.parent) {
-    console.log('[applyNodeTransform] Cleaning up split nodes for', node.key);
     cleanupSplitNodes(node, node.parent);
   }
 
@@ -59,14 +49,8 @@ export const applyNodeTransform = (
   if (shouldAdd) {
     node.transforms.push(entry);
   } else {
-    console.log('[applyNodeTransform] Replacing transforms with', entry.name);
     node.transforms = [entry];
   }
-
-  console.log(
-    '[applyNodeTransform] After update:',
-    node.transforms.map((t) => t.name)
-  );
 
   desk.propagateTransform(node);
   if (node.parent) desk.propagateTransform(node.parent);
@@ -131,19 +115,9 @@ const cleanupSplitNodes = (node: ObjectNodeData, parent: ObjectNodeData): void =
     (child) => child !== node && child.splitSourceId === node.id
   );
 
-  console.log('[cleanupSplitNodes]', {
-    sourceNode: node.key,
-    sourceId: node.id,
-    parentChildren: parent.children!.map((c) => ({ key: c.key, splitSourceId: c.splitSourceId })),
-    hasSplitNodes,
-  });
-
   if (hasSplitNodes) {
-    const beforeCount = parent.children!.length;
     parent.children = parent.children!.filter(
       (child) => child === node || child.splitSourceId !== node.id
     );
-    const afterCount = parent.children!.length;
-    console.log('[cleanupSplitNodes] Removed', beforeCount - afterCount, 'split nodes');
   }
 };

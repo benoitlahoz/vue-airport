@@ -1,6 +1,4 @@
 import type { ObjectNodeData, ObjectTransformerDesk, Transform } from '../../types';
-import { ObjectTransformerDeskKey } from '../../types';
-import { useCheckIn } from 'vue-airport';
 import { isStructuralResult } from '../type-guards.util';
 import { buildNodeTree } from '../node/node-builder.util';
 import { pipe, not } from 'vue-airport';

@@ -81,19 +81,6 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
         // 2. Any of its ancestors is structural (it's inside a structural result)
         const isStructuralResult = isStructuralNode || ancestorIsStructural;
 
-        console.log('[buildRecipe] Tracking rename:', {
-          path: originalPath,
-          oldKey,
-          newKey: node.key,
-          nodeFirstKey: node.firstKey,
-          nodeOriginalKey: node.originalKey,
-          splitSourceId: node.splitSourceId,
-          isStructuralNode,
-          ancestorIsStructural,
-          isStructuralResult,
-          deleted: node.deleted,
-        });
-
         renamedKeys.push({
           path: originalPath, // Parent path using ORIGINAL keys
           oldKey: oldKey, // Original key (firstKey for structural, originalKey for regular)
