@@ -7,6 +7,17 @@ import type {
 } from '../../types';
 import { CURRENT_RECIPE_VERSION } from '../../types';
 import { getStructuralTransformHandler } from './structural-transform-handlers.util';
+import {
+  getOriginalKeyCompat,
+  getFirstKeyCompat,
+  isKeyModifiedCompat,
+  getKeyForDeletion,
+} from '../node/node-key-metadata.util';
+import {
+  copyOnWriteClone,
+  buildModifiedPaths,
+  deepClone as deepCloneFallback,
+} from './copy-on-write-clone.util';
 
 /**
  * Build a recipe from the current tree state
@@ -33,8 +44,8 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     // For source nodes (from original data): use originalKey || key
     const isStructuralNode = !!node.splitSourceId;
     const originalKeyToUse = isStructuralNode
-      ? node.firstKey || node.key // Structural node: use firstKey
-      : node.originalKey || node.key; // Source node: use originalKey
+      ? getFirstKeyCompat(node) || node.key // Structural node: use firstKey
+      : getOriginalKeyCompat(node) || node.key; // Source node: use originalKey
 
     // For array items, skip numeric indices in paths (they're templates)
     const shouldSkipInPath = parentIsArrayRoot && /^\d+$/.test(originalKeyToUse || '');
@@ -63,8 +74,7 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     // - If the node was auto-renamed to avoid conflicts (autoRenamed), use ORIGINAL key
     // - Otherwise, use ORIGINAL key (the key it had in the source data)
     if (node.deleted && !shouldSkipInPath) {
-      const isAutoRenamed = (node as any).autoRenamed;
-      const keyToDelete = node.keyModified && !isAutoRenamed ? node.key : originalKeyToUse;
+      const keyToDelete = getKeyForDeletion(node);
       if (keyToDelete) {
         deletedPaths.push([...originalPath, keyToDelete]);
       }
@@ -73,8 +83,8 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
     // Track renamed keys - store parent path using ORIGINAL keys
     // Skip deleted nodes - they don't need rename tracking in the recipe
     // since they're going to be deleted anyway
-    if (node.keyModified && node.key && !shouldSkipInPath && !node.deleted) {
-      const oldKey = node.firstKey || node.originalKey;
+    if (isKeyModifiedCompat(node) && node.key && !shouldSkipInPath && !node.deleted) {
+      const oldKey = getFirstKeyCompat(node) || getOriginalKeyCompat(node);
       if (oldKey && oldKey !== node.key) {
         // A node is a structural result if:
         // 1. It has splitSourceId (it was created by a structural transform), OR
@@ -145,34 +155,9 @@ export const buildRecipe = (tree: ObjectNodeData): TransformRecipe => {
 
 /**
  * Deep clone that preserves Date objects and parses ISO date strings
+ * 🟡 DEPRECATED: Kept for backward compatibility, use copyOnWriteClone for better performance
  */
-const deepClone = (obj: any): any => {
-  if (obj === null || typeof obj !== 'object') {
-    // Try to parse ISO date strings into Date objects
-    if (typeof obj === 'string') {
-      // More permissive ISO 8601 date detection
-      const isoDateRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
-      if (isoDateRegex.test(obj)) {
-        const parsed = new Date(obj);
-        // Check if the parsed date is valid
-        if (!isNaN(parsed.getTime())) {
-          return parsed;
-        }
-      }
-    }
-    return obj;
-  }
-  if (obj instanceof Date) return new Date(obj.getTime());
-  if (Array.isArray(obj)) return obj.map(deepClone);
-
-  const cloned: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      cloned[key] = deepClone(obj[key]);
-    }
-  }
-  return cloned;
-};
+const deepClone = deepCloneFallback;
 
 /**
  * Apply a recipe to new data
@@ -217,15 +202,42 @@ const applySingleRecipe = (
   availableTransforms: Transform[],
   desk?: ObjectTransformerContext
 ): any => {
-  // Clone the data to avoid mutations - preserve Dates
-  const result = deepClone(data);
+  // 🟡 OPTIMIZATION: Use copy-on-write cloning for better performance
+  // Build set of paths that will be modified
+  const modifiedPaths = buildModifiedPaths(
+    recipe.steps,
+    recipe.deletedPaths,
+    recipe.renamedKeys
+  );
+  
+  // Clone only the branches that will be modified
+  const result = copyOnWriteClone(data, modifiedPaths);
+
+  // 🟢 OPTIMIZATION: Build transform index once instead of searching for each step
+  const transformsByName = new Map<string, Transform[]>();
+  for (const transform of availableTransforms) {
+    const existing = transformsByName.get(transform.name);
+    if (existing) {
+      existing.push(transform);
+    } else {
+      transformsByName.set(transform.name, [transform]);
+    }
+  }
 
   // Track applied renames to translate paths from original to current keys
   const pathTranslator: Map<string, string> = new Map(); // Maps "original.path" -> "current.path"
 
+  // 🟢 OPTIMIZATION: Cache translated paths to avoid redundant calculations
+  const translatedPathCache = new Map<string, string[]>();
+
   // Helper to translate a path from original keys to current keys
   const translatePath = (originalPath: string[]): string[] => {
     if (originalPath.length === 0) return [];
+
+    // 🟢 OPTIMIZATION: Check cache first
+    const cacheKey = originalPath.join('.');
+    const cached = translatedPathCache.get(cacheKey);
+    if (cached) return cached;
 
     // Build path step by step, checking renames at each level
     const translatedPath: string[] = [];
@@ -238,6 +250,9 @@ const applySingleRecipe = (
       const renamedKey = pathTranslator.get(`${pathKey}|${originalKey}`);
       translatedPath.push(renamedKey || originalKey);
     }
+
+    // 🟢 OPTIMIZATION: Store in cache
+    translatedPathCache.set(cacheKey, translatedPath);
     return translatedPath;
   };
 
@@ -245,63 +260,140 @@ const applySingleRecipe = (
   const sourceRenames = recipe.renamedKeys.filter((r) => !r.isStructuralResult);
   const structuralRenames = recipe.renamedKeys.filter((r) => r.isStructuralResult);
 
-  // Apply source renames first (before transforms)
-  sourceRenames.sort((a, b) => a.path.length - b.path.length);
+  // 🟡 OPTIMIZATION: Single-pass application combining all operations
+  // Group operations by depth for efficient processing
+  interface Operation {
+    type: 'sourceRename' | 'step' | 'deletion' | 'structuralRename';
+    path: string[];
+    data?: any;
+    depth: number;
+  }
+
+  const operations: Operation[] = [];
+
+  // Add source renames (depth-first)
   sourceRenames.forEach(({ path, oldKey, newKey }) => {
-    const translatedPath = translatePath(path);
-    renameKeyAtPath(result, translatedPath, oldKey, newKey);
-    // Track this rename for path translation
-    pathTranslator.set(`${path.join('.')}|${oldKey}`, newKey);
-  });
-
-  // Apply steps using translated paths
-  recipe.steps.forEach((step) => {
-    // Translate the path from original keys to current keys
-    const translatedPath = translatePath(step.path);
-
-    // Find transform that matches both name AND is compatible with the original type
-    const mockNode = { type: step.originalType, path: translatedPath };
-
-    const transform = availableTransforms.find((t) => {
-      if (t.name !== step.transformName) return false;
-      if (t.if && !t.if(mockNode as any)) return false;
-      return true;
+    operations.push({
+      type: 'sourceRename',
+      path,
+      data: { oldKey, newKey },
+      depth: path.length,
     });
-
-    if (!transform) {
-      if (import.meta.env.DEV) {
-        console.warn(
-          `Transform "${step.transformName}" not found for type "${step.originalType}" at path ${step.path.join('.')}`
-        );
-      }
-      return;
-    }
-
-    try {
-      applyTransformAtPath(result, translatedPath, transform, step.params, desk);
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error(
-          `Error applying transform "${step.transformName}" at path ${translatedPath.join('.')}:`,
-          error
-        );
-      }
-    }
   });
 
-  // Apply deletions using translated paths
+  // Add steps
+  recipe.steps.forEach((step) => {
+    operations.push({
+      type: 'step',
+      path: step.path,
+      data: step,
+      depth: step.path.length,
+    });
+  });
+
+  // Add deletions
   recipe.deletedPaths.forEach((path) => {
-    const translatedPath = translatePath(path);
-    deleteAtPath(result, translatedPath);
+    operations.push({
+      type: 'deletion',
+      path,
+      depth: path.length,
+    });
   });
 
-  // Apply structural renames AFTER transforms
-  structuralRenames.sort((a, b) => a.path.length - b.path.length);
+  // Add structural renames (depth-first)
   structuralRenames.forEach(({ path, oldKey, newKey }) => {
-    const translatedPath = translatePath(path);
-    renameKeyAtPath(result, translatedPath, oldKey, newKey);
-    // Track this rename for subsequent path translations
-    pathTranslator.set(`${path.join('.')}|${oldKey}`, newKey);
+    operations.push({
+      type: 'structuralRename',
+      path,
+      data: { oldKey, newKey },
+      depth: path.length,
+    });
+  });
+
+  // Sort operations: source renames → steps → deletions → structural renames
+  // Within each type, sort by depth (shallow to deep)
+  const typeOrder = {
+    sourceRename: 0,
+    step: 1,
+    deletion: 2,
+    structuralRename: 3,
+  };
+
+  operations.sort((a, b) => {
+    // First by type
+    if (typeOrder[a.type] !== typeOrder[b.type]) {
+      return typeOrder[a.type] - typeOrder[b.type];
+    }
+    // Then by depth
+    return a.depth - b.depth;
+  });
+
+  // Execute operations in order
+  operations.forEach((op) => {
+    const translatedPath = translatePath(op.path);
+
+    switch (op.type) {
+      case 'sourceRename': {
+        const { oldKey, newKey } = op.data;
+        renameKeyAtPath(result, translatedPath, oldKey, newKey);
+        pathTranslator.set(`${op.path.join('.')}|${oldKey}`, newKey);
+        translatedPathCache.clear();
+        break;
+      }
+
+      case 'step': {
+        const step = op.data;
+        const candidates = transformsByName.get(step.transformName);
+        if (!candidates) {
+          if (import.meta.env.DEV) {
+            console.warn(
+              `Transform "${step.transformName}" not found at path ${op.path.join('.')}`
+            );
+          }
+          break;
+        }
+
+        const mockNode = { type: step.originalType, path: translatedPath };
+        const transform = candidates.find((t) => {
+          if (t.if && !t.if(mockNode as any)) return false;
+          return true;
+        });
+
+        if (!transform) {
+          if (import.meta.env.DEV) {
+            console.warn(
+              `Transform "${step.transformName}" not found for type "${step.originalType}" at path ${op.path.join('.')}`
+            );
+          }
+          break;
+        }
+
+        try {
+          applyTransformAtPath(result, translatedPath, transform, step.params, desk);
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.error(
+              `Error applying transform "${step.transformName}" at path ${translatedPath.join('.')}:`,
+              error
+            );
+          }
+        }
+        break;
+      }
+
+      case 'deletion': {
+        deleteAtPath(result, translatedPath);
+        break;
+      }
+
+      case 'structuralRename': {
+        const { oldKey, newKey } = op.data;
+        renameKeyAtPath(result, translatedPath, oldKey, newKey);
+        pathTranslator.set(`${op.path.join('.')}|${oldKey}`, newKey);
+        translatedPathCache.clear();
+        break;
+      }
+    }
   });
 
   return result;
@@ -429,6 +521,7 @@ export const validateRecipeTransforms = (
 const deleteAtPath = (obj: any, path: string[]): void => {
   if (path.length === 0) return;
 
+  // 🟢 OPTIMIZATION: Navigate directly to parent
   let current = obj;
   for (let i = 0; i < path.length - 1; i++) {
     const segment = path[i];
@@ -454,6 +547,7 @@ const deleteAtPath = (obj: any, path: string[]): void => {
  * Helper: Rename a key at a specific path
  */
 const renameKeyAtPath = (obj: any, path: string[], oldKey: string, newKey: string): void => {
+  // 🟢 OPTIMIZATION: Handle root-level rename directly
   if (path.length === 0) {
     if (obj[oldKey] !== undefined) {
       obj[newKey] = obj[oldKey];
@@ -463,6 +557,7 @@ const renameKeyAtPath = (obj: any, path: string[], oldKey: string, newKey: strin
     return;
   }
 
+  // 🟢 OPTIMIZATION: Navigate directly to target
   let current = obj;
   for (const segment of path) {
     if (current[segment] === undefined) return;
@@ -490,39 +585,36 @@ const applyTransformAtPath = (
     return;
   }
 
+  // 🟢 OPTIMIZATION: Navigate to target in a single pass
   let current = obj;
-  const parentPath: string[] = [];
-
+  
   for (let i = 0; i < path.length - 1; i++) {
     const segment = path[i];
     if (!segment || current[segment] === undefined) return;
-    parentPath.push(segment);
     current = current[segment];
   }
 
   const lastKey = path[path.length - 1];
-  if (!lastKey) return;
+  if (!lastKey || current[lastKey] === undefined) return;
 
-  if (current[lastKey] !== undefined) {
-    const inputValue = current[lastKey];
-    const result = transform.fn(inputValue, ...params);
+  const inputValue = current[lastKey];
+  const result = transform.fn(inputValue, ...params);
 
-    // Handle structural transforms using registered handlers (same as UI)
-    if (result?.__structuralChange) {
-      const handler = getStructuralTransformHandler(result.action, desk);
+  // Handle structural transforms using registered handlers (same as UI)
+  if (result?.__structuralChange) {
+    const handler = getStructuralTransformHandler(result.action, desk);
 
-      if (handler) {
-        handler(current, lastKey, result);
-      } else {
-        console.warn(
-          `Structural transform action "${result.action}" not registered. ` +
-            `Use registerStructuralTransformHandler to add support for this action.`
-        );
-      }
+    if (handler) {
+      handler(current, lastKey, result);
     } else {
-      // Non-structural transform: simply replace the value (same as UI)
-      current[lastKey] = result;
+      console.warn(
+        `Structural transform action "${result.action}" not registered. ` +
+          `Use registerStructuralTransformHandler to add support for this action.`
+      );
     }
+  } else {
+    // Non-structural transform: simply replace the value (same as UI)
+    current[lastKey] = result;
   }
 };
 
@@ -559,7 +651,9 @@ export const applyRecipeToTree = (
     let current = root;
     for (const segment of path) {
       if (!current.children) return null;
-      const child = current.children.find((c) => c.key === segment || c.originalKey === segment);
+      const child = current.children.find(
+        (c) => c.key === segment || getOriginalKeyCompat(c) === segment
+      );
       if (!child) return null;
       current = child;
     }
@@ -594,10 +688,16 @@ export const applyRecipeToTree = (
     const parentNode = path.length === 0 ? tree : findNodeByPath(tree, path);
     if (!parentNode || !parentNode.children) return;
 
-    const child = parentNode.children.find((c) => c.key === oldKey || c.firstKey === oldKey);
+    const child = parentNode.children.find(
+      (c) => c.key === oldKey || getFirstKeyCompat(c) === oldKey
+    );
     if (child) {
       child.key = newKey;
-      child.keyModified = true;
+      // 🟡 OPTIMIZATION: Use new metadata structure
+      if (!child.keyMetadata) {
+        child.keyMetadata = {};
+      }
+      child.keyMetadata.modified = true;
     }
   });
 

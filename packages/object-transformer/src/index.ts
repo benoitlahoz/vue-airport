@@ -7,9 +7,11 @@ export * from './object-node-slot.types';
 // Core utilities
 export * from './utils/type-guards.util';
 export * from './utils/node/node-builder.util';
+export * from './utils/node/node-key-metadata.util';
 export * from './utils/transform/structural-transform-handlers.util';
 export * from './utils/transform/transform-propagation.util';
 export * from './utils/transform/transform-recipe.util';
+export * from './utils/transform/copy-on-write-clone.util';
 export * from './utils/node/node-utilities.util';
 export * from './utils/node/node-transforms.util';
 export * from './utils/node/node-editing.util';

@@ -3,6 +3,7 @@ import { isStructuralResult } from '../type-guards.util';
 import { buildNodeTree } from '../node/node-builder.util';
 import { pipe, not } from 'vue-airport';
 import { isMultiPartAction } from './structural-transform-handlers.util';
+import { initKeyMetadata, isKeyModifiedCompat } from '../node/node-key-metadata.util';
 
 /**
  * Transform Application - Pure functions for applying transforms
@@ -130,19 +131,23 @@ const createSplitNodes = (
       existing.value = part;
       existing.type = typeof part as any;
 
+      // 🟡 OPTIMIZATION: Use new metadata structure
       // firstKey never changes - it's the key at first creation
       // If not set yet, set it now (for backward compatibility)
-      if (!existing.firstKey) {
-        existing.firstKey = existing.key || key;
+      if (!existing.keyMetadata?.original) {
+        initKeyMetadata(existing, existing.key || key);
       }
 
       // originalKey = what the key WOULD be if not manually renamed
       // Update it to reflect new parent name
-      existing.originalKey = key;
+      if (!existing.keyMetadata) {
+        existing.keyMetadata = {};
+      }
+      existing.keyMetadata.original = key;
 
       // IMPORTANT: Only update key if NOT manually renamed
       // This preserves "firstname", "lastname" etc.
-      if (!existing.keyModified) {
+      if (!isKeyModifiedCompat(existing)) {
         existing.key = key;
       }
 
@@ -153,9 +158,8 @@ const createSplitNodes = (
     // Create new node
     const node = buildNodeTree(part, key, parent);
 
-    // IMPORTANT: Set originalKey and firstKey on creation
-    node.originalKey = key;
-    node.firstKey = key; // The very first key, never changes
+    // 🟡 OPTIMIZATION: Use new metadata structure
+    initKeyMetadata(node, key);
     // Track the source node and index for reliable matching
     if (sourceNodeId !== undefined) {
       node.splitSourceId = sourceNodeId;
