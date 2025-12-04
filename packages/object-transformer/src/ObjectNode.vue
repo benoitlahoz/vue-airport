@@ -14,7 +14,7 @@ import {
   ObjectTransformerDeskKey,
 } from '.';
 import { Separator } from './components/ui/separator';
-import { isPrimitive as isPrimitiveType, formatValue } from '.';
+import { formatValue } from '.';
 import { cn } from './lib/utils';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
@@ -50,7 +50,6 @@ const nodeId = computed(() => tree.value.id);
 
 // State
 const isOpen = computed(() => tree.value.isOpen ?? true);
-const isPrimitive = computed(() => isPrimitiveType(tree.value.type));
 const editingKey = computed(() => deskWithContext.editingNode.value === tree.value);
 const isHovered = ref(false);
 const inputFieldElement = ref<any>(null);
