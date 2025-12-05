@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useCheckIn } from 'vue-airport';
 import type { ObjectNodeData, ObjectTransformerContext } from '.';
 import { ObjectTransformerDeskKey } from '.';
 import { Button } from './components/ui/button';
-import { Copy, Check } from 'lucide-vue-next';
+import { Copy, Check, Loader2, Play } from 'lucide-vue-next';
 
 interface Props {
   class?: string;
@@ -18,6 +18,31 @@ const { checkIn } = useCheckIn<ObjectNodeData, ObjectTransformerContext>();
 const { desk } = checkIn(ObjectTransformerDeskKey);
 
 const isCopied = ref(false);
+const isGenerating = ref(false);
+const progress = ref(0);
+const itemsProcessed = ref(0);
+const totalItems = ref(0);
+const previewCache = ref<any>(null);
+const needsRegeneration = ref(true);
+
+// Watch for changes that require preview regeneration
+watch(
+  () => desk?.recipe.value,
+  () => {
+    needsRegeneration.value = true;
+    previewCache.value = null;
+  },
+  { deep: true }
+);
+
+watch(
+  () => desk?.originalData.value,
+  () => {
+    needsRegeneration.value = true;
+    previewCache.value = null;
+  },
+  { deep: true }
+);
 
 // Fonction récursive pour construire la valeur finale avec support des transformations structurelles imbriquées
 const buildFinalValue = (node: ObjectNodeData): any => {
@@ -74,6 +99,45 @@ const applyNonStructuralTransforms = (value: any, transforms: any[] | undefined)
   return result;
 };
 
+// Generate preview with progress for large datasets
+async function generateLargePreview(data: any[], recipe: any) {
+  if (isGenerating.value) return;
+
+  isGenerating.value = true;
+  progress.value = 0;
+  totalItems.value = data.length;
+  itemsProcessed.value = 0;
+
+  const result: any[] = [];
+  const chunkSize = 100;
+
+  for (let i = 0; i < data.length; i += chunkSize) {
+    const chunk = data.slice(i, i + chunkSize);
+    const transformed = chunk.map((item) => desk!.applyRecipe(item, recipe));
+    result.push(...transformed);
+
+    itemsProcessed.value = Math.min(i + chunkSize, data.length);
+    progress.value = (itemsProcessed.value / totalItems.value) * 100;
+
+    // Let the browser breathe
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  previewCache.value = result;
+  isGenerating.value = false;
+  needsRegeneration.value = false;
+}
+
+// Manual generation trigger
+async function generatePreview() {
+  if (!desk || !Array.isArray(desk.originalData.value)) return;
+
+  const data = desk.originalData.value;
+  const recipe = desk.recipe.value;
+
+  await generateLargePreview(data, recipe);
+}
+
 const finalObject = computed(() => {
   if (!desk) return null;
 
@@ -81,13 +145,24 @@ const finalObject = computed(() => {
   const currentTree = desk.tree.value;
 
   // IMPORTANT: Access recipe to create dependency on key changes
-  // The recipe includes renamed keys, so when keys change, recipe changes, and this computed recalculates
   void desk.recipe.value;
 
-  // En mode model, appliquer la recipe à tous les objets de l'array
+  // En mode model avec lazy generation
   if (desk.mode.value === 'model' && Array.isArray(desk.originalData.value)) {
-    const recipe = desk.recipe.value;
-    return desk.originalData.value.map((item) => desk.applyRecipe(item, recipe));
+    // Return cached preview if available
+    if (previewCache.value && !needsRegeneration.value) {
+      return previewCache.value;
+    }
+
+    // For small datasets (< 500 items), generate synchronously
+    const data = desk.originalData.value;
+    if (data.length < 500) {
+      const recipe = desk.recipe.value;
+      return data.map((item) => desk.applyRecipe(item, recipe));
+    }
+
+    // For large datasets, return empty until manual generation
+    return null;
   }
 
   // En mode object, construire récursivement depuis l'arbre
@@ -111,6 +186,15 @@ const formattedJson = computed(() => {
   }
 });
 
+const showGenerateButton = computed(() => {
+  return (
+    desk?.mode.value === 'model' &&
+    Array.isArray(desk?.originalData.value) &&
+    desk.originalData.value.length >= 500 &&
+    (!previewCache.value || needsRegeneration.value)
+  );
+});
+
 const copyToClipboard = async () => {
   try {
     await navigator.clipboard.writeText(formattedJson.value);
@@ -130,7 +214,9 @@ const copyToClipboard = async () => {
     class="relative group flex-1 min-h-0"
     :class="props.class"
   >
+    <!-- Copy button -->
     <Button
+      v-if="!showGenerateButton"
       size="icon"
       variant="ghost"
       class="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -140,8 +226,137 @@ const copyToClipboard = async () => {
       <Check v-if="isCopied" class="h-3.5 w-3.5 text-primary" />
       <Copy v-else class="h-3.5 w-3.5" />
     </Button>
+
+    <!-- Generate button for large datasets -->
+    <div v-if="showGenerateButton" class="preview-generate-placeholder">
+      <div class="preview-generate-content">
+        <Play class="preview-generate-icon" />
+        <h3 class="preview-generate-title">Large Dataset Preview</h3>
+        <p class="preview-generate-text">
+          {{ desk?.originalData.value?.length.toLocaleString() }} items detected
+        </p>
+        <Button @click="generatePreview" class="preview-generate-button"> Generate Preview </Button>
+      </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div v-if="isGenerating" class="preview-loading-overlay">
+      <div class="preview-loading-content">
+        <Loader2 class="preview-loading-spinner" />
+        <div class="preview-loading-text">
+          Generating preview... {{ itemsProcessed.toLocaleString() }} /
+          {{ totalItems.toLocaleString() }}
+        </div>
+        <!-- Custom progress bar -->
+        <div class="preview-progress-bar">
+          <div class="preview-progress-fill" :style="{ width: `${progress}%` }" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview content -->
     <pre
+      v-show="!showGenerateButton"
       class="text-xs bg-muted p-3 rounded overflow-x-auto overflow-y-auto h-full whitespace-pre-wrap wrap-break-word"
     ><code>{{ formattedJson }}</code></pre>
   </div>
 </template>
+
+<style scoped>
+.preview-generate-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: var(--color-muted);
+  border-radius: 0.375rem;
+}
+
+.preview-generate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.preview-generate-icon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-primary);
+  opacity: 0.8;
+}
+
+.preview-generate-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.preview-generate-text {
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+  margin: 0;
+}
+
+.preview-generate-button {
+  margin-top: 0.5rem;
+}
+
+.preview-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--color-background-rgb, 255, 255, 255), 0.95);
+  backdrop-filter: blur(4px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.preview-loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  color: var(--color-primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.preview-loading-text {
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+}
+
+.preview-progress-bar {
+  width: 16rem;
+  height: 0.5rem;
+  background: var(--color-muted);
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.preview-progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 9999px;
+  transition: width 0.3s ease-out;
+}
+</style>
