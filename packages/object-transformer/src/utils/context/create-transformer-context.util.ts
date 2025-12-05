@@ -122,7 +122,7 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
     if (!Array.isArray(originalDataRef.value)) return [];
 
     // Force reactivity by accessing tree.value
-    // This ensures the computed re-runs when the tree changes  
+    // This ensures the computed re-runs when the tree changes
     const currentTree = tree.value;
     if (!currentTree) return analyzeArrayDifferences(originalDataRef.value);
 
