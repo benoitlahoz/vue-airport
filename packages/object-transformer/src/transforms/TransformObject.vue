@@ -9,7 +9,7 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 const transforms: Transform[] = [
   {
     name: 'Pick Keys',
-    if: (node) => node.type === 'object',
+    applicableTo: ['object'],
     params: [{ key: 'keys', label: 'Keys (comma-separated)', type: 'text', default: '' }],
     fn: (v: any, keys: string) => {
       if (typeof v !== 'object' || v === null) return v;
@@ -23,7 +23,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Omit Keys',
-    if: (node) => node.type === 'object',
+    applicableTo: ['object'],
     params: [{ key: 'keys', label: 'Keys (comma-separated)', type: 'text', default: '' }],
     fn: (v: any, keys: string) => {
       if (typeof v !== 'object' || v === null) return v;
@@ -35,7 +35,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'To String',
-    if: (node) => node.type === 'object',
+    applicableTo: ['object'],
     fn: (v: any) => {
       // Safety check: only stringify objects
       if (typeof v !== 'object' || v === null || Array.isArray(v)) {

@@ -1,5 +1,6 @@
 import type { Ref } from 'vue';
 import { triggerRef } from 'vue';
+import { maybe, when } from 'vue-airport';
 import type { ObjectNodeData, Transform } from '../../types';
 import {
   createPropagateTransform,
@@ -28,6 +29,18 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
     }
   };
 
+  // Helper function to check if a transform is applicable to a node
+  const isTransformApplicable = (transform: Transform, node: ObjectNodeData): boolean => {
+    // Check applicableTo first (declarative, more performant)
+    const checkApplicableTo = (t: Transform) => t.applicableTo?.includes(node.type as any) ?? null;
+
+    // Fall back to if check for advanced conditions
+    const checkIf = (t: Transform) => t.if?.(node) ?? null;
+
+    // Try applicableTo, then if, default to true if neither exists
+    return maybe(checkApplicableTo, null)(transform) ?? maybe(checkIf, null)(transform) ?? true;
+  };
+
   return {
     addTransforms(...newTransforms: Transform[]) {
       context.transforms.value.push(...newTransforms);
@@ -42,7 +55,7 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
 
       // If node is provided, filter by type compatibility
       if (node) {
-        return candidates.find((t) => t.if(node));
+        return candidates.find((t) => isTransformApplicable(t, node));
       }
       return candidates[0];
     },
@@ -58,7 +71,9 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
       if (!candidates) return null;
 
       // If node is provided, filter by type compatibility
-      const transform = node ? candidates.find((t) => t.if(node)) : candidates[0];
+      const transform = node
+        ? candidates.find((t) => isTransformApplicable(t, node))
+        : candidates[0];
 
       if (!transform) return null;
 

@@ -61,7 +61,7 @@ export const applyTransform = (
 /**
  * Apply a structural transform result
  *
- * Handles split, arrayToProperties, and toObject actions
+ * Handles split, arrayToProperties, toObject, and conditionalBranch actions
  */
 const applyStructuralTransform = (data: any, path: Path, result: any): any => {
   const action = result.action;
@@ -73,6 +73,8 @@ const applyStructuralTransform = (data: any, path: Path, result: any): any => {
       return applyArrayToProperties(data, path, result);
     case 'toObject':
       return applyToObject(data, path, result);
+    case 'conditionalBranch':
+      return applyConditionalBranch(data, path, result);
     default:
       if (import.meta.env.DEV) {
         console.warn(`Unknown structural transform action: ${action}`);
@@ -207,7 +209,49 @@ const applyToObject = (data: any, path: Path, result: any): any => {
     // Keep source
     return { ...parent, ...newProps };
   });
-}; /**
+};
+
+/**
+ * Apply conditionalBranch structural transform
+ * Creates two sibling properties: key_if and key_else based on condition result
+ */
+const applyConditionalBranch = (data: any, path: Path, result: any): any => {
+  if (result.value === undefined) {
+    return data;
+  }
+
+  // Navigate to parent
+  if (path.length === 0) {
+    // Cannot branch at root
+    return data;
+  }
+
+  const parentPath = path.slice(0, -1);
+  const lastKey = path[path.length - 1];
+
+  return updateAt(data, parentPath, (parent) => {
+    if (!parent || typeof parent !== 'object') {
+      return parent;
+    }
+
+    // Create two branches based on condition result
+    const newProps: Record<string, any> = {
+      [`${lastKey}_if`]: result.value,
+      [`${lastKey}_else`]: result.value,
+    };
+
+    // Remove source if specified
+    if (result.removeSource) {
+      const { [lastKey]: _, ...rest } = parent;
+      return { ...rest, ...newProps };
+    }
+
+    // Keep source
+    return { ...parent, ...newProps };
+  });
+};
+
+/**
  * Apply a rename operation
  *
  * Renames a key at the specified path

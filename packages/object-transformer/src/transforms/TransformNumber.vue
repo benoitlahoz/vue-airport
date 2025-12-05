@@ -9,7 +9,7 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 const transforms: Transform[] = [
   {
     name: 'Add',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     params: [{ key: 'amount', label: 'Amount', type: 'number', default: 1 }],
     fn: (v: any, amount: number) => {
       if (typeof v !== 'number') return v;
@@ -19,7 +19,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Subtract',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     params: [{ key: 'amount', label: 'Amount', type: 'number', default: 1 }],
     fn: (v: any, amount: number) => {
       if (typeof v !== 'number') return v;
@@ -29,7 +29,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Multiply',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     params: [{ key: 'factor', label: 'Factor', type: 'number', default: 2 }],
     fn: (v: any, factor: number) => {
       if (typeof v !== 'number') return v;
@@ -39,7 +39,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Divide',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     params: [{ key: 'divisor', label: 'Divisor', type: 'number', default: 2 }],
     fn: (v: any, divisor: number) => {
       if (typeof v !== 'number') return v;
@@ -49,32 +49,32 @@ const transforms: Transform[] = [
   },
   {
     name: 'Round',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     fn: (v: any) => (typeof v === 'number' ? Math.round(v) : v),
   },
   {
     name: 'Ceil',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     fn: (v: any) => (typeof v === 'number' ? Math.ceil(v) : v),
   },
   {
     name: 'Floor',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     fn: (v: any) => (typeof v === 'number' ? Math.floor(v) : v),
   },
   {
     name: 'Absolute',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     fn: (v: any) => (typeof v === 'number' ? Math.abs(v) : v),
   },
   {
     name: 'Negate',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     fn: (v: any) => (typeof v === 'number' ? -v : v),
   },
   {
     name: 'Power',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     params: [{ key: 'exponent', label: 'Exponent', type: 'number', default: 2 }],
     fn: (v: any, exponent: number) => {
       if (typeof v !== 'number') return v;
@@ -84,7 +84,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Modulo',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     params: [{ key: 'modulus', label: 'Modulus', type: 'number', default: 2 }],
     fn: (v: any, modulus: number) => {
       if (typeof v !== 'number') return v;
@@ -94,12 +94,12 @@ const transforms: Transform[] = [
   },
   {
     name: 'To Date',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     fn: (v: any) => (typeof v === 'number' ? new Date(v) : v),
   },
   {
     name: 'To String',
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     fn: (v: any) => {
       // Safety check: convert numbers with proper formatting
       if (typeof v !== 'number') {
@@ -111,7 +111,7 @@ const transforms: Transform[] = [
   {
     name: 'To Object',
     structural: true,
-    if: (node) => node.type === 'number',
+    applicableTo: ['number'],
     fn: (v: any) => {
       // Accept any value type after intermediate transformations
       // Wrap any value in an object structure

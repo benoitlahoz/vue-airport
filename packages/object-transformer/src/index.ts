@@ -40,6 +40,9 @@ export { default as TransformBoolean } from './transforms/TransformBoolean.vue';
 export { default as TransformObject } from './transforms/TransformObject.vue';
 export { default as TransformArray } from './transforms/TransformArray.vue';
 
+// Conditions (now structural transforms that branch)
+export { default as ConditionString } from './conditions/ConditionString.vue';
+
 // Model rules util
 export * from './utils/model/model-rules.util';
 export * from './utils/transform/common-structural-handlers.util';

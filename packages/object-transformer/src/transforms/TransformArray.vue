@@ -9,7 +9,7 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 const transforms: Transform[] = [
   {
     name: 'Join',
-    if: (node) => node.type === 'array',
+    applicableTo: ['array'],
     params: [{ key: 'separator', label: 'Separator', type: 'string', default: ', ' }],
     fn: (v: any[], separator: string) => {
       if (!Array.isArray(v)) return v;
@@ -19,7 +19,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Unique',
-    if: (node) => node.type === 'array',
+    applicableTo: ['array'],
     fn: (v: any[]) => {
       if (!Array.isArray(v)) return v;
       return Array.from(new Set(v));
@@ -27,7 +27,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Filter Nulls',
-    if: (node) => node.type === 'array',
+    applicableTo: ['array'],
     fn: (v: any[]) => {
       if (!Array.isArray(v)) return v;
       return v.filter((item) => item != null);
@@ -35,7 +35,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Filter Undefined',
-    if: (node) => node.type === 'array',
+    applicableTo: ['array'],
     fn: (v: any[]) => {
       if (!Array.isArray(v)) return v;
       return v.filter((item) => item !== undefined);
@@ -43,7 +43,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Filter By Value',
-    if: (node) => node.type === 'array',
+    applicableTo: ['array'],
     params: [{ key: 'value', label: 'Value', type: 'text', default: '' }],
     fn: (v: any[], value: any) => {
       if (!Array.isArray(v)) return v;
@@ -53,7 +53,7 @@ const transforms: Transform[] = [
   {
     name: 'To Object',
     structural: true, // This is a structural transform
-    if: (node) => node.type === 'array',
+    applicableTo: ['array'],
     fn: (v: any): StructuralTransformResult => {
       // Accept any value type after intermediate transformations
       // Convert to object with indexed keys if it's an array, otherwise wrap the value
@@ -83,7 +83,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'To String',
-    if: (node) => node.type === 'array',
+    applicableTo: ['array'],
     fn: (v: any) => {
       // Safety check: only stringify arrays
       if (!Array.isArray(v)) {

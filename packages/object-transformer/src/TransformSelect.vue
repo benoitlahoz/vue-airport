@@ -62,12 +62,24 @@ const availableTransforms = computed(() => {
 });
 
 // Separate structural and non-structural transforms using partition
+// Also exclude transforms with 'condition' property (they go to availableConditions)
 const transformsPartition = computed(() =>
-  partition(availableTransforms.value, (t) => t.structural === true)
+  partition(
+    availableTransforms.value.filter((t) => !t.condition),
+    (t) => t.structural === true
+  )
 );
 
 const structuralTransforms = computed(() => transformsPartition.value[0]);
 const regularTransforms = computed(() => transformsPartition.value[1]);
+
+// Available conditions based on test value type
+// Conditions are transforms with a 'condition' property
+const availableConditions = computed(() => {
+  if (!node.value) return [];
+  // Filter transforms that have a condition property (conditional transforms)
+  return availableTransforms.value.filter((t) => t.condition !== undefined);
+});
 
 // Current selection
 const currentSelection = computed({
@@ -191,6 +203,11 @@ const handleTransformChange = (event: Event) => {
         <optgroup v-if="structuralTransforms.length" label="Structural">
           <option v-for="tr in structuralTransforms" :key="tr.name" :value="tr.name">
             {{ tr.name }}
+          </option>
+        </optgroup>
+        <optgroup v-if="availableConditions.length" label="Conditions">
+          <option v-for="cond in availableConditions" :key="cond.name" :value="cond.name">
+            {{ cond.name }}
           </option>
         </optgroup>
       </select>

@@ -31,19 +31,83 @@ export const computeIntermediateValue = (node: ObjectNodeData): any => {
 // Compute value at specific step (value AFTER applying transforms up to and including index)
 export const computeStepValue = (node: ObjectNodeData, index: number): any => {
   const transformsUpToIndex = node.transforms.slice(0, index + 1);
-  return until(isStructuralResult)(transformsUpToIndex, node.value);
+
+  // 🔗 CHAIN OF RESPONSIBILITY: Evaluate conditions sequentially
+  // Stop at first true condition (if/else if behavior)
+  let value = node.value;
+  let chainState: 'pending' | 'matched' | 'unmatched' = 'pending';
+  let lastConditionMet: boolean | undefined;
+
+  for (const t of transformsUpToIndex) {
+    // If transform has a condition
+    if (t.condition) {
+      // Only evaluate if chain is still pending (no condition matched yet)
+      if (chainState === 'pending') {
+        const conditionResult = t.condition(value, ...(t.params || []));
+        t.conditionMet = conditionResult;
+
+        if (conditionResult) {
+          chainState = 'matched'; // First true condition → stop chain
+          lastConditionMet = true;
+        }
+      } else {
+        // Chain already resolved, skip evaluation
+        t.conditionMet = false;
+      }
+    }
+
+    // Apply transform (structural transforms will check conditionMet internally)
+    const result = t.fn(value, ...(t.params || []));
+
+    // Stop if structural change
+    if (isStructuralResult(result)) {
+      return value;
+    }
+
+    value = result;
+  }
+
+  // If we went through all conditions without a match, mark as unmatched
+  if (chainState === 'pending') {
+    lastConditionMet = false;
+  }
+
+  return value;
 };
 
 // Compute child transformed value (ignores structural transforms)
 export const computeChildTransformedValue = (child: ObjectNodeData): any => {
   if (child.transforms.length === 0) return child.value;
 
-  const transformFns = child.transforms.map((t) => (v: any) => {
-    const result = t.fn(v, ...(t.params || []));
-    return isStructuralResult(result) ? v : result;
-  });
+  // 🔗 CHAIN OF RESPONSIBILITY: Sequential condition evaluation
+  let value = child.value;
+  let chainState: 'pending' | 'matched' | 'unmatched' = 'pending';
 
-  return pipe(...transformFns)(child.value);
+  for (const t of child.transforms) {
+    // If transform has a condition
+    if (t.condition) {
+      // Only evaluate if chain is still pending
+      if (chainState === 'pending') {
+        const conditionResult = t.condition(value, ...(t.params || []));
+        t.conditionMet = conditionResult;
+
+        if (conditionResult) {
+          chainState = 'matched'; // Stop chain at first true
+        }
+      } else {
+        t.conditionMet = false; // Skip subsequent conditions
+      }
+    }
+
+    const result = t.fn(value, ...(t.params || []));
+
+    // Ignore structural results
+    if (!isStructuralResult(result)) {
+      value = result;
+    }
+  }
+
+  return value;
 };
 
 // Compute final transformed value (for objects/arrays with children, first rebuilds from children)
@@ -71,13 +135,36 @@ export const computeFinalTransformedValue = (node: ObjectNodeData): any => {
     }
   }
 
-  // Apply transforms on the base value (ignoring structural results)
-  const transformFns = node.transforms.map((t) => (v: any) => {
-    const result = t.fn(v, ...(t.params || []));
-    return isStructuralResult(result) ? v : result;
-  });
+  // Apply transforms on the base value (respecting conditions and ignoring structural results)
+  // 🔗 CHAIN OF RESPONSIBILITY: Sequential condition evaluation
+  let value = baseValue;
+  let chainState: 'pending' | 'matched' | 'unmatched' = 'pending';
 
-  return pipe(...transformFns)(baseValue);
+  for (const t of node.transforms) {
+    // If transform has a condition
+    if (t.condition) {
+      // Only evaluate if chain is still pending
+      if (chainState === 'pending') {
+        const conditionResult = t.condition(value, ...(t.params || []));
+        t.conditionMet = conditionResult;
+
+        if (conditionResult) {
+          chainState = 'matched'; // Stop chain at first true
+        }
+      } else {
+        t.conditionMet = false; // Skip subsequent conditions
+      }
+    }
+
+    const result = t.fn(value, ...(t.params || []));
+
+    // Ignore structural results
+    if (!isStructuralResult(result)) {
+      value = result;
+    }
+  }
+
+  return value;
 };
 
 /**
@@ -110,6 +197,64 @@ export const propagateArrayValue = (node: ObjectNodeData): void => {
 /**
  * Structural Split Handling - Manage split/arrayToProperties transformations
  */
+
+// 🔥 MODEL MODE: Find max parts across all sibling nodes for schema uniformity
+const findMaxPartsInModelMode = (
+  node: ObjectNodeData,
+  desk: ObjectTransformerDesk
+): number | null => {
+  // Only in model mode
+  if (desk.mode?.value !== 'model') return null;
+
+  // Need to be in an array context (parent's parent should be array)
+  if (!node.parent?.parent || node.parent.type !== 'object') return null;
+  const arrayNode = node.parent.parent;
+  if (arrayNode.type !== 'array') return null;
+
+  // Find all sibling objects (other objects in the same array)
+  const siblingObjects =
+    arrayNode.children?.filter((child) => child.type === 'object' && !child.deleted) || [];
+
+  if (siblingObjects.length <= 1) return null;
+
+  // For each sibling, find the corresponding property node and check its split
+  let maxParts = 0;
+  const targetKey = node.key;
+
+  for (const sibling of siblingObjects) {
+    // Find the property with the same key in this sibling
+    const propertyNode = sibling.children?.find(
+      (child) => child.key === targetKey && !child.deleted
+    );
+
+    if (!propertyNode) continue;
+
+    // Check if this node has a Split transform
+    const hasSplit = propertyNode.transforms.some((t) => t.structural && t.name === 'Split');
+
+    if (!hasSplit) continue;
+
+    // Count existing split nodes
+    const splitNodes =
+      sibling.children?.filter((child) => child.splitSourceId === propertyNode.id) || [];
+
+    maxParts = Math.max(maxParts, splitNodes.length);
+
+    // Also check what the split WOULD produce
+    if (propertyNode.transforms.length > 0) {
+      const lastTransform = propertyNode.transforms.at(-1);
+      if (lastTransform?.structural && lastTransform.name === 'Split') {
+        const intermediateValue = computeIntermediateValue(propertyNode);
+        const result = lastTransform.fn(intermediateValue, ...(lastTransform.params || []));
+        if (isStructuralResult(result) && result.parts) {
+          maxParts = Math.max(maxParts, result.parts.length);
+        }
+      }
+    }
+  }
+
+  return maxParts > 0 ? maxParts : null;
+};
 
 // Create split nodes
 const createSplitNodes = (
@@ -192,11 +337,34 @@ export const handleStructuralSplit = (
   parts: any[],
   removeSource: boolean,
   desk: ObjectTransformerDesk,
-  keys?: string[]
+  keys?: string[],
+  conditionMet?: boolean
 ): void => {
   if (!node.parent) return;
 
   const baseKey = node.key || 'part';
+
+  // 🔥 SCHEMA UNIFORMITY: If condition was false, normalize parts
+  // All objects must have same structure for data normalization
+  // When condition=false: put original value in _0, undefined in rest
+  let normalizedParts = parts;
+  if (conditionMet === false && parts.length > 0) {
+    // Get the original value (before split attempt)
+    const originalValue = node.value;
+    // Create array with same length: [originalValue, undefined, undefined, ...]
+    normalizedParts = parts.map((_, i) => (i === 0 ? originalValue : undefined));
+  }
+
+  // 🔥 MODEL MODE: Ensure all objects have same number of parts
+  const maxParts = findMaxPartsInModelMode(node, desk);
+  if (maxParts !== null && maxParts > normalizedParts.length) {
+    // Pad with undefined to reach maxParts
+    const padded = [...normalizedParts];
+    while (padded.length < maxParts) {
+      padded.push(undefined);
+    }
+    normalizedParts = padded;
+  }
 
   // Check if split nodes already exist by looking for nodes with matching splitSourceId
   const existingSplitNodes =
@@ -208,7 +376,7 @@ export const handleStructuralSplit = (
 
     // Reuse existing nodes by passing them to createSplitNodes
     const updatedNodes = createSplitNodes(
-      parts,
+      normalizedParts,
       baseKey,
       node.parent,
       keys,
@@ -232,7 +400,14 @@ export const handleStructuralSplit = (
     ];
   } else {
     // First time creating split nodes
-    const newNodes = createSplitNodes(parts, baseKey, node.parent, keys, undefined, node.id);
+    const newNodes = createSplitNodes(
+      normalizedParts,
+      baseKey,
+      node.parent,
+      keys,
+      undefined,
+      node.id
+    );
     node.parent.children = insertNodes(node.parent.children!, newNodes, node, removeSource);
   }
 
@@ -276,14 +451,38 @@ export const createPropagateTransform =
         (lastResult.parts || lastResult.object) &&
         node.parent
       ) {
+        // 🔥 Find last condition result for schema uniformity
+        // Look for the most recent transform with conditionMet defined
+        let lastConditionMet: boolean | undefined;
+        for (let i = node.transforms.length - 1; i >= 0; i--) {
+          if (node.transforms[i].conditionMet !== undefined) {
+            lastConditionMet = node.transforms[i].conditionMet;
+            break;
+          }
+        }
+
         // For toObject, extract keys and values separately
         if (lastResult.object) {
           const entries = Object.entries(lastResult.object);
           const keys = entries.map(([k]) => k);
           const values = entries.map(([, v]) => v);
-          handleStructuralSplit(node, values, lastResult.removeSource, desk, keys);
+          handleStructuralSplit(
+            node,
+            values,
+            lastResult.removeSource,
+            desk,
+            keys,
+            lastConditionMet
+          );
         } else if (lastResult.parts) {
-          handleStructuralSplit(node, lastResult.parts, lastResult.removeSource, desk);
+          handleStructuralSplit(
+            node,
+            lastResult.parts,
+            lastResult.removeSource,
+            desk,
+            undefined,
+            lastConditionMet
+          );
         }
         return;
       }

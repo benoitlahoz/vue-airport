@@ -1,3 +1,4 @@
+import { maybe } from 'vue-airport';
 import type { ObjectNodeData, Transform, ObjectTransformerDesk } from '../../types';
 import { computePathFromNode } from '../../recipe/recipe-recorder';
 
@@ -5,7 +6,19 @@ import { computePathFromNode } from '../../recipe/recipe-recorder';
  * Transform filtering - Pure functions
  */
 export const filterTransformsByType = (transforms: Transform[], nodeType: string): Transform[] => {
-  return transforms.filter((t) => t.if({ type: nodeType } as ObjectNodeData));
+  const nodeStub = { type: nodeType } as ObjectNodeData;
+
+  return transforms.filter((t) => {
+    // Check applicableTo first (declarative, more performant)
+    const checkApplicableTo = (transform: Transform) =>
+      transform.applicableTo?.includes(nodeType as any) ?? null;
+
+    // Fall back to if check for advanced conditions
+    const checkIf = (transform: Transform) => transform.if?.(nodeStub) ?? null;
+
+    // Try applicableTo, then if, default to true if neither exists
+    return maybe(checkApplicableTo, null)(t) ?? maybe(checkIf, null)(t) ?? true;
+  });
 };
 
 /**
