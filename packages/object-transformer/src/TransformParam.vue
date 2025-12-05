@@ -71,8 +71,8 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div 
-    data-slot="transform-param" 
+  <div
+    data-slot="transform-param"
     :class="{ 'transform-param-checkbox-wrapper': config?.type === 'boolean' }"
   >
     <input

@@ -79,6 +79,10 @@ export const computeStepValue = (node: ObjectNodeData, index: number): any => {
 export const computeChildTransformedValue = (child: ObjectNodeData): any => {
   if (child.transforms.length === 0) return child.value;
 
+  if (import.meta.env.DEV && child.key === 'name') {
+    console.log(`[computeChildTransformedValue] Processing name="${child.value}", transforms count=${child.transforms.length}`);
+  }
+
   // 🔗 CHAIN OF RESPONSIBILITY: Sequential condition evaluation
   let value = child.value;
   let chainState: 'pending' | 'matched' | 'unmatched' = 'pending';
@@ -89,7 +93,7 @@ export const computeChildTransformedValue = (child: ObjectNodeData): any => {
       // Only evaluate if chain is still pending
       if (chainState === 'pending') {
         const conditionResult = t.condition(value, ...(t.params || []));
-        t.conditionMet = conditionResult;
+        t.conditionMet = conditionResult; // 🔥 OK because each node has its own transform instances
 
         if (conditionResult) {
           chainState = 'matched'; // Stop chain at first true
@@ -204,18 +208,73 @@ const findMaxPartsInModelMode = (
   desk: ObjectTransformerDesk
 ): number | null => {
   // Only in model mode
-  if (desk.mode?.value !== 'model') return null;
+  if (desk.mode?.value !== 'model') {
+    if (import.meta.env.DEV) {
+      console.log(`[findMaxParts] Mode is NOT model: ${desk.mode?.value}`);
+    }
+    return null;
+  }
 
-  // Need to be in an array context (parent's parent should be array)
-  if (!node.parent?.parent || node.parent.type !== 'object') return null;
-  const arrayNode = node.parent.parent;
-  if (arrayNode.type !== 'array') return null;
+  if (import.meta.env.DEV) {
+    console.log(`[findMaxParts] Mode IS model`, {
+      nodeKey: node.key,
+      nodeType: node.type,
+      hasParent: !!node.parent,
+      parentType: node.parent?.type,
+      hasGrandparent: !!node.parent?.parent,
+      grandparentType: node.parent?.parent?.type,
+    });
+  }
 
-  // Find all sibling objects (other objects in the same array)
-  const siblingObjects =
-    arrayNode.children?.filter((child) => child.type === 'object' && !child.deleted) || [];
+  // Node must be a property inside an object
+  if (!node.parent || node.parent.type !== 'object') {
+    if (import.meta.env.DEV) {
+      console.log(`[findMaxParts] Parent is not an object`);
+    }
+    return null;
+  }
 
-  if (siblingObjects.length <= 1) return null;
+  // Find the container of sibling objects
+  // Case 1: Parent's parent is an array (normal case: array[i].property)
+  // Case 2: Parent's parent doesn't exist - look at root tree
+  let siblingObjects: ObjectNodeData[] = [];
+  
+  if (node.parent.parent?.type === 'array') {
+    // Array context: get siblings from array children
+    siblingObjects = node.parent.parent.children?.filter(
+      (child) => child.type === 'object' && !child.deleted
+    ) || [];
+  } else if (desk.tree?.value) {
+    // Root context: get siblings from root tree
+    const rootNode = desk.tree.value;
+    if (rootNode.type === 'array') {
+      // Root is an array - get its object children
+      siblingObjects = rootNode.children?.filter(
+        (child) => child.type === 'object' && !child.deleted
+      ) || [];
+      if (import.meta.env.DEV) {
+        console.log(`[findMaxParts] Root array case - found ${siblingObjects.length} siblings`);
+      }
+    } else {
+      // Root is not an array - can't normalize
+      if (import.meta.env.DEV) {
+        console.log(`[findMaxParts] Root is not array: ${rootNode.type}`);
+      }
+      return null;
+    }
+  } else {
+    if (import.meta.env.DEV) {
+      console.log(`[findMaxParts] No tree available`);
+    }
+    return null;
+  }
+
+  if (siblingObjects.length <= 1) {
+    if (import.meta.env.DEV) {
+      console.log(`[findMaxParts] Not enough siblings: ${siblingObjects.length}`);
+    }
+    return null;
+  }
 
   // For each sibling, find the corresponding property node and check its split
   let maxParts = 0;
@@ -342,29 +401,23 @@ export const handleStructuralSplit = (
 ): void => {
   if (!node.parent) return;
 
-  const baseKey = node.key || 'part';
-
-  // 🔥 SCHEMA UNIFORMITY: If condition was false, normalize parts
-  // All objects must have same structure for data normalization
-  // When condition=false: put original value in _0, undefined in rest
-  let normalizedParts = parts;
-  if (conditionMet === false && parts.length > 0) {
-    // Get the original value (before split attempt)
-    const originalValue = node.value;
-    // Create array with same length: [originalValue, undefined, undefined, ...]
-    normalizedParts = parts.map((_, i) => (i === 0 ? originalValue : undefined));
-  }
-
-  // 🔥 MODEL MODE: Ensure all objects have same number of parts
-  const maxParts = findMaxPartsInModelMode(node, desk);
-  if (maxParts !== null && maxParts > normalizedParts.length) {
-    // Pad with undefined to reach maxParts
-    const padded = [...normalizedParts];
-    while (padded.length < maxParts) {
-      padded.push(undefined);
+  // 🔥 USER CHOICE: If condition was false, do NOT create split nodes
+  // Keep the original property as-is (user's choice to have non-conformant objects)
+  if (conditionMet === false) {
+    if (import.meta.env.DEV) {
+      console.log(`[Split] Condition false - skipping split for ${node.key}`);
     }
-    normalizedParts = padded;
+    // Remove any existing split nodes from previous evaluations
+    if (node.parent.children) {
+      node.parent.children = node.parent.children.filter(
+        (child) => child.splitSourceId !== node.id
+      );
+    }
+    return;
   }
+
+  const baseKey = node.key || 'part';
+  let normalizedParts = parts;
 
   // Check if split nodes already exist by looking for nodes with matching splitSourceId
   const existingSplitNodes =
@@ -441,6 +494,27 @@ export const createPropagateTransform =
       const lastTransform = node.transforms.at(-1);
       if (!lastTransform) return;
 
+      // 🔥 CHAIN OF RESPONSIBILITY: Check if any preceding condition failed
+      // If there's a condition in the chain and it's false, don't execute structural
+      let shouldExecuteStructural = true;
+      let lastConditionMet: boolean | undefined;
+      
+      for (let i = node.transforms.length - 1; i >= 0; i--) {
+        const t = node.transforms[i];
+        if (t.conditionMet !== undefined) {
+          lastConditionMet = t.conditionMet;
+          // If any condition in the chain is false, don't execute structural
+          if (!t.conditionMet) {
+            shouldExecuteStructural = false;
+          }
+          break; // Only check the last condition (Chain of Responsibility)
+        }
+      }
+
+      if (import.meta.env.DEV) {
+        console.log(`[createPropagateTransform] node.key=${node.key}, shouldExecuteStructural=${shouldExecuteStructural}, lastConditionMet=${lastConditionMet}`);
+      }
+
       const intermediateValue = computeIntermediateValue(node);
       const lastResult = lastTransform.fn(intermediateValue, ...(lastTransform.params || []));
 
@@ -449,16 +523,11 @@ export const createPropagateTransform =
         isStructuralResult(lastResult) &&
         isMultiPartAction(lastResult.action, desk) &&
         (lastResult.parts || lastResult.object) &&
-        node.parent
+        node.parent &&
+        shouldExecuteStructural  // 🔥 Only execute if condition chain passed
       ) {
-        // 🔥 Find last condition result for schema uniformity
-        // Look for the most recent transform with conditionMet defined
-        let lastConditionMet: boolean | undefined;
-        for (let i = node.transforms.length - 1; i >= 0; i--) {
-          if (node.transforms[i].conditionMet !== undefined) {
-            lastConditionMet = node.transforms[i].conditionMet;
-            break;
-          }
+        if (import.meta.env.DEV) {
+          console.log(`[handleStructuralSplit] Executing split for node.key=${node.key}, node.value=${node.value}`);
         }
 
         // For toObject, extract keys and values separately
@@ -485,6 +554,30 @@ export const createPropagateTransform =
           );
         }
         return;
+      }
+      
+      // 🔥 If structural result exists but shouldn't be executed (condition failed),
+      // clean up any existing split nodes
+      if (
+        isStructuralResult(lastResult) &&
+        isMultiPartAction(lastResult.action, desk) &&
+        !shouldExecuteStructural &&
+        node.parent
+      ) {
+        if (import.meta.env.DEV) {
+          console.log(`[createPropagateTransform] Cleaning up splits for node.key=${node.key} (condition failed)`);
+        }
+        // Remove any existing split nodes
+        if (node.parent.children) {
+          const childrenBefore = node.parent.children.length;
+          node.parent.children = node.parent.children.filter(
+            (child) => child.splitSourceId !== node.id
+          );
+          const childrenAfter = node.parent.children.length;
+          if (import.meta.env.DEV && childrenBefore !== childrenAfter) {
+            console.log(`[createPropagateTransform] Removed ${childrenBefore - childrenAfter} split nodes`);
+          }
+        }
       }
     }
 

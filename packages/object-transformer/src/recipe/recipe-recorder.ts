@@ -28,7 +28,7 @@ export interface RecipeRecorder {
    * Record the complete transform state for a node
    * This replaces any previous transforms at this path
    */
-  recordSetTransforms(path: Path, transforms: Array<{ name: string; params: any[] }>): void;
+  recordSetTransforms(path: Path, transforms: Array<{ name: string; params: any[]; isCondition?: boolean }>): void;
 
   /**
    * Record a rename operation
@@ -97,6 +97,11 @@ export const createRecipeRecorder = (
         transforms.add(op.transformName);
       } else if (op.type === 'setTransforms') {
         op.transforms.forEach((t) => transforms.add(t.name));
+      } else if (op.type === 'applyConditions') {
+        // 🆕 Extract transforms from conditions
+        op.conditions.forEach((condition) => {
+          condition.transforms.forEach((t) => transforms.add(t.name));
+        });
       }
     });
 
@@ -126,25 +131,62 @@ export const createRecipeRecorder = (
       });
     },
 
-    recordSetTransforms(path: Path, transforms: Array<{ name: string; params: any[] }>) {
-      // Remove any previous setTransforms operations for this path
+    recordSetTransforms(path: Path, transforms: Array<{ name: string; params: any[]; isCondition?: boolean }>) {
+      // Remove any previous operations for this path (both setTransforms and applyConditions)
       const pathKey = path.join('.');
       operations.value = operations.value.filter((op) => {
-        if (op.type !== 'setTransforms') return true;
+        if (op.type !== 'setTransforms' && op.type !== 'applyConditions') return true;
         return op.path.join('.') !== pathKey;
       });
 
       // Only add new operation if there are transforms
       // If transforms is empty, we just removed the operation above (restoration to original)
       if (transforms.length > 0) {
-        operations.value.push({
-          type: 'setTransforms',
-          path: [...path],
-          transforms: transforms.map((t) => ({
-            name: t.name,
-            params: [...t.params],
-          })),
-        });
+        // 🆕 NEW ARCHITECTURE: Separate conditions from regular transforms
+        // isCondition flag tells us which transforms are conditions
+        
+        const conditions: Array<{
+          predicate?: { name: string; params: any[] };
+          transforms: Array<{ name: string; params: any[] }>;
+        }> = [];
+        
+        let currentCondition: { name: string; params: any[] } | undefined = undefined;
+        let currentTransforms: Array<{ name: string; params: any[] }> = [];
+        
+        for (const t of transforms) {
+          if (t.isCondition) {
+            // This is a condition - save current group if any
+            if (currentTransforms.length > 0) {
+              conditions.push({
+                predicate: currentCondition,
+                transforms: [...currentTransforms],
+              });
+              currentTransforms = [];
+            }
+            // Start new condition group
+            currentCondition = { name: t.name, params: [...t.params] };
+          } else {
+            // This is a regular transform
+            currentTransforms.push({ name: t.name, params: [...t.params] });
+          }
+        }
+        
+        // Add final group
+        if (currentTransforms.length > 0) {
+          conditions.push({
+            predicate: currentCondition,
+            transforms: [...currentTransforms],
+          });
+        }
+        
+        // If no conditions array was created (no transforms), don't add operation
+        if (conditions.length > 0) {
+          operations.value.push({
+            type: 'applyConditions',
+            path: [...path],
+            conditions,
+          });
+        }
       }
     },
 

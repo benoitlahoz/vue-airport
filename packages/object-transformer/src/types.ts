@@ -45,7 +45,7 @@ export interface Transform {
   structural?: boolean;
   // Conditional execution
   condition?: (value: any, ...params: any[]) => boolean; // Si défini, c'est un transform conditionnel
-  conditionMet?: boolean; // Résultat de l'évaluation de la condition (stocké dans l'instance)
+  conditionMet?: boolean; // 🔥 LOCAL to each node's transform instance (not shared)
 }
 
 export interface Condition {

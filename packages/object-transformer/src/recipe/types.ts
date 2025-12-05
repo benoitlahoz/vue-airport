@@ -20,7 +20,34 @@ export type Path = string[];
  * Operation: atomic transformation that can be applied to data
  * All operations are pure functions: data -> data'
  */
-export type Operation = TransformOp | RenameOp | DeleteOp | AddOp | SetTransformsOp | UpdateOp;
+export type Operation = 
+  | TransformOp 
+  | RenameOp 
+  | DeleteOp 
+  | AddOp 
+  | SetTransformsOp 
+  | UpdateOp
+  | ApplyConditionsOp; // 🔥 NEW: Unified conditional transforms architecture
+
+/**
+ * 🔥 NEW: Conditional transforms operation
+ * Chain of Responsibility: evaluates conditions in order, applies transforms of first match
+ * If no predicate, condition is always true (unconditional transforms)
+ */
+export interface ApplyConditionsOp {
+  type: 'applyConditions';
+  path: Path;
+  conditions: Array<{
+    predicate?: {
+      name: string;
+      params: any[];
+    };
+    transforms: Array<{
+      name: string;
+      params: any[];
+    }>;
+  }>;
+}
 
 /**
  * Transform operation: applies a registered transform function

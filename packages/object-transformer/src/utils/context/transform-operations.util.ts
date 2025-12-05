@@ -77,10 +77,17 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
 
       if (!transform) return null;
 
-      // Create a copy with params as VALUES array (not configs)
+      // 🔥 DEEP CLONE: Create a completely new instance for each node
+      // This prevents shared state between nodes (especially conditionMet)
       return {
-        ...transform,
+        name: transform.name,
+        applicableTo: transform.applicableTo ? [...transform.applicableTo] : undefined,
         params: transform.params?.map((p) => p.default ?? null) || [],
+        fn: transform.fn,
+        condition: transform.condition,
+        structural: transform.structural,
+        if: transform.if,
+        // conditionMet will be set during evaluation, unique per node
       };
     },
 

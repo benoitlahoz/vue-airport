@@ -92,6 +92,7 @@ export const applyNodeTransform = (
       const transforms = node.transforms.map((t) => ({
         name: t.name,
         params: t.params || [],
+        isCondition: !!t.condition, // 🆕 Mark if this is a conditional transform
       }));
       (desk as any).recorder.recordSetTransforms(path, transforms);
     }
@@ -135,6 +136,7 @@ export const applyStepTransform = (
         const transforms = node.transforms.map((t) => ({
           name: t.name,
           params: t.params || [],
+          isCondition: !!t.condition, // 🆕 Mark if this is a conditional transform
         }));
         (desk as any).recorder.recordSetTransforms(path, transforms);
       }
@@ -169,6 +171,7 @@ export const applyStepTransform = (
         const transforms = node.transforms.map((t) => ({
           name: t.name,
           params: t.params || [],
+          isCondition: !!t.condition, // 🆕 Mark if this is a conditional transform
         }));
         (desk as any).recorder.recordSetTransforms(path, transforms);
       }
