@@ -80,7 +80,9 @@ export const computeChildTransformedValue = (child: ObjectNodeData): any => {
   if (child.transforms.length === 0) return child.value;
 
   if (import.meta.env.DEV && child.key === 'name') {
-    console.log(`[computeChildTransformedValue] Processing name="${child.value}", transforms count=${child.transforms.length}`);
+    console.log(
+      `[computeChildTransformedValue] Processing name="${child.value}", transforms count=${child.transforms.length}`
+    );
   }
 
   // 🔗 CHAIN OF RESPONSIBILITY: Sequential condition evaluation
@@ -238,20 +240,19 @@ const findMaxPartsInModelMode = (
   // Case 1: Parent's parent is an array (normal case: array[i].property)
   // Case 2: Parent's parent doesn't exist - look at root tree
   let siblingObjects: ObjectNodeData[] = [];
-  
+
   if (node.parent.parent?.type === 'array') {
     // Array context: get siblings from array children
-    siblingObjects = node.parent.parent.children?.filter(
-      (child) => child.type === 'object' && !child.deleted
-    ) || [];
+    siblingObjects =
+      node.parent.parent.children?.filter((child) => child.type === 'object' && !child.deleted) ||
+      [];
   } else if (desk.tree?.value) {
     // Root context: get siblings from root tree
     const rootNode = desk.tree.value;
     if (rootNode.type === 'array') {
       // Root is an array - get its object children
-      siblingObjects = rootNode.children?.filter(
-        (child) => child.type === 'object' && !child.deleted
-      ) || [];
+      siblingObjects =
+        rootNode.children?.filter((child) => child.type === 'object' && !child.deleted) || [];
       if (import.meta.env.DEV) {
         console.log(`[findMaxParts] Root array case - found ${siblingObjects.length} siblings`);
       }
@@ -498,7 +499,7 @@ export const createPropagateTransform =
       // If there's a condition in the chain and it's false, don't execute structural
       let shouldExecuteStructural = true;
       let lastConditionMet: boolean | undefined;
-      
+
       for (let i = node.transforms.length - 1; i >= 0; i--) {
         const t = node.transforms[i];
         if (t.conditionMet !== undefined) {
@@ -512,7 +513,9 @@ export const createPropagateTransform =
       }
 
       if (import.meta.env.DEV) {
-        console.log(`[createPropagateTransform] node.key=${node.key}, shouldExecuteStructural=${shouldExecuteStructural}, lastConditionMet=${lastConditionMet}`);
+        console.log(
+          `[createPropagateTransform] node.key=${node.key}, shouldExecuteStructural=${shouldExecuteStructural}, lastConditionMet=${lastConditionMet}`
+        );
       }
 
       const intermediateValue = computeIntermediateValue(node);
@@ -524,10 +527,12 @@ export const createPropagateTransform =
         isMultiPartAction(lastResult.action, desk) &&
         (lastResult.parts || lastResult.object) &&
         node.parent &&
-        shouldExecuteStructural  // 🔥 Only execute if condition chain passed
+        shouldExecuteStructural // 🔥 Only execute if condition chain passed
       ) {
         if (import.meta.env.DEV) {
-          console.log(`[handleStructuralSplit] Executing split for node.key=${node.key}, node.value=${node.value}`);
+          console.log(
+            `[handleStructuralSplit] Executing split for node.key=${node.key}, node.value=${node.value}`
+          );
         }
 
         // For toObject, extract keys and values separately
@@ -555,7 +560,7 @@ export const createPropagateTransform =
         }
         return;
       }
-      
+
       // 🔥 If structural result exists but shouldn't be executed (condition failed),
       // clean up any existing split nodes
       if (
@@ -565,7 +570,9 @@ export const createPropagateTransform =
         node.parent
       ) {
         if (import.meta.env.DEV) {
-          console.log(`[createPropagateTransform] Cleaning up splits for node.key=${node.key} (condition failed)`);
+          console.log(
+            `[createPropagateTransform] Cleaning up splits for node.key=${node.key} (condition failed)`
+          );
         }
         // Remove any existing split nodes
         if (node.parent.children) {
@@ -575,7 +582,9 @@ export const createPropagateTransform =
           );
           const childrenAfter = node.parent.children.length;
           if (import.meta.env.DEV && childrenBefore !== childrenAfter) {
-            console.log(`[createPropagateTransform] Removed ${childrenBefore - childrenAfter} split nodes`);
+            console.log(
+              `[createPropagateTransform] Removed ${childrenBefore - childrenAfter} split nodes`
+            );
           }
         }
       }

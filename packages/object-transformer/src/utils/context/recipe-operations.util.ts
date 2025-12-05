@@ -28,7 +28,7 @@ function findNodesAtPath(
       // In model mode with array root, search in ALL objects
       for (const child of root.children) {
         if (child.type === 'object' && child.children) {
-          const matchingChild = child.children.find(c => c.key === firstKey);
+          const matchingChild = child.children.find((c) => c.key === firstKey);
           if (matchingChild) {
             currentLevelNodes.push(matchingChild);
           }
@@ -36,7 +36,7 @@ function findNodesAtPath(
       }
     } else {
       // In object mode or non-array root, search normally
-      const matchingChild = root.children.find(c => c.key === firstKey);
+      const matchingChild = root.children.find((c) => c.key === firstKey);
       if (matchingChild) {
         currentLevelNodes.push(matchingChild);
       }
@@ -169,14 +169,16 @@ export function createRecipeOperationsMethods(context: RecipeOperationsContext) 
           if (op.type === 'setTransforms' && op.path && op.transforms) {
             // Find all nodes matching this path in model mode
             const matchingNodes = findNodesAtPath(context.tree.value, op.path, currentMode);
-            
+
             for (const node of matchingNodes) {
               // Create fresh transform instances for this node (NOT shared!)
               node.transforms = op.transforms.map((t: any) => {
-                return context.deskRef?.().createTransformEntry(t.name, node) || {
-                  name: t.name,
-                  params: t.params || [],
-                };
+                return (
+                  context.deskRef?.().createTransformEntry(t.name, node) || {
+                    name: t.name,
+                    params: t.params || [],
+                  }
+                );
               });
             }
           }

@@ -20,12 +20,12 @@ export type Path = string[];
  * Operation: atomic transformation that can be applied to data
  * All operations are pure functions: data -> data'
  */
-export type Operation = 
-  | TransformOp 
-  | RenameOp 
-  | DeleteOp 
-  | AddOp 
-  | SetTransformsOp 
+export type Operation =
+  | TransformOp
+  | RenameOp
+  | DeleteOp
+  | AddOp
+  | SetTransformsOp
   | UpdateOp
   | ApplyConditionsOp; // 🔥 NEW: Unified conditional transforms architecture
 

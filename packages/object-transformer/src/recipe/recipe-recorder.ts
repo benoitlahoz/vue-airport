@@ -28,7 +28,10 @@ export interface RecipeRecorder {
    * Record the complete transform state for a node
    * This replaces any previous transforms at this path
    */
-  recordSetTransforms(path: Path, transforms: Array<{ name: string; params: any[]; isCondition?: boolean }>): void;
+  recordSetTransforms(
+    path: Path,
+    transforms: Array<{ name: string; params: any[]; isCondition?: boolean }>
+  ): void;
 
   /**
    * Record a rename operation
@@ -131,7 +134,10 @@ export const createRecipeRecorder = (
       });
     },
 
-    recordSetTransforms(path: Path, transforms: Array<{ name: string; params: any[]; isCondition?: boolean }>) {
+    recordSetTransforms(
+      path: Path,
+      transforms: Array<{ name: string; params: any[]; isCondition?: boolean }>
+    ) {
       // Remove any previous operations for this path (both setTransforms and applyConditions)
       const pathKey = path.join('.');
       operations.value = operations.value.filter((op) => {
@@ -144,15 +150,15 @@ export const createRecipeRecorder = (
       if (transforms.length > 0) {
         // 🆕 NEW ARCHITECTURE: Separate conditions from regular transforms
         // isCondition flag tells us which transforms are conditions
-        
+
         const conditions: Array<{
           predicate?: { name: string; params: any[] };
           transforms: Array<{ name: string; params: any[] }>;
         }> = [];
-        
+
         let currentCondition: { name: string; params: any[] } | undefined = undefined;
         let currentTransforms: Array<{ name: string; params: any[] }> = [];
-        
+
         for (const t of transforms) {
           if (t.isCondition) {
             // This is a condition - save current group if any
@@ -170,7 +176,7 @@ export const createRecipeRecorder = (
             currentTransforms.push({ name: t.name, params: [...t.params] });
           }
         }
-        
+
         // Add final group
         if (currentTransforms.length > 0) {
           conditions.push({
@@ -178,7 +184,7 @@ export const createRecipeRecorder = (
             transforms: [...currentTransforms],
           });
         }
-        
+
         // If no conditions array was created (no transforms), don't add operation
         if (conditions.length > 0) {
           operations.value.push({

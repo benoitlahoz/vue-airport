@@ -317,7 +317,7 @@ export const applySetTransforms = (
   let transformedValue = currentValue;
   let chainState: 'pending' | 'matched' | 'unmatched' = 'pending';
   const conditionResults = new Map<number, boolean>(); // Local condition results
-  
+
   for (let i = 0; i < op.transforms.length; i++) {
     const t = op.transforms[i];
     const transform = transforms.get(t.name);
@@ -354,12 +354,12 @@ export const applySetTransforms = (
             break;
           }
         }
-        
+
         // Pass condition result to structural transform
         if (lastConditionMet !== undefined) {
           result.conditionMet = lastConditionMet;
         }
-        
+
         // Apply structural transform
         data = applyStructuralTransform(data, op.path, result);
         // For structural transforms, get the new value at path for next iteration
@@ -384,7 +384,7 @@ export const applySetTransforms = (
 
 /**
  * 🔥 NEW: Apply conditional transforms operation
- * 
+ *
  * Chain of Responsibility pattern:
  * - Evaluates conditions in order
  * - Applies transforms from first matching condition

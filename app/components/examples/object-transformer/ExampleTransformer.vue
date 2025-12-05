@@ -202,7 +202,7 @@ const smallData = [
 ];
 
 // Toggle between small and large dataset - change to test performance
-const USE_LARGE_DATASET = false; // Changed to false to show noble names
+const USE_LARGE_DATASET = true; // Changed to false to show noble names
 const LARGE_DATASET_SIZE = 1000;
 
 const data = USE_LARGE_DATASET ? generateLargeDataset(LARGE_DATASET_SIZE) : smallData;
