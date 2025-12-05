@@ -295,6 +295,35 @@ export const createPropagateTransform =
       propagators[node.type]?.(node);
     }
 
+    // 🔄 Update node type if transforms changed it
+    // For primitives with transforms, check if the final transformed value has a different type
+    if (node.transforms.length > 0 && !node.children?.length) {
+      const finalValue = computeFinalTransformedValue(node);
+      const finalType = typeof finalValue;
+      
+      // DON'T update node.value - it should stay as the original value
+      // Only update the type so the correct transforms are available
+      
+      // Map JavaScript types to ObjectNodeType
+      let newType: string = finalType;
+      if (finalType === 'object') {
+        if (finalValue === null) {
+          newType = 'null';
+        } else if (finalValue instanceof Date) {
+          newType = 'date';
+        } else if (Array.isArray(finalValue)) {
+          newType = 'array';
+        } else {
+          newType = 'object';
+        }
+      }
+      
+      // Update type if it changed
+      if (newType !== node.type) {
+        node.type = newType as any;
+      }
+    }
+
     // Recursive propagation
     if (node.parent) desk.propagateTransform(node.parent);
   };

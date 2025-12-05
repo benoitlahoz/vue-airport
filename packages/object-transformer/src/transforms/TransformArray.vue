@@ -85,7 +85,10 @@ const transforms: Transform[] = [
     name: 'To String',
     if: (node) => node.type === 'array',
     fn: (v: any) => {
-      if (!Array.isArray(v)) return v;
+      // Safety check: only stringify arrays
+      if (!Array.isArray(v)) {
+        return String(v); // Fallback to standard String conversion
+      }
       return JSON.stringify(v);
     },
   },

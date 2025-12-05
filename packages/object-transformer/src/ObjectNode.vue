@@ -81,6 +81,14 @@ const shouldShowChildren = computed(() => {
   // Show children only if final value is still an object or array
   return finalType === 'object' && (Array.isArray(finalValue) || finalValue !== null);
 });
+
+// Compute the display value (ORIGINAL value, not transformed)
+// For primitives, always show the original value stored in node.value
+// Transformed values are shown in the transform chain below
+const displayValue = computed(() => {
+  if (!tree.value) return '';
+  return tree.value.value;
+});
 </script>
 
 <template>
@@ -135,7 +143,7 @@ const shouldShowChildren = computed(() => {
             Array({{ tree.children?.length || 0 }})
           </span>
           <span v-else-if="tree.type !== 'object'" class="object-node-value">
-            {{ formatValue(tree.value, tree.type) }}
+            {{ formatValue(displayValue, tree.type) }}
           </span>
           <span v-else class="object-node-value-hidden" />
 
