@@ -138,7 +138,9 @@ export function createKeyEditingMethods(context: KeyEditingContext) {
           // 🟢 RECORD THE RENAME OPERATION
           const desk = context.deskRef?.();
           if (desk?.recorder && nodeMetadata.original && nodeMetadata.original !== finalKey) {
-            const parentPath = node.parent ? computePathFromNode(node.parent) : [];
+            const parentPath = node.parent
+              ? computePathFromNode(node.parent, desk.mode?.value)
+              : [];
             desk.recorder.recordRename(parentPath, nodeMetadata.original, finalKey);
           }
 

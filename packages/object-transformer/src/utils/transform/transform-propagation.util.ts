@@ -290,7 +290,10 @@ export const createPropagateTransform =
     }
 
     // Propagate based on current type (rebuild value from children)
-    propagators[node.type]?.(node);
+    // Only propagate if node has children (containers)
+    if (node.children && node.children.length > 0) {
+      propagators[node.type]?.(node);
+    }
 
     // Recursive propagation
     if (node.parent) desk.propagateTransform(node.parent);

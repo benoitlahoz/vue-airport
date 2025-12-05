@@ -129,15 +129,18 @@ export const createRecipeRecorder = (
         return op.path.join('.') !== pathKey;
       });
 
-      // Add new setTransforms operation
-      operations.value.push({
-        type: 'setTransforms',
-        path: [...path],
-        transforms: transforms.map((t) => ({
-          name: t.name,
-          params: [...t.params],
-        })),
-      });
+      // Only add new operation if there are transforms
+      // If transforms is empty, we just removed the operation above (restoration to original)
+      if (transforms.length > 0) {
+        operations.value.push({
+          type: 'setTransforms',
+          path: [...path],
+          transforms: transforms.map((t) => ({
+            name: t.name,
+            params: [...t.params],
+          })),
+        });
+      }
     },
 
     recordRename(parentPath: Path, from: string, to: string) {
@@ -209,14 +212,32 @@ export const createRecipeRecorder = (
  * Helper: Compute path from tree node
  *
  * Walks up the tree to build the full path from root to node
+ * @param node - The node to compute path for
+ * @param mode - Optional mode ('object' | 'model'). In model mode, skips numeric indices for template root.
  */
-export const computePathFromNode = (node: any): Path => {
+export const computePathFromNode = (node: any, mode?: 'object' | 'model'): Path => {
   const path: string[] = [];
   let current = node;
 
+  // First pass: compute depth from root and collect ancestors
+  const ancestors: any[] = [];
+  let temp = node;
+  while (temp && temp.parent) {
+    ancestors.unshift(temp);
+    if (!temp.parent.parent && (temp.parent.key === 'Object' || temp.parent.key === 'Array')) {
+      break;
+    }
+    temp = temp.parent;
+  }
+
+  // Second pass: build path
+  let currentDepth = 0;
   while (current && current.parent) {
-    // Add current key to path (unless it's a numeric index in template mode)
-    if (current.key && !/^\d+$/.test(current.key)) {
+    // In model mode, skip numeric indices ONLY if parent is the root Array (template mode)
+    const parentIsRoot = !current.parent.parent && current.parent.key === 'Array';
+    const isTemplateRootChild = mode === 'model' && parentIsRoot && /^\d+$/.test(current.key);
+
+    if (current.key && !isTemplateRootChild) {
       path.unshift(current.key);
     }
 
@@ -229,6 +250,7 @@ export const computePathFromNode = (node: any): Path => {
     }
 
     current = current.parent;
+    currentDepth++;
   }
 
   return path;

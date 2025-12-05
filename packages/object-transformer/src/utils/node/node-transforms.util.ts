@@ -22,7 +22,7 @@ export const applyNodeTransform = (
     node.transforms = [];
 
     // 🟢 RECORD THE REMOVAL (empty transforms list)
-    const path = computePathFromNode(node);
+    const path = computePathFromNode(node, desk.mode?.value);
     if ((desk as any).recorder) {
       const isModelMode = desk.mode?.value === 'model';
       const isTemplateRoot = path.length === 0;
@@ -68,7 +68,8 @@ export const applyNodeTransform = (
   // 🟢 RECORD THE OPERATION (Delta-based recording)
   // Record the COMPLETE transform state, not just the last addition
   // This allows for reversibility: removing/changing transforms updates the recipe
-  const path = computePathFromNode(node);
+  const path = computePathFromNode(node, desk.mode?.value);
+
   if ((desk as any).recorder) {
     const isModelMode = desk.mode?.value === 'model';
     const isTemplateRoot = path.length === 0;
@@ -110,6 +111,21 @@ export const applyStepTransform = (
     if (removingStructural && node.parent) {
       cleanupSplitNodes(node, node.parent);
     }
+
+    // 🟢 RECORD THE REMOVAL (update complete transform state)
+    const path = computePathFromNode(node, desk.mode?.value);
+    if ((desk as any).recorder) {
+      const isModelMode = desk.mode?.value === 'model';
+      const isTemplateRoot = path.length === 0;
+
+      if (!isModelMode || !isTemplateRoot) {
+        const transforms = node.transforms.map((t) => ({
+          name: t.name,
+          params: t.params || [],
+        }));
+        (desk as any).recorder.recordSetTransforms(path, transforms);
+      }
+    }
   } else {
     // Check if there's already a transform at nextIndex (we're replacing)
     const isReplacing = nextIndex < node.transforms.length;
@@ -130,10 +146,19 @@ export const applyStepTransform = (
       node.transforms.push(entry);
     }
 
-    // 🟢 RECORD THE OPERATION
-    const path = computePathFromNode(node);
+    // 🟢 RECORD THE OPERATION (use setTransforms for consistency)
+    const path = computePathFromNode(node, desk.mode?.value);
     if ((desk as any).recorder) {
-      (desk as any).recorder.recordTransform(path, entry.name, entry.params || []);
+      const isModelMode = desk.mode?.value === 'model';
+      const isTemplateRoot = path.length === 0;
+
+      if (!isModelMode || !isTemplateRoot) {
+        const transforms = node.transforms.map((t) => ({
+          name: t.name,
+          params: t.params || [],
+        }));
+        (desk as any).recorder.recordSetTransforms(path, transforms);
+      }
     }
   }
 

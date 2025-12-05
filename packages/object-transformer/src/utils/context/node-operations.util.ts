@@ -38,7 +38,7 @@ export function createNodeOperationsMethods(context: NodeOperationsContext) {
       // 🟢 RECORD THE OPERATION (Delta-based recording)
       const desk = context.deskRef?.();
       if (desk?.recorder && node.parent) {
-        const path = computePathFromNode(node);
+        const path = computePathFromNode(node, desk.mode?.value);
 
         if (!wasDeleted && node.deleted) {
           // Node was visible, now deleted → record delete
