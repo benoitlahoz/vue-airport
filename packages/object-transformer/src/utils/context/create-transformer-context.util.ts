@@ -62,6 +62,7 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
   const nodeOps = createNodeOperationsMethods({
     tree,
     propagateTransform: (node: ObjectNodeData) => transformOps.propagateTransform(node),
+    deskRef: () => deskRef,
   });
 
   const keyEditing = createKeyEditingMethods({

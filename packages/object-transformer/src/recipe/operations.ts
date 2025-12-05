@@ -165,15 +165,48 @@ const applyArrayToProperties = (data: any, path: Path, result: any): any => {
 
 /**
  * Apply toObject structural transform
- * Replaces the value at path with result.object
+ * Creates sibling properties with the pattern lastKey_key
+ * (same logic as the common toObject handler in the tree)
  */
 const applyToObject = (data: any, path: Path, result: any): any => {
   if (!result.object || typeof result.object !== 'object') {
     return data;
   }
 
-  // Replace the value at path with the new object
-  return updateAt(data, path, () => result.object);
+  // Navigate to parent
+  if (path.length === 0) {
+    // At root level - create properties from result.object
+    const newProps: Record<string, any> = {};
+    Object.entries(result.object).forEach(([key, value]) => {
+      newProps[key] = value;
+    });
+    return newProps;
+  }
+
+  const parentPath = path.slice(0, -1);
+  const lastKey = path[path.length - 1];
+
+  return updateAt(data, parentPath, (parent) => {
+    if (!parent || typeof parent !== 'object') {
+      return parent;
+    }
+
+    // Create new properties from result.object (same pattern as tree handler)
+    const newProps: Record<string, any> = {};
+    Object.entries(result.object).forEach(([key, value]) => {
+      const newKey = `${lastKey}_${key}`;
+      newProps[newKey] = value;
+    });
+
+    // Remove source if specified
+    if (result.removeSource) {
+      const { [lastKey]: _, ...rest } = parent;
+      return { ...rest, ...newProps };
+    }
+
+    // Keep source
+    return { ...parent, ...newProps };
+  });
 }; /**
  * Apply a rename operation
  *

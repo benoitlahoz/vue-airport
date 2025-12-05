@@ -74,7 +74,9 @@ const transforms: Transform[] = [
       return {
         __structuralChange: true,
         action: 'toObject' as const,
-        object: { value: v },
+        object: {
+          object: { value: v },
+        },
         removeSource: false,
       };
     },
