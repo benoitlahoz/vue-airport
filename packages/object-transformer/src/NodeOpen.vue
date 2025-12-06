@@ -5,7 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 import type { ObjectNodeData, ObjectTransformerContext } from '.';
 import { ObjectTransformerDeskKey } from '.';
 
-interface Props {
+export interface Props {
   nodeId: string;
 }
 
@@ -42,4 +42,3 @@ const toggleOpen = () => {
     <ChevronDown v-else-if="isOpen" class="ot-open-icon" @click="toggleOpen" />
   </div>
 </template>
-

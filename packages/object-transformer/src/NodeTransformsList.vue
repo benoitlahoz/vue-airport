@@ -6,7 +6,7 @@ import type { ObjectNodeData, ObjectTransformerContext } from '.';
 import { ObjectTransformerDeskKey, TransformSelect, filterTransformsByType, getNodeType } from '.';
 import { computePathFromNode } from './recipe/recipe-recorder';
 
-interface Props {
+export interface Props {
   nodeId: string;
   class?: string;
 }

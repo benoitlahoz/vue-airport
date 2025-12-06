@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn } from 'vue-airport';
-import { onMounted } from 'vue';
-import type { ObjectTransformerContext, Transform } from '..';
+import type { ObjectTransformerContext, Transform, TransformProvider } from '..';
 import { ObjectTransformerDeskKey } from '..';
-
-type DeskWithContext = typeof desk & ObjectTransformerContext;
 
 const transforms: Transform[] = [
   {
@@ -29,6 +26,8 @@ const transforms: Transform[] = [
       if (typeof v !== 'object' || v === null) return v;
       const k = typeof keys === 'string' ? keys.split(',').map((s) => s.trim()) : [];
       const res: any = { ...v };
+      // TODO: Check if it can be reversed by transform cancelation
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       k.forEach((key) => delete res[key]);
       return res;
     },
@@ -50,15 +49,14 @@ const transforms: Transform[] = [
   },
 ];
 
-const { checkIn } = useCheckIn<Transform, ObjectTransformerContext>();
-const { desk } = checkIn(ObjectTransformerDeskKey, {
+const { checkIn } = useCheckIn<TransformProvider, ObjectTransformerContext>();
+checkIn(ObjectTransformerDeskKey, {
   id: 'object-transform',
   autoCheckIn: true,
-});
-
-onMounted(() => {
-  const d = desk as DeskWithContext;
-  d.addTransforms(...transforms);
+  data: {
+    type: 'transform-provider',
+    transforms,
+  },
 });
 </script>
 

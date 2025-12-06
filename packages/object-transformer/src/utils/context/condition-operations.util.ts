@@ -12,12 +12,7 @@ export function createConditionOperationsMethods(context: ConditionOperationsCon
   const { conditions } = context;
 
   return {
-    /**
-     * Add new conditions to the registry
-     */
-    addConditions(...newConditions: Condition[]) {
-      conditions.value.push(...newConditions);
-    },
+    // addConditions removed - use RegistryPlugin
 
     /**
      * Get a condition by name

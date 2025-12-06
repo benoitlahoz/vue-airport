@@ -1,4 +1,4 @@
-import type { Ref } from 'vue';
+import { computed, type Ref } from 'vue';
 import { triggerRef } from 'vue';
 import { maybe, when } from 'vue-airport';
 import type { ObjectNodeData, Transform } from '../../types';
@@ -15,19 +15,18 @@ export interface TransformOperationsContext {
 
 export function createTransformOperationsMethods(context: TransformOperationsContext) {
   // 🟢 OPTIMIZATION: Map-based index for O(1) transform lookup
-  const transformsByName = new Map<string, Transform[]>();
-
-  const rebuildTransformIndex = () => {
-    transformsByName.clear();
+  const transformsByName = computed(() => {
+    const map = new Map<string, Transform[]>();
     for (const transform of context.transforms.value) {
-      const existing = transformsByName.get(transform.name);
+      const existing = map.get(transform.name);
       if (existing) {
         existing.push(transform);
       } else {
-        transformsByName.set(transform.name, [transform]);
+        map.set(transform.name, [transform]);
       }
     }
-  };
+    return map;
+  });
 
   // Helper function to check if a transform is applicable to a node
   const isTransformApplicable = (transform: Transform, node: ObjectNodeData): boolean => {
@@ -42,15 +41,21 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
   };
 
   return {
-    addTransforms(...newTransforms: Transform[]) {
-      context.transforms.value.push(...newTransforms);
-      // Rebuild index after adding transforms
-      rebuildTransformIndex();
+    // addTransforms removed - use RegistryPlugin
+
+    getAvailableTransforms(node: ObjectNodeData): Transform[] {
+      return context.transforms.value.filter((t) => isTransformApplicable(t, node));
+    },
+
+    getTransformByName(name: string): Transform | undefined {
+      // Use the computed map
+      const matches = transformsByName.value.get(name);
+      return matches ? matches[0] : undefined;
     },
 
     findTransform(name: string, node?: ObjectNodeData): Transform | undefined {
       // 🟢 OPTIMIZATION: Use Map lookup O(1) instead of Array.find O(n)
-      const candidates = transformsByName.get(name);
+      const candidates = transformsByName.value.get(name);
       if (!candidates) return undefined;
 
       // If node is provided, filter by type compatibility
@@ -67,7 +72,7 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
 
     createTransformEntry(name: string, node?: ObjectNodeData) {
       // 🟢 OPTIMIZATION: Use Map lookup O(1) instead of Array.find O(n)
-      const candidates = transformsByName.get(name);
+      const candidates = transformsByName.value.get(name);
       if (!candidates) return null;
 
       // If node is provided, filter by type compatibility
@@ -102,10 +107,7 @@ export function createTransformOperationsMethods(context: TransformOperationsCon
 
     // 🟢 OPTIMIZATION: Expose map-based lookup for external use (e.g., applyRecipe)
     getTransformsByName(): Map<string, Transform[]> {
-      return transformsByName;
+      return transformsByName.value;
     },
-
-    // Rebuild index (useful after bulk operations or initial load)
-    rebuildTransformIndex,
   };
 }

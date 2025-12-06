@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { useCheckIn } from 'vue-airport';
-import { onMounted } from 'vue';
-import type { ObjectTransformerContext, Transform } from '..';
+import type { ObjectTransformerContext, Transform, TransformProvider } from '..';
 import { ObjectTransformerDeskKey } from '..';
-
-type DeskWithContext = typeof desk & ObjectTransformerContext;
 
 const transforms: Transform[] = [
   {
@@ -85,15 +82,14 @@ const transforms: Transform[] = [
   },
 ];
 
-const { checkIn } = useCheckIn<Transform, ObjectTransformerContext>();
-const { desk } = checkIn(ObjectTransformerDeskKey, {
+const { checkIn } = useCheckIn<TransformProvider, ObjectTransformerContext>();
+checkIn(ObjectTransformerDeskKey, {
   id: 'date-transform',
   autoCheckIn: true,
-});
-
-onMounted(() => {
-  const d = desk as DeskWithContext;
-  d.addTransforms(...transforms);
+  data: {
+    type: 'transform-provider',
+    transforms,
+  },
 });
 </script>
 

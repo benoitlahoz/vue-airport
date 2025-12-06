@@ -18,7 +18,9 @@
     "paths": {
       "@/*": ["src/*"],
       "vue-airport": ["../core/src"],
-      "vue-airport/*": ["../core/src/*"]
+      "vue-airport/*": ["../core/src/*"],
+      "@vue-airport/plugins-base": ["../plugins-base/src"],
+      "@vue-airport/plugins-base/*": ["../plugins-base/src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.vue"],

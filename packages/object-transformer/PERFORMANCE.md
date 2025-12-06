@@ -282,7 +282,7 @@ Deeply nested object flattening, multiple renames, splits, and deletions.
     "tags_1": "active",
     "tags_2": "premium"
   },
-  "migratedAt": "2025-12-06T17:25:48.555Z"
+  "migratedAt": "2025-12-06T19:41:54.158Z"
 }
 ```
 </details>
@@ -293,25 +293,25 @@ Deeply nested object flattening, multiple renames, splits, and deletions.
 
 | Name | Ops/sec (Hz) | Mean (ms) | P99 (ms) | Samples |
 | :--- | :--- | :--- | :--- | :--- |
-| Scaling: Small (10 items) | 397319.54 | 0.0025 | 0.0034 | 198660 |
-| Scaling: Medium (1,000 items) | 4175.12 | 0.2395 | 0.3737 | 2088 |
-| Scaling: Large (10,000 items) | 414.78 | 2.4109 | 2.8942 | 208 |
-| Complexity: Simple | 417.81 | 2.3934 | 2.7787 | 209 |
-| Complexity: Structural | 171.63 | 5.8265 | 10.5822 | 86 |
-| Complexity: Conditional | 477.95 | 2.0923 | 2.5957 | 239 |
-| Complexity: Heavy | 116.29 | 8.5995 | 12.8735 | 59 |
-| Complexity: Structural Complex | 71.60 | 13.9659 | 23.1670 | 36 |
-| Complexity: Extreme (Deep Nested) | 24.60 | 40.6559 | 46.8796 | 13 |
+| Scaling: Small (10 items) | 399971.23 | 0.0025 | 0.0033 | 199986 |
+| Scaling: Medium (1,000 items) | 4353.23 | 0.2297 | 0.3537 | 2177 |
+| Scaling: Large (10,000 items) | 426.49 | 2.3447 | 2.7326 | 214 |
+| Complexity: Simple | 429.96 | 2.3258 | 2.6736 | 216 |
+| Complexity: Structural | 174.23 | 5.7395 | 10.1391 | 88 |
+| Complexity: Conditional | 462.30 | 2.1631 | 5.7533 | 232 |
+| Complexity: Heavy | 118.85 | 8.4141 | 13.1120 | 60 |
+| Complexity: Structural Complex | 74.35 | 13.4507 | 17.6076 | 38 |
+| Complexity: Extreme (Deep Nested) | 24.28 | 41.1883 | 45.5224 | 13 |
 
 ## Performance Comparison
 
 **Scaling: Small (10 items)** is the fastest.
 
-- **95.16x** faster than *Scaling: Medium (1,000 items)*
-- **831.30x** faster than *Complexity: Conditional*
-- **950.95x** faster than *Complexity: Simple*
-- **957.92x** faster than *Scaling: Large (10,000 items)*
-- **2314.97x** faster than *Complexity: Structural*
-- **3416.76x** faster than *Complexity: Heavy*
-- **5548.94x** faster than *Complexity: Structural Complex*
-- **16153.38x** faster than *Complexity: Extreme (Deep Nested)*
+- **91.88x** faster than *Scaling: Medium (1,000 items)*
+- **865.18x** faster than *Complexity: Conditional*
+- **930.26x** faster than *Complexity: Simple*
+- **937.83x** faster than *Scaling: Large (10,000 items)*
+- **2295.62x** faster than *Complexity: Structural*
+- **3365.38x** faster than *Complexity: Heavy*
+- **5379.87x** faster than *Complexity: Structural Complex*
+- **16474.12x** faster than *Complexity: Extreme (Deep Nested)*

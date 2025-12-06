@@ -1,5 +1,6 @@
 // Public types for @vue-airport/object-transformer
 import type { ComputedRef, InjectionKey, Ref } from 'vue';
+import type { Notification, NotificationSeverity } from '@vue-airport/plugins-base';
 
 export type TransformerMode = 'object' | 'model';
 
@@ -11,15 +12,10 @@ export interface PropertyVariation {
   coverage: number;
 }
 
-export type ErrorSeverity = 'info' | 'warning' | 'error' | 'critical';
+export type ErrorSeverity = NotificationSeverity;
 
-export interface TransformerError {
-  id: string;
+export interface TransformerError extends Notification {
   code: string;
-  message: string;
-  details?: any;
-  severity: ErrorSeverity;
-  timestamp: number;
 }
 
 export type ObjectNodeType =
@@ -65,6 +61,16 @@ export interface Condition {
   applicableTo?: ObjectNodeType[]; // Filtre déclaratif par type de valeur
   if: (value: any, ...params: any[]) => boolean; // Teste la valeur directement
   params?: any[];
+}
+
+export interface TransformProvider {
+  type: 'transform-provider';
+  transforms: Transform[];
+}
+
+export interface ConditionProvider {
+  type: 'condition-provider';
+  conditions: Condition[];
 }
 
 // 🟡 OPTIMIZATION: Simplified key metadata structure
@@ -114,7 +120,6 @@ export interface ObjectTransformerContext {
   structuralTransformHandlers: Record<string, (current: any, lastKey: string, result: any) => void>;
   // Transforms
   transforms: Ref<Transform[]>;
-  addTransforms: (...newTransforms: Transform[]) => void;
   findTransform: (name: string, node?: ObjectNodeData) => Transform | undefined;
   initParams: (transform: Transform) => any[];
   createTransformEntry: (
@@ -125,10 +130,8 @@ export interface ObjectTransformerContext {
   computeStepValue: (node: ObjectNodeData, index: number) => any;
   // 🟢 OPTIMIZATION: Map-based transform lookup
   getTransformsByName: () => Map<string, Transform[]>;
-  rebuildTransformIndex: () => void;
   // Conditions
   conditions: Ref<Condition[]>;
-  addConditions: (...newConditions: Condition[]) => void;
   getCondition: (name: string) => Condition | undefined;
   // Nodes
   forbiddenKeys: Ref<string[]>;
@@ -170,17 +173,19 @@ export interface ObjectTransformerContext {
     oldParentKey: string | undefined,
     newParentKey: string
   ) => void;
-  // Error Management
-  errors: Ref<TransformerError[]>;
-  notify: (error: Partial<TransformerError>) => void;
-  dismiss: (id: string) => void;
-  clearErrors: () => void;
 
   // Desk injection (must be called after desk creation)
   setDesk: (desk: any) => void;
 }
 
-export type ObjectTransformerDesk = any & ObjectTransformerContext;
+export type ObjectTransformerDesk = any &
+  ObjectTransformerContext & {
+    errors: Ref<TransformerError[]>;
+    notify: (error: Partial<TransformerError>) => void;
+    dismiss: (id: string) => void;
+    clearErrors: () => void;
+    getErrors: () => TransformerError[];
+  };
 
 export const ObjectTransformerDeskKey: InjectionKey<ObjectTransformerDesk> =
   Symbol('ObjectTransformerDesk');

@@ -5,7 +5,7 @@ import type { ObjectNodeData, ObjectTransformerContext } from '.';
 import { ObjectTransformerDeskKey, shouldStartEdit, canConfirmEdit } from '.';
 import { cn } from './lib/utils';
 
-interface Props {
+export interface Props {
   nodeId: string;
   class?: HTMLAttributes['class'];
   style?: HTMLAttributes['style'];
@@ -115,4 +115,3 @@ const cancelEdit = () => {
     <span v-else :class="keyClasses">{{ displayKey }}</span>
   </div>
 </template>
-

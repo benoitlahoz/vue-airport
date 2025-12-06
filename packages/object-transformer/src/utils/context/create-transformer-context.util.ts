@@ -1,4 +1,5 @@
-import { ref, watch, nextTick, computed } from 'vue';
+import { ref, watch, nextTick, computed, toRef, type Ref } from 'vue';
+import type { StatePlugin } from '@vue-airport/plugins-base';
 import type {
   ObjectNodeData,
   ObjectNodeType,
@@ -31,6 +32,9 @@ export interface CreateContextParams {
   originalData: any;
   forbiddenKeys: string[];
   primitiveTypes: ObjectNodeType[];
+  statePlugin: StatePlugin<any>;
+  transforms: Ref<any[]>;
+  conditions: Ref<any[]>;
 }
 
 /**
@@ -44,47 +48,17 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
     originalData,
     forbiddenKeys,
     primitiveTypes,
+    statePlugin,
+    transforms,
+    conditions,
   } = params;
 
   // Shared refs and state
-  const tree = ref<ObjectNodeData>(
-    buildNodeTree(initialData, Array.isArray(initialData) ? 'Array' : 'Object')
-  );
-  const treeKey = ref<number>(0); // Key to force complete remount of tree
-  const mode = ref<'object' | 'model'>(initialMode);
-  const templateIndex = ref<number>(initialTemplateIndex);
-  const originalDataRef = ref(originalData);
-  const transforms = ref<any[]>([]);
-  const conditions = ref<any[]>([]); // Conditions registry
-
-  // Error Management
-  const errors = ref<TransformerError[]>([]);
-
-  const dismiss = (id: string) => {
-    errors.value = errors.value.filter((e) => e.id !== id);
-  };
-
-  const notify = (payload: Partial<TransformerError>) => {
-    const id = crypto.randomUUID();
-    const error: TransformerError = {
-      id,
-      timestamp: Date.now(),
-      severity: 'error',
-      code: 'UNKNOWN',
-      message: 'An unknown error occurred',
-      ...payload,
-    };
-    errors.value.push(error);
-
-    // Auto-dismiss for info/warning
-    if (error.severity === 'info' || error.severity === 'warning') {
-      setTimeout(() => dismiss(id), 5000);
-    }
-  };
-
-  const clearErrors = () => {
-    errors.value = [];
-  };
+  const tree = toRef(statePlugin.state, 'tree');
+  const treeKey = toRef(statePlugin.state, 'treeKey');
+  const mode = toRef(statePlugin.state, 'mode');
+  const templateIndex = toRef(statePlugin.state, 'templateIndex');
+  const originalDataRef = toRef(statePlugin.state, 'originalData');
 
   // Computed: mode availability
   const isObjectModeAvailable = computed(() => !Array.isArray(originalDataRef.value));
@@ -146,7 +120,6 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
     transforms,
     treeKey,
     deskRef: () => deskRef,
-    notify,
   });
 
   const modeOps = createModeManagementMethods({
@@ -277,12 +250,6 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
 
     // Recipe management
     ...recipeOps,
-
-    // Error Management
-    errors,
-    notify,
-    dismiss,
-    clearErrors,
 
     // Inject desk reference after creation (must be called before using transforms)
     setDesk(desk: any) {

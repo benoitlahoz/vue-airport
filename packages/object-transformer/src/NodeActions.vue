@@ -5,7 +5,7 @@ import { Undo, Trash } from 'lucide-vue-next';
 import type { ObjectNodeData, ObjectTransformerContext } from '.';
 import { ObjectTransformerDeskKey } from '.';
 
-interface Props {
+export interface Props {
   nodeId: string;
   isVisible: boolean;
 }

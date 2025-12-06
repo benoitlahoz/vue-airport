@@ -15,7 +15,7 @@ import { getTypeFromValue } from './utils/type-guards.util';
 
 type DeskWithContext = typeof desk & ObjectTransformerContext;
 
-interface Props {
+export interface Props {
   nodeId: string;
   stepIndex?: number; // Si défini, gère un step transform au lieu du node transform
   placeholder?: string;

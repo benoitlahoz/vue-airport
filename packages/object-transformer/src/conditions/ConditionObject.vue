@@ -1,18 +1,9 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
 import { useCheckIn } from 'vue-airport';
-import type { ObjectTransformerContext, Transform } from '..';
+import type { ObjectTransformerContext, Transform, TransformProvider } from '..';
 import { ObjectTransformerDeskKey } from '..';
 
-type DeskWithContext = typeof desk & ObjectTransformerContext;
-
-const { checkIn } = useCheckIn<Transform, ObjectTransformerContext>();
-const { desk } = checkIn(ObjectTransformerDeskKey, {
-  id: 'object-conditions',
-  autoCheckIn: true,
-});
-
-const deskWithContext = desk as DeskWithContext;
+const { checkIn } = useCheckIn<TransformProvider, ObjectTransformerContext>();
 
 // Conditions are NON-structural transforms that return the value unchanged
 // They use the 'condition' property to evaluate and set conditionMet metadata
@@ -87,13 +78,18 @@ const transforms: Transform[] = [
   },
 ];
 
-onMounted(() => {
-  deskWithContext.addTransforms(...transforms);
+checkIn(ObjectTransformerDeskKey, {
+  id: 'object-conditions',
+  autoCheckIn: true,
+  data: {
+    type: 'transform-provider',
+    transforms,
+  },
 });
 </script>
 
 <template>
   <div data-slot="condition-object" style="display: none">
-    <!-- Conditions are registered via addTransforms in onMounted -->
+    <!-- Conditions are registered via checkIn data -->
   </div>
 </template>

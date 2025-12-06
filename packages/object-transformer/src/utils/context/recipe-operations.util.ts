@@ -1,5 +1,5 @@
 import { ref, computed, nextTick, type Ref } from 'vue';
-import type { ObjectNodeData, Transform, TransformerMode, TransformerError } from '../../types';
+import type { ObjectNodeData, Transform, TransformerMode } from '../../types';
 import { applyRecipe as applyRecipeUtil } from '../../recipe/recipe-applier';
 import { buildNodeTree, destroyNodeTree } from '../node/node-builder.util';
 import { getDataForMode } from '../model/model-mode.util';
@@ -20,7 +20,7 @@ function findNodesAtPath(
   if (path.length === 0) return [];
 
   const [firstKey, ...restPath] = path;
-  let currentLevelNodes: ObjectNodeData[] = [];
+  const currentLevelNodes: ObjectNodeData[] = [];
 
   // Start from root's children
   if (root.children) {
@@ -63,7 +63,6 @@ export interface RecipeOperationsContext {
   transforms: Ref<Transform[]>;
   treeKey: Ref<number>;
   deskRef?: () => any;
-  notify: (error: Partial<TransformerError>) => void;
 }
 
 /**
@@ -117,7 +116,7 @@ export function createRecipeOperationsMethods(context: RecipeOperationsContext) 
       try {
         return applyRecipeUtil(data, recipeToApply, context.transforms.value);
       } catch (error) {
-        context.notify({
+        context.deskRef?.().notify({
           code: 'RECIPE_APPLY_ERROR',
           message: 'Failed to apply recipe',
           details: error instanceof Error ? error.message : error,
@@ -207,7 +206,7 @@ export function createRecipeOperationsMethods(context: RecipeOperationsContext) 
         // Update originalData to keep in sync
         context.originalData.value = transformedData;
       } catch (error) {
-        context.notify({
+        context.deskRef?.().notify({
           code: 'RECIPE_IMPORT_ERROR',
           message: 'Failed to import recipe',
           details: error instanceof Error ? error.message : error,

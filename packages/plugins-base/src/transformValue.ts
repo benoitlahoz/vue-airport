@@ -38,11 +38,11 @@ export interface TransformValuePluginMethods<T> extends CheckInPluginMethods<T> 
   /**
    * Add or update a transform for a property
    */
-  addTransform<K extends keyof T>(key: K, config: TransformConfig<T[K]>): void;
+  addTransform<K extends keyof T>(desk: DeskCore<T>, key: K, config: TransformConfig<T[K]>): void;
   /**
    * Remove a transform for a property
    */
-  removeTransform<K extends keyof T>(key: K): void;
+  removeTransform<K extends keyof T>(desk: DeskCore<T>, key: K): void;
 }
 
 export function createTransformValuePlugin<T>(
@@ -62,34 +62,22 @@ export function createTransformValuePlugin<T>(
     },
 
     /**
-     * Apply all transforms to an item and return the transformed result
-     */
-    applyTransforms(id, item) {
-      const result = { ...item };
-      for (const key in transforms) {
-        const config = transforms[key];
-        if (config && config.fn) {
-          const transformResult = config.fn(deskInstance!, item[key], result, key);
-          if (transformResult && typeof transformResult === 'object') {
-            Object.assign(result, transformResult);
-          }
-        }
-      }
-      return result;
-    },
-
-    /**
      * Apply transforms to the item in-place before check-in. Returns false if a strict transform fails, true otherwise.
      */
-    onBeforeCheckIn(id, item) {
+    onBeforeCheckIn(id, item, desk) {
       let hasStrictError = false;
       for (const key in transforms) {
         const config = transforms[key];
         if (config && config.fn) {
           try {
-            const transformResult = config.fn(deskInstance!, item[key], item, key);
+            const transformResult = config.fn(
+              desk as DeskCore<T> & TransformValuePluginExports<T>,
+              item[key],
+              item,
+              key
+            );
             if (transformResult && typeof transformResult === 'object') {
-              Object.assign(item, transformResult);
+              Object.assign(item as object, transformResult);
             } else if (transformResult === undefined || transformResult === null) {
               if (config.strict) {
                 hasStrictError = true;
@@ -108,11 +96,11 @@ export function createTransformValuePlugin<T>(
     },
 
     methods: {
-      addTransform(key, config) {
+      addTransform(desk, key, config) {
         transforms[key] = config;
       },
-      removeTransform(key) {
-        transforms[key] = undefined;
+      removeTransform(desk, key) {
+        delete transforms[key];
       },
     },
   };

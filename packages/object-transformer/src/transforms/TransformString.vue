@@ -1,16 +1,8 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useCheckIn } from 'vue-airport';
-import type { ObjectTransformerContext, Transform } from '..';
+import type { ObjectTransformerContext, Transform, TransformProvider } from '..';
 import { ObjectTransformerDeskKey, registerStructuralTransformHandler } from '..';
-
-type DeskWithContext = typeof desk & ObjectTransformerContext;
-
-const { checkIn } = useCheckIn<Transform, ObjectTransformerContext>();
-const { desk } = checkIn(ObjectTransformerDeskKey, {
-  id: 'string-transform',
-  autoCheckIn: true,
-});
 
 const transforms: Transform[] = [
   {
@@ -257,6 +249,18 @@ const transforms: Transform[] = [
   },
 ];
 
+const { checkIn } = useCheckIn<TransformProvider, ObjectTransformerContext>();
+const { desk } = checkIn(ObjectTransformerDeskKey, {
+  id: 'string-transform',
+  autoCheckIn: true,
+  data: {
+    type: 'transform-provider',
+    transforms,
+  },
+});
+
+type DeskWithContext = typeof desk & ObjectTransformerContext;
+
 onMounted(() => {
   const d = desk as DeskWithContext;
   if (!d) return;
@@ -281,8 +285,6 @@ onMounted(() => {
     },
     d
   );
-
-  d.addTransforms(...transforms);
 });
 </script>
 
