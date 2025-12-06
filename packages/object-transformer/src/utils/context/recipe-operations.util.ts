@@ -1,5 +1,5 @@
 import { ref, computed, nextTick, type Ref } from 'vue';
-import type { ObjectNodeData, Transform, TransformerMode } from '../../types';
+import type { ObjectNodeData, Transform, TransformerMode, TransformerError } from '../../types';
 import { applyRecipe as applyRecipeUtil } from '../../recipe/recipe-applier';
 import { buildNodeTree, destroyNodeTree } from '../node/node-builder.util';
 import { getDataForMode } from '../model/model-mode.util';
@@ -63,6 +63,7 @@ export interface RecipeOperationsContext {
   transforms: Ref<Transform[]>;
   treeKey: Ref<number>;
   deskRef?: () => any;
+  notify: (error: Partial<TransformerError>) => void;
 }
 
 /**
@@ -113,7 +114,17 @@ export function createRecipeOperationsMethods(context: RecipeOperationsContext) 
 
     // Apply recipe (uses recipe-applier)
     applyRecipe(data: any, recipeToApply: any) {
-      return applyRecipeUtil(data, recipeToApply, context.transforms.value);
+      try {
+        return applyRecipeUtil(data, recipeToApply, context.transforms.value);
+      } catch (error) {
+        context.notify({
+          code: 'RECIPE_APPLY_ERROR',
+          message: 'Failed to apply recipe',
+          details: error instanceof Error ? error.message : error,
+          severity: 'error',
+        });
+        throw error;
+      }
     },
 
     // Export recipe
@@ -123,77 +134,87 @@ export function createRecipeOperationsMethods(context: RecipeOperationsContext) 
 
     // Import recipe
     async importRecipe(recipeJson: string) {
-      const recipe = JSON.parse(recipeJson);
+      try {
+        const recipe = JSON.parse(recipeJson);
 
-      // Store the imported recipe for later use (e.g., propertyVariations)
-      importedRecipe.value = recipe;
+        // Store the imported recipe for later use (e.g., propertyVariations)
+        importedRecipe.value = recipe;
 
-      // 🟢 DESTRUCTIVE IMPORT PROCESS:
-      // 1. Apply recipe to original input data
-      // 2. Destroy old tree completely (breaks circular refs)
-      // 3. Clear recorder to start fresh
-      // 4. Build new tree from transformed data (respecting current mode)
-      // 5. Increment treeKey to force Vue component remount
-      // 6. Wait for Vue to process the remount
-      // 7. Update originalData to keep in sync
+        // 🟢 DESTRUCTIVE IMPORT PROCESS:
+        // 1. Apply recipe to original input data
+        // 2. Destroy old tree completely (breaks circular refs)
+        // 3. Clear recorder to start fresh
+        // 4. Build new tree from transformed data (respecting current mode)
+        // 5. Increment treeKey to force Vue component remount
+        // 6. Wait for Vue to process the remount
+        // 7. Update originalData to keep in sync
 
-      const transformedData = applyRecipeUtil(
-        context.originalData.value,
-        recipe,
-        context.transforms.value
-      );
+        const transformedData = applyRecipeUtil(
+          context.originalData.value,
+          recipe,
+          context.transforms.value
+        );
 
-      // Destroy old tree first - this breaks all circular references
-      if (context.tree.value) {
-        destroyNodeTree(context.tree.value);
-      }
+        // Destroy old tree first - this breaks all circular references
+        if (context.tree.value) {
+          destroyNodeTree(context.tree.value);
+        }
 
-      // Clear recorder - we start fresh with transformed data
-      recorder.clear();
+        // Clear recorder - we start fresh with transformed data
+        recorder.clear();
 
-      // Respect current mode when rebuilding tree (like data watcher does)
-      const currentMode = context.mode.value;
-      const currentTemplateIndex = context.templateIndex.value;
-      const dataForTree = getDataForMode(transformedData, currentMode, currentTemplateIndex);
+        // Respect current mode when rebuilding tree (like data watcher does)
+        const currentMode = context.mode.value;
+        const currentTemplateIndex = context.templateIndex.value;
+        const dataForTree = getDataForMode(transformedData, currentMode, currentTemplateIndex);
 
-      // Build completely new tree
-      context.tree.value = buildNodeTree(
-        dataForTree,
-        Array.isArray(dataForTree) ? 'Array' : 'Object'
-      );
+        // Build completely new tree
+        context.tree.value = buildNodeTree(
+          dataForTree,
+          Array.isArray(dataForTree) ? 'Array' : 'Object'
+        );
 
-      // 🔥 CRITICAL: Apply transforms from recipe to tree nodes
-      // This ensures each node has its own transform instances with independent conditionMet
-      if (recipe.operations && Array.isArray(recipe.operations)) {
-        for (const op of recipe.operations) {
-          if (op.type === 'setTransforms' && op.path && op.transforms) {
-            // Find all nodes matching this path in model mode
-            const matchingNodes = findNodesAtPath(context.tree.value, op.path, currentMode);
+        // 🔥 CRITICAL: Apply transforms from recipe to tree nodes
+        // This ensures each node has its own transform instances with independent conditionMet
+        if (recipe.operations && Array.isArray(recipe.operations)) {
+          for (const op of recipe.operations) {
+            if (op.type === 'setTransforms' && op.path && op.transforms) {
+              // Find all nodes matching this path in model mode
+              const matchingNodes = findNodesAtPath(context.tree.value, op.path, currentMode);
 
-            for (const node of matchingNodes) {
-              // Create fresh transform instances for this node (NOT shared!)
-              node.transforms = op.transforms.map((t: any) => {
-                return (
-                  context.deskRef?.().createTransformEntry(t.name, node) || {
-                    name: t.name,
-                    params: t.params || [],
-                  }
-                );
-              });
+              for (const node of matchingNodes) {
+                // Create fresh transform instances for this node (NOT shared!)
+                node.transforms = op.transforms.map((t: any) => {
+                  return (
+                    context.deskRef?.().createTransformEntry(t.name, node) || {
+                      name: t.name,
+                      params: t.params || [],
+                    }
+                  );
+                });
+              }
             }
           }
         }
+
+        // Increment treeKey to force Vue to completely remount the tree
+        // This ensures old ObjectNode components are destroyed before new ones mount
+        context.treeKey.value++;
+
+        // Wait for Vue to process the remount
+        await nextTick();
+
+        // Update originalData to keep in sync
+        context.originalData.value = transformedData;
+      } catch (error) {
+        context.notify({
+          code: 'RECIPE_IMPORT_ERROR',
+          message: 'Failed to import recipe',
+          details: error instanceof Error ? error.message : error,
+          severity: 'error',
+        });
+        throw error;
       }
-
-      // Increment treeKey to force Vue to completely remount the tree
-      // This ensures old ObjectNode components are destroyed before new ones mount
-      context.treeKey.value++;
-
-      // Wait for Vue to process the remount
-      await nextTick();
-
-      // Update originalData to keep in sync
-      context.originalData.value = transformedData;
     },
 
     // Clear recipe

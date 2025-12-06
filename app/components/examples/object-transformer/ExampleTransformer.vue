@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, unref } from 'vue';
+import { computed, ref, unref, watch } from 'vue';
 import {
   ObjectTransformer,
   ObjectPreview,
@@ -14,6 +14,7 @@ import {
   ConditionString,
   type ObjectTransformerContext,
 } from '@vue-airport/object-transformer';
+import { toast } from 'vue-sonner';
 import ModeToggle from './ModeToggle.vue';
 import ModelInsights from './ModelInsights.vue';
 import {
@@ -29,11 +30,35 @@ const transformerRef = ref<InstanceType<typeof ObjectTransformer>>();
 // Get treeKey for forcing tree remount
 const treeKey = computed(() => unref(transformerRef.value?.treeKey) ?? 0);
 
+// Access desk through component ref
+const transformerDesk = computed(
+  () => transformerRef.value?.desk as ObjectTransformerContext | undefined
+);
+
+// Watch for errors and display toasts
+watch(
+  () => transformerDesk.value?.errors.value.length,
+  (newLength, oldLength) => {
+    console.log('Error count changed:', { newLength, oldLength });
+    if (typeof newLength === 'number' && typeof oldLength === 'number' && newLength > oldLength) {
+      const error = transformerDesk.value?.errors.value[newLength - 1];
+      if (error) {
+        toast.error('Transformation Error', {
+          description: error.message,
+          action: {
+            label: 'Dismiss',
+            onClick: () => transformerDesk.value?.dismiss(error.id),
+          },
+        });
+      }
+    }
+  }
+);
+
 // Recipe stats for display - access desk through component ref
 const stats = computed(() => {
-  const desk = transformerRef.value?.desk as ObjectTransformerContext | undefined;
-  if (!desk) return null;
-  const recipe = desk.buildRecipe();
+  if (!transformerDesk.value) return null;
+  const recipe = transformerDesk.value.buildRecipe();
 
   // Count operations by type in Recipe v2
   const transformations = recipe.operations.length;
@@ -205,10 +230,32 @@ const USE_LARGE_DATASET = true; // Changed to false to show noble names
 const LARGE_DATASET_SIZE = 1000;
 
 const data = USE_LARGE_DATASET ? generateLargeDataset(LARGE_DATASET_SIZE) : smallData;
+
+const triggerTestError = async () => {
+  const desk = transformerRef.value?.desk as ObjectTransformerContext | undefined;
+  if (desk) {
+    // Trigger a real error inside the desk logic by attempting to import invalid JSON
+    // This will be caught by the centralized error handler in recipe-operations.util.ts
+    try {
+      await desk.importRecipe('{{ THIS IS NOT VALID JSON }}');
+    } catch {
+      console.log('Test error triggered successfully');
+    }
+  }
+};
 </script>
 
 <template>
   <div class="h-164 overflow-hidden flex flex-col">
+    <Sonner />
+    <div class="flex justify-end mb-2">
+      <button
+        class="px-3 py-1 text-xs font-medium text-white bg-orange-500 rounded hover:bg-orange-600 transition-colors"
+        @click="triggerTestError"
+      >
+        Trigger Test Error
+      </button>
+    </div>
     <ObjectTransformer
       ref="transformerRef"
       v-slot="{ desk }"
