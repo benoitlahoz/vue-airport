@@ -11,6 +11,17 @@ export interface PropertyVariation {
   coverage: number;
 }
 
+export type ErrorSeverity = 'info' | 'warning' | 'error' | 'critical';
+
+export interface TransformerError {
+  id: string;
+  code: string;
+  message: string;
+  details?: any;
+  severity: ErrorSeverity;
+  timestamp: number;
+}
+
 export type ObjectNodeType =
   | 'string'
   | 'number'
@@ -159,6 +170,12 @@ export interface ObjectTransformerContext {
     oldParentKey: string | undefined,
     newParentKey: string
   ) => void;
+  // Error Management
+  errors: Ref<TransformerError[]>;
+  notify: (error: Partial<TransformerError>) => void;
+  dismiss: (id: string) => void;
+  clearErrors: () => void;
+
   // Desk injection (must be called after desk creation)
   setDesk: (desk: any) => void;
 }

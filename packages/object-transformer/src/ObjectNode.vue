@@ -185,6 +185,9 @@ const displayValue = computed(() => {
   --ot-red: oklch(0.6276 0.2218 22.0942);
   --ot-red-bg: oklch(0.9647 0.0078 247.8581);
   --ot-red-border: oklch(0.8422 0.0039 247.8581);
+  --ot-yellow: oklch(0.65 0.18 65);
+  --ot-yellow-bg: oklch(0.9647 0.0078 247.8581);
+  --ot-yellow-border: oklch(0.8422 0.0039 247.8581);
 }
 
 :root.dark {
@@ -211,6 +214,9 @@ const displayValue = computed(() => {
   --ot-red: oklch(0.7276 0.1818 22.0942);
   --ot-red-bg: oklch(0.2392 0.0166 250.8453);
   --ot-red-border: oklch(0.3217 0.0144 253.4316);
+  --ot-yellow: oklch(0.85 0.15 85);
+  --ot-yellow-bg: oklch(0.2392 0.0166 250.8453);
+  --ot-yellow-border: oklch(0.3217 0.0144 253.4316);
 }
 
 /* Main container */
@@ -1013,5 +1019,110 @@ const displayValue = computed(() => {
   50% {
     opacity: 0.5;
   }
+}
+
+/* === Error Notifications === */
+.ot-error-container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 28rem;
+  width: 100%;
+}
+
+.ot-error-item {
+  border-width: 1px;
+  border-style: solid;
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
+  position: relative;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.ot-error-critical {
+  background-color: var(--ot-red-bg);
+  border-color: var(--ot-red-border);
+  color: var(--ot-red);
+}
+
+.ot-error-warning {
+  background-color: var(--ot-yellow-bg);
+  border-color: var(--ot-yellow-border);
+  color: var(--ot-yellow);
+}
+
+.ot-error-info {
+  background-color: var(--ot-blue-bg);
+  border-color: var(--ot-blue-border);
+  color: var(--ot-blue);
+}
+
+.ot-error-content {
+  flex: 1 1 0%;
+}
+
+.ot-error-code {
+  font-weight: 700;
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.ot-error-message {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.ot-error-details {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+.ot-error-pre {
+  margin-top: 0.25rem;
+  padding: 0.25rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  overflow: auto;
+  max-height: 5rem;
+}
+
+.ot-error-dismiss {
+  font-size: 1.25rem;
+  line-height: 1;
+  font-weight: 700;
+  opacity: 0.5;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.ot-error-dismiss:hover {
+  opacity: 1;
+}
+
+/* Transitions */
+.ot-error-list-enter-active,
+.ot-error-list-leave-active {
+  transition: all 0.3s ease;
+}
+.ot-error-list-enter-from,
+.ot-error-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
 }
 </style>

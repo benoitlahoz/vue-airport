@@ -1,5 +1,10 @@
 import { ref, watch, nextTick, computed } from 'vue';
-import type { ObjectNodeData, ObjectNodeType, ObjectTransformerContext } from '../../types';
+import type {
+  ObjectNodeData,
+  ObjectNodeType,
+  ObjectTransformerContext,
+  TransformerError,
+} from '../../types';
 import { buildNodeTree } from '../node/node-builder.util';
 import { getTypeFromValue } from '../type-guards.util';
 import {
@@ -51,6 +56,35 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
   const originalDataRef = ref(originalData);
   const transforms = ref<any[]>([]);
   const conditions = ref<any[]>([]); // Conditions registry
+
+  // Error Management
+  const errors = ref<TransformerError[]>([]);
+
+  const dismiss = (id: string) => {
+    errors.value = errors.value.filter((e) => e.id !== id);
+  };
+
+  const notify = (payload: Partial<TransformerError>) => {
+    const id = crypto.randomUUID();
+    const error: TransformerError = {
+      id,
+      timestamp: Date.now(),
+      severity: 'error',
+      code: 'UNKNOWN',
+      message: 'An unknown error occurred',
+      ...payload,
+    };
+    errors.value.push(error);
+
+    // Auto-dismiss for info/warning
+    if (error.severity === 'info' || error.severity === 'warning') {
+      setTimeout(() => dismiss(id), 5000);
+    }
+  };
+
+  const clearErrors = () => {
+    errors.value = [];
+  };
 
   // Computed: mode availability
   const isObjectModeAvailable = computed(() => !Array.isArray(originalDataRef.value));
@@ -112,6 +146,7 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
     transforms,
     treeKey,
     deskRef: () => deskRef,
+    notify,
   });
 
   const modeOps = createModeManagementMethods({
@@ -242,6 +277,12 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
 
     // Recipe management
     ...recipeOps,
+
+    // Error Management
+    errors,
+    notify,
+    dismiss,
+    clearErrors,
 
     // Inject desk reference after creation (must be called before using transforms)
     setDesk(desk: any) {
