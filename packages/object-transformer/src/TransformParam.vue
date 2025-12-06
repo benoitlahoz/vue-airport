@@ -71,7 +71,10 @@ function handleKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div data-slot="transform-param">
+  <div
+    data-slot="transform-param"
+    :class="{ 'transform-param-checkbox-wrapper': config?.type === 'boolean' }"
+  >
     <input
       v-if="config?.type === 'text'"
       v-model="localValue"
@@ -92,23 +95,24 @@ function handleKeydown(event: KeyboardEvent) {
       @input="(e) => handleInput(Number((e.target as HTMLInputElement).value), true)"
     />
 
-    <div v-else-if="config?.type === 'boolean'" class="transform-param-checkbox">
-      <input
-        :id="`checkbox-${config?.label}`"
-        type="checkbox"
-        :checked="localValue"
-        class="transform-param-checkbox-input"
-        @change="(e) => handleInput((e.target as HTMLInputElement).checked, true)"
-      />
-      <label :for="`checkbox-${config?.label}`" class="transform-param-checkbox-label">
-        {{ localValue ? 'true' : 'false' }}
-      </label>
-    </div>
+    <input
+      v-else-if="config?.type === 'boolean'"
+      :id="`checkbox-${config?.label}`"
+      type="checkbox"
+      :checked="localValue"
+      class="transform-param-checkbox"
+      @change="(e) => handleInput((e.target as HTMLInputElement).checked, true)"
+    />
   </div>
 </template>
 
 <style>
 /* TransformParam styles - using ObjectNode variables */
+.transform-param-checkbox-wrapper {
+  width: auto !important;
+  max-width: fit-content;
+}
+
 .transform-param-input {
   height: 1.5rem;
   width: 100%;
@@ -136,37 +140,46 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 .transform-param-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.transform-param-checkbox-input {
-  width: 1rem;
-  height: 1rem;
+  width: 1.25rem;
+  height: 1.25rem;
   border: 1px solid var(--object-node-input-border);
   border-radius: 0.25rem;
   background-color: var(--object-node-input-bg);
   cursor: pointer;
-  transition-property: border-color, background-color;
+  transition-property: border-color, background-color, box-shadow;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  flex-shrink: 0;
 }
 
-.transform-param-checkbox-input:checked {
+.transform-param-checkbox:checked {
   background-color: var(--object-node-primary);
   border-color: var(--object-node-primary);
 }
 
-.transform-param-checkbox-input:focus {
+.transform-param-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 0.3rem;
+  top: 0.05rem;
+  width: 0.35rem;
+  height: 0.65rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.transform-param-checkbox:focus {
   outline: none;
+  border-color: var(--object-node-input-ring);
   box-shadow: 0 0 0 3px oklch(from var(--object-node-input-ring) l c h / 0.1);
 }
 
-.transform-param-checkbox-label {
-  font-size: 0.75rem;
-  line-height: 1rem;
-  cursor: pointer;
-  user-select: none;
+.transform-param-checkbox:hover {
+  border-color: var(--object-node-input-ring);
 }
 </style>

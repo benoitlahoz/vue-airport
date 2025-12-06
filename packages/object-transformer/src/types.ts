@@ -27,18 +27,33 @@ export type ObjectNodeType =
 
 export interface StructuralTransformResult {
   __structuralChange: true;
-  action: 'split' | 'merge' | 'arrayToProperties' | 'toObject';
+  action: 'split' | 'merge' | 'arrayToProperties' | 'toObject' | 'conditionalBranch';
   parts?: any[];
   object?: any;
   removeSource?: boolean;
+  // For conditionalBranch action
+  conditionMet?: boolean; // Result of the condition evaluation
+  value?: any; // The value to branch
 }
 
 export interface Transform {
   name: string;
-  if: (node: ObjectNodeData) => boolean;
+  applicableTo?: ObjectNodeType[]; // Filtre déclaratif par type de node
+  if?: (node: ObjectNodeData) => boolean; // Optionnel, pour conditions avancées
   fn: (value: any, ...params: any[]) => any | StructuralTransformResult;
   params?: any[];
   structural?: boolean;
+  // Conditional execution
+  condition?: (value: any, ...params: any[]) => boolean; // Si défini, c'est un transform conditionnel
+  conditionMet?: boolean; // 🔥 LOCAL to each node's transform instance (not shared)
+}
+
+export interface Condition {
+  name: string;
+  description?: string;
+  applicableTo?: ObjectNodeType[]; // Filtre déclaratif par type de valeur
+  if: (value: any, ...params: any[]) => boolean; // Teste la valeur directement
+  params?: any[];
 }
 
 // 🟡 OPTIMIZATION: Simplified key metadata structure
@@ -100,6 +115,10 @@ export interface ObjectTransformerContext {
   // 🟢 OPTIMIZATION: Map-based transform lookup
   getTransformsByName: () => Map<string, Transform[]>;
   rebuildTransformIndex: () => void;
+  // Conditions
+  conditions: Ref<Condition[]>;
+  addConditions: (...newConditions: Condition[]) => void;
+  getCondition: (name: string) => Condition | undefined;
   // Nodes
   forbiddenKeys: Ref<string[]>;
   getComputedValueType: (node: ObjectNodeData, value: any) => ObjectNodeType;

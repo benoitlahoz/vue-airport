@@ -9,22 +9,22 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 const transforms: Transform[] = [
   {
     name: 'To ISO String',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     fn: (v: any) => (v instanceof Date ? v.toISOString() : v),
   },
   {
     name: 'To Locale Date String',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     fn: (v: any) => (v instanceof Date ? v.toLocaleDateString() : v),
   },
   {
     name: 'To Locale Time String',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     fn: (v: any) => (v instanceof Date ? v.toLocaleTimeString() : v),
   },
   {
     name: 'Add Days',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     params: [{ key: 'days', label: 'Days', type: 'number', default: 1 }],
     fn: (v: any, days: number) => {
       if (!(v instanceof Date)) return v;
@@ -36,7 +36,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Subtract Days',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     params: [{ key: 'days', label: 'Days', type: 'number', default: 1 }],
     fn: (v: any, days: number) => {
       if (!(v instanceof Date)) return v;
@@ -48,28 +48,28 @@ const transforms: Transform[] = [
   },
   {
     name: 'Get Time',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     fn: (v: any) => (v instanceof Date ? v.getTime() : v),
   },
   {
     name: 'Get Year',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     fn: (v: any) => (v instanceof Date ? v.getFullYear() : v),
   },
   {
     name: 'Get Month',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     fn: (v: any) => (v instanceof Date ? v.getMonth() + 1 : v), // Months are zero-based
   },
   {
     name: 'Get Day',
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     fn: (v: any) => (v instanceof Date ? v.getDate() : v), // Day of the month
   },
   {
     name: 'To Object',
     structural: true,
-    if: (node) => node.type === 'date',
+    applicableTo: ['date'],
     fn: (v: any) => {
       // Accept any value type after intermediate transformations
       // Wrap any value in an object structure

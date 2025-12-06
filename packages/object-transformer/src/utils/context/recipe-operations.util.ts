@@ -1,5 +1,5 @@
 import { ref, computed, nextTick, type Ref } from 'vue';
-import type { ObjectNodeData, Transform } from '../../types';
+import type { ObjectNodeData, Transform, TransformerMode } from '../../types';
 import { applyRecipe as applyRecipeUtil } from '../../recipe/recipe-applier';
 import { buildNodeTree, destroyNodeTree } from '../node/node-builder.util';
 import { getDataForMode } from '../model/model-mode.util';
@@ -7,6 +7,53 @@ import { getDataForMode } from '../model/model-mode.util';
 // 🟢 Use delta-based recording (like Quill Delta / Excel Macros)
 import { createRecipeRecorder } from '../../recipe/recipe-recorder';
 import type { RecipeRecorder } from '../../recipe/recipe-recorder';
+
+/**
+ * Find all nodes in the tree that match the given path
+ * In model mode, this finds ALL nodes with matching keys at each path level
+ */
+function findNodesAtPath(
+  root: ObjectNodeData,
+  path: string[],
+  mode: TransformerMode
+): ObjectNodeData[] {
+  if (path.length === 0) return [];
+
+  const [firstKey, ...restPath] = path;
+  let currentLevelNodes: ObjectNodeData[] = [];
+
+  // Start from root's children
+  if (root.children) {
+    if (mode === 'model' && root.type === 'array') {
+      // In model mode with array root, search in ALL objects
+      for (const child of root.children) {
+        if (child.type === 'object' && child.children) {
+          const matchingChild = child.children.find((c) => c.key === firstKey);
+          if (matchingChild) {
+            currentLevelNodes.push(matchingChild);
+          }
+        }
+      }
+    } else {
+      // In object mode or non-array root, search normally
+      const matchingChild = root.children.find((c) => c.key === firstKey);
+      if (matchingChild) {
+        currentLevelNodes.push(matchingChild);
+      }
+    }
+  }
+
+  // If there are more path segments, recurse
+  if (restPath.length > 0) {
+    const results: ObjectNodeData[] = [];
+    for (const node of currentLevelNodes) {
+      results.push(...findNodesAtPath(node, restPath, mode));
+    }
+    return results;
+  }
+
+  return currentLevelNodes;
+}
 
 export interface RecipeOperationsContext {
   tree: Ref<ObjectNodeData>;
@@ -114,6 +161,29 @@ export function createRecipeOperationsMethods(context: RecipeOperationsContext) 
         dataForTree,
         Array.isArray(dataForTree) ? 'Array' : 'Object'
       );
+
+      // 🔥 CRITICAL: Apply transforms from recipe to tree nodes
+      // This ensures each node has its own transform instances with independent conditionMet
+      if (recipe.operations && Array.isArray(recipe.operations)) {
+        for (const op of recipe.operations) {
+          if (op.type === 'setTransforms' && op.path && op.transforms) {
+            // Find all nodes matching this path in model mode
+            const matchingNodes = findNodesAtPath(context.tree.value, op.path, currentMode);
+
+            for (const node of matchingNodes) {
+              // Create fresh transform instances for this node (NOT shared!)
+              node.transforms = op.transforms.map((t: any) => {
+                return (
+                  context.deskRef?.().createTransformEntry(t.name, node) || {
+                    name: t.name,
+                    params: t.params || [],
+                  }
+                );
+              });
+            }
+          }
+        }
+      }
 
       // Increment treeKey to force Vue to completely remount the tree
       // This ensures old ObjectNode components are destroyed before new ones mount

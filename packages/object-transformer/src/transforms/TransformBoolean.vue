@@ -9,14 +9,14 @@ type DeskWithContext = typeof desk & ObjectTransformerContext;
 const transforms: Transform[] = [
   {
     name: 'Negate',
-    if: (node) => node.type === 'boolean',
+    applicableTo: ['boolean'],
     fn: (v: boolean) => {
       return !v;
     },
   },
   {
     name: 'To String',
-    if: (node) => node.type === 'boolean',
+    applicableTo: ['boolean'],
     fn: (v: boolean) => {
       // Safety check: only convert booleans with specific formatting
       if (typeof v !== 'boolean') {
@@ -27,7 +27,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'To Number',
-    if: (node) => node.type === 'boolean',
+    applicableTo: ['boolean'],
     fn: (v: boolean) => {
       // Safety check: only convert booleans
       if (typeof v !== 'boolean') {
@@ -38,14 +38,14 @@ const transforms: Transform[] = [
   },
   {
     name: 'To Yes/No',
-    if: (node) => node.type === 'boolean',
+    applicableTo: ['boolean'],
     fn: (v: boolean) => {
       return v ? 'Yes' : 'No';
     },
   },
   {
     name: 'To On/Off',
-    if: (node) => node.type === 'boolean',
+    applicableTo: ['boolean'],
     fn: (v: boolean) => {
       return v ? 'On' : 'Off';
     },
@@ -53,7 +53,7 @@ const transforms: Transform[] = [
   {
     name: 'To Object',
     structural: true,
-    if: (node) => node.type === 'boolean',
+    applicableTo: ['boolean'],
     fn: (v: any) => {
       // Accept any value type after intermediate transformations
       // Wrap any value in an object structure

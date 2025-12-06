@@ -11,6 +11,7 @@ import {
   TransformBoolean,
   TransformObject,
   TransformArray,
+  ConditionString,
   type ObjectTransformerContext,
 } from '@vue-airport/object-transformer';
 import ModeToggle from './ModeToggle.vue';
@@ -173,34 +174,34 @@ const smallData = [
     hobbies: ['reading', 'traveling', 'swimming'],
   },
   {
-    name: 'jane smith',
+    name: 'laurie jane de keersmaeker',
     age: 28,
     active: false,
-    city: 'paris',
+    city: 'brussels',
     address: {
       street: '456 elm st',
-      zip: '75001',
+      zip: '1000',
     },
-    hobbies: ['cooking', 'painting'],
+    hobbies: ['dancing', 'choreography'],
   },
   {
-    name: 'bob wilson',
+    name: 'marie van der berg',
     age: 35,
     dob: new Date('1988-03-20T00:00:00Z'),
     active: true,
-    city: 'lyon',
+    city: 'amsterdam',
     address: {
       street: '789 oak ave',
-      zip: '69001',
+      zip: '1012',
       custom: {
-        info: 'another info',
+        info: 'dutch noble family',
       },
     },
   },
 ];
 
 // Toggle between small and large dataset - change to test performance
-const USE_LARGE_DATASET = true;
+const USE_LARGE_DATASET = true; // Changed to false to show noble names
 const LARGE_DATASET_SIZE = 1000;
 
 const data = USE_LARGE_DATASET ? generateLargeDataset(LARGE_DATASET_SIZE) : smallData;
@@ -214,12 +215,16 @@ const data = USE_LARGE_DATASET ? generateLargeDataset(LARGE_DATASET_SIZE) : smal
       :data="data"
       class="flex md:flex-row w-full h-full gap-4"
     >
+      <!-- Transform Components -->
       <TransformString />
       <TransformNumber />
       <TransformDate />
       <TransformBoolean />
       <TransformObject />
       <TransformArray />
+
+      <!-- Condition Components -->
+      <ConditionString />
 
       <div class="flex-1 flex flex-col gap-2 min-h-0">
         <ModeToggle :desk="desk" class="shrink-0" />
@@ -251,7 +256,7 @@ const data = USE_LARGE_DATASET ? generateLargeDataset(LARGE_DATASET_SIZE) : smal
                 <div v-if="stats" class="flex flex-wrap gap-3 text-xs text-muted-foreground">
                   <span>v{{ stats.version }}</span>
                   <span
-                    >{{ stats.transformations }} transform{{
+                    >{{ stats.transformations }} operation{{
                       stats.transformations !== 1 ? 's' : ''
                     }}</span
                   >

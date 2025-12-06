@@ -27,4 +27,24 @@ export const registerCommonStructuralHandlers = (desk?: ObjectTransformerContext
     },
     desk
   );
+
+  // Conditional branch handler - creates _if and _else branches
+  registerStructuralTransformHandler(
+    'conditionalBranch',
+    (current, lastKey, result) => {
+      if (result.value === undefined) return;
+
+      // Create two branches with the same value
+      // They will diverge when different transforms are applied
+      current[`${lastKey}_if`] = result.value;
+      current[`${lastKey}_else`] = result.value;
+
+      // Remove source if specified
+      if (result.removeSource) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete current[lastKey];
+      }
+    },
+    desk
+  );
 };

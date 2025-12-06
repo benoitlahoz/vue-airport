@@ -12,6 +12,7 @@ import { computeIntermediateValue } from '../transform/transform-propagation.uti
 import { createKeyEditingMethods } from './key-editing.util';
 import { createNodeOperationsMethods } from './node-operations.util';
 import { createTransformOperationsMethods } from './transform-operations.util';
+import { createConditionOperationsMethods } from './condition-operations.util';
 import { createSelectionManagementMethods } from './selection-management.util';
 import { createRecipeOperationsMethods } from './recipe-operations.util';
 import { createModeManagementMethods } from './mode-management.util';
@@ -49,6 +50,7 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
   const templateIndex = ref<number>(initialTemplateIndex);
   const originalDataRef = ref(originalData);
   const transforms = ref<any[]>([]);
+  const conditions = ref<any[]>([]); // Conditions registry
 
   // Computed: mode availability
   const isObjectModeAvailable = computed(() => !Array.isArray(originalDataRef.value));
@@ -91,6 +93,10 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
     tree,
     transforms,
     deskRef: () => deskRef,
+  });
+
+  const conditionOps = createConditionOperationsMethods({
+    conditions,
   });
 
   const selectionMgmt = createSelectionManagementMethods({
@@ -168,6 +174,10 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
     // Transforms
     transforms,
     ...transformOps,
+
+    // Conditions
+    conditions,
+    ...conditionOps,
 
     // Nodes
     forbiddenKeys: forbiddenKeysRef,

@@ -38,6 +38,11 @@ const getParamConfig = (transformName: string, paramIndex: number) => {
   return desk!.getParamConfig(transformName, paramIndex);
 };
 
+const hasParams = (transformName: string) => {
+  const transform = desk!.findTransform(transformName);
+  return transform?.params && transform.params.length > 0;
+};
+
 const handleParamChange = () => {
   if (!node.value) return;
 
@@ -70,7 +75,7 @@ const handleParamChange = () => {
     <!-- Chaque transformation = 1 ou 2 wrappers (ligne params optionnelle + ligne transform) -->
     <template v-for="(t, index) in node.transforms" :key="`${t.name}-${index}`">
       <!-- Ligne de paramètres (seulement si la transformation a des params) -->
-      <div v-if="t.params" class="transform-row-wrapper">
+      <div v-if="hasParams(t.name)" class="transform-row-wrapper">
         <!-- Colonne 1: Vide -->
         <div class="transform-spacer"></div>
 
@@ -85,7 +90,7 @@ const handleParamChange = () => {
               {{ getParamConfig(t.name, pi)?.label || `Param ${pi + 1}` }}
             </label>
             <TransformerParamInput
-              v-model="t.params[pi]"
+              v-model="t.params![pi]"
               :config="getParamConfig(t.name, pi)"
               @change="handleParamChange()"
             />
@@ -93,8 +98,12 @@ const handleParamChange = () => {
         </div>
       </div>
 
-      <!-- Ligne de transformation : valeur + select (seulement si pas structurel) -->
-      <div v-if="!isStructuralTransform(index)" class="transform-row-wrapper">
+      <!-- Ligne de transformation : valeur + select -->
+      <!-- Afficher pour tous SAUF les structural qui ne sont PAS conditionnels -->
+      <div
+        v-if="!isStructuralTransform(index) || t.name.startsWith('If ')"
+        class="transform-row-wrapper"
+      >
         <!-- Colonne 1: Vide -->
         <div class="transform-spacer"></div>
 
@@ -186,6 +195,12 @@ const handleParamChange = () => {
   flex-direction: column;
   gap: 0.25rem;
   width: 120px;
+}
+
+/* Checkbox param items should be smaller */
+.transform-param-item:has(.transform-param-checkbox-wrapper) {
+  width: auto;
+  min-width: fit-content;
 }
 
 .transform-param-label {

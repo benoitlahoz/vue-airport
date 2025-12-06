@@ -2,7 +2,6 @@
 // Re-export types, core utils and Vue components bundled in this package
 
 export * from './types';
-export * from './object-node-slot.types';
 
 // Core utilities
 export * from './utils/type-guards.util';
@@ -24,7 +23,6 @@ export { default as ObjectTransformer } from './ObjectTransformer.vue';
 export { default as ObjectPreview } from './ObjectPreview.vue';
 export { default as RecipePreview } from './RecipePreview.vue';
 export { default as ObjectNode } from './ObjectNode.vue';
-export { default as DefaultObjectNodeRender } from './DefaultObjectNodeRender.vue';
 export { default as TransformSelect } from './TransformSelect.vue';
 export { default as TransformParam } from './TransformParam.vue';
 export { default as NodeKeyEditor } from './NodeKeyEditor.vue';
@@ -39,6 +37,12 @@ export { default as TransformDate } from './transforms/TransformDate.vue';
 export { default as TransformBoolean } from './transforms/TransformBoolean.vue';
 export { default as TransformObject } from './transforms/TransformObject.vue';
 export { default as TransformArray } from './transforms/TransformArray.vue';
+
+// Conditions (now structural transforms that branch)
+export { default as ConditionString } from './conditions/ConditionString.vue';
+export { default as ConditionNumber } from './conditions/ConditionNumber.vue';
+export { default as ConditionArray } from './conditions/ConditionArray.vue';
+export { default as ConditionObject } from './conditions/ConditionObject.vue';
 
 // Model rules util
 export * from './utils/model/model-rules.util';

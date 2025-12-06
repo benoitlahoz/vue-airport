@@ -16,7 +16,7 @@ const transforms: Transform[] = [
   {
     name: 'Split',
     structural: true, // This is a structural transform
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     params: [
       { key: 'delimiter', label: 'Delimiter', type: 'text', default: ' ' },
       { key: 'splitAt', label: 'Split at index (0 = all)', type: 'number', default: 0 },
@@ -51,23 +51,23 @@ const transforms: Transform[] = [
   },
   {
     name: 'Uppercase',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: any) => (typeof v === 'string' ? v.toUpperCase() : v),
   },
   {
     name: 'Lowercase',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: any) => (typeof v === 'string' ? v.toLowerCase() : v),
   },
   {
     name: 'Capitalized',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: any) =>
       typeof v === 'string' ? v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() : v,
   },
   {
     name: 'Replace',
-    if: (n) => n.type === 'string',
+    applicableTo: ['string'],
     params: [
       { key: 'search', label: 'Search', type: 'text', default: '' },
       { key: 'replace', label: 'Replace', type: 'text', default: '' },
@@ -82,12 +82,12 @@ const transforms: Transform[] = [
   },
   {
     name: 'Trim',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: any) => (typeof v === 'string' ? v.trim() : v),
   },
   {
     name: 'Append',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     params: [{ key: 'suffix', label: 'Suffix', type: 'text', default: '' }],
     fn: (v: string, s: string) => {
       if (typeof s !== 'string') s = '';
@@ -96,7 +96,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Prepend',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     params: [{ key: 'prefix', label: 'Prefix', type: 'text', default: '' }],
     fn: (v: string, p: string) => {
       if (typeof p !== 'string') p = '';
@@ -105,7 +105,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Substring',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     params: [
       { key: 'start', label: 'Start Index', type: 'number', default: 0 },
       { key: 'end', label: 'End Index', type: 'number', default: undefined },
@@ -118,7 +118,7 @@ const transforms: Transform[] = [
   },
   {
     name: 'Repeat',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     params: [{ key: 'count', label: 'Count', type: 'number', default: 1 }],
     fn: (v: string, count: number) => {
       const repeatCount = typeof count === 'number' && count > 0 ? Math.floor(count) : 1;
@@ -127,22 +127,22 @@ const transforms: Transform[] = [
   },
   {
     name: 'Remove Spaces',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: string) => v.replace(/\s+/g, ''),
   },
   {
     name: 'Remove Multiple Spaces',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: string) => v.replace(/\s+/g, ' '),
   },
   {
     name: 'Reverse',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: string) => v.split('').reverse().join(''),
   },
   {
     name: 'To Number',
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: string) => {
       if (typeof v !== 'string') return v;
       return Number(v); // Always return number, even if NaN
@@ -151,7 +151,7 @@ const transforms: Transform[] = [
   {
     name: 'To Object',
     structural: true,
-    if: (node) => node.type === 'string',
+    applicableTo: ['string'],
     fn: (v: any) => {
       // Accept any value type after intermediate transformations
       return {
@@ -162,6 +162,97 @@ const transforms: Transform[] = [
         },
         removeSource: false,
       };
+    },
+  },
+
+  // 🔥 REGEX TRANSFORMS
+  {
+    name: 'Replace Regex',
+    applicableTo: ['string'],
+    params: [
+      { key: 'pattern', label: 'Regex pattern', type: 'text', default: '' },
+      { key: 'flags', label: 'Flags (g,i,m,s,u)', type: 'text', default: 'g' },
+      { key: 'replacement', label: 'Replacement', type: 'text', default: '' },
+    ],
+    fn: (v: string, pattern: string, flags: string = 'g', replacement: string = '') => {
+      if (typeof v !== 'string') return v;
+      if (!pattern) return v;
+
+      try {
+        const regex = new RegExp(pattern, flags);
+        return v.replace(regex, replacement);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Replace Regex] Invalid pattern:', { pattern, flags, error });
+        }
+        return v; // Fallback: return unchanged
+      }
+    },
+  },
+
+  {
+    name: 'Extract Regex',
+    applicableTo: ['string'],
+    params: [
+      { key: 'pattern', label: 'Regex pattern (with groups)', type: 'text', default: '' },
+      { key: 'flags', label: 'Flags', type: 'text', default: '' },
+      { key: 'groupIndex', label: 'Group index (0=full match)', type: 'number', default: 0 },
+    ],
+    fn: (v: string, pattern: string, flags: string = '', groupIndex: number = 0) => {
+      if (typeof v !== 'string') return null;
+      if (!pattern) return null;
+
+      try {
+        const regex = new RegExp(pattern, flags);
+        const match = v.match(regex);
+
+        if (!match) return null;
+
+        const index = typeof groupIndex === 'number' ? groupIndex : 0;
+        return match[index] !== undefined ? match[index] : null;
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Extract Regex] Invalid pattern:', { pattern, flags, error });
+        }
+        return null;
+      }
+    },
+  },
+
+  {
+    name: 'Split Regex',
+    applicableTo: ['string'],
+    structural: true,
+    params: [
+      { key: 'pattern', label: 'Regex pattern', type: 'text', default: '\\s+' },
+      { key: 'flags', label: 'Flags', type: 'text', default: '' },
+      { key: 'limit', label: 'Limit (0=no limit)', type: 'number', default: 0 },
+    ],
+    fn: (v: string, pattern: string = '\\s+', flags: string = '', limit: number = 0) => {
+      if (typeof v !== 'string') {
+        return { __structuralChange: true };
+      }
+
+      if (!pattern) {
+        return { __structuralChange: true };
+      }
+
+      try {
+        const regex = new RegExp(pattern, flags);
+        const parts = limit > 0 ? v.split(regex, limit) : v.split(regex);
+
+        return {
+          __structuralChange: true,
+          action: 'split' as const,
+          parts: parts,
+          removeSource: false,
+        };
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('[Split Regex] Invalid pattern:', { pattern, flags, error });
+        }
+        return { __structuralChange: true };
+      }
     },
   },
 ];
