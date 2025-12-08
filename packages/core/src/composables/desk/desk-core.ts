@@ -56,7 +56,7 @@ export interface DeskCoreOptions<
   devTools?: boolean;
   plugins?: CheckInPlugin<T, CheckInPluginMethods<T>, CheckInPluginComputed<T>>[];
   deskId?: string; // For DevTools integration
-  context?: TContext;
+  context?: TContext | ((desk: DeskCore<T, TContext>) => TContext);
 }
 
 export interface DeskCore<T = any, TContext extends Record<string, any> = {}> {
@@ -139,15 +139,10 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
   const devTools = options?.devTools ? DevTools : NoOpDevTools;
   const deskId = options?.deskId || `desk-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Register desk with DevTools with plugin information
-  devTools.registerDesk(deskId, {
-    deskId,
-    debug: options?.debug,
-    createdAt: new Date().toLocaleString(),
-    plugins: options?.plugins?.map((p) => p.name) || [],
-    label: options?.deskId || 'Default Desk',
-    context: options?.context,
-  });
+  /**
+   * Internal variable to store the resolved context (will be set after desk creation)
+   */
+  let resolvedContext: TContext | undefined;
 
   /**
    * Primary storage: Map (fast lookups, O(1) operations)
@@ -205,15 +200,13 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
 
   const pluginCleanups: Array<() => void> = [];
 
-  const getContext = <U extends TContext>() => options?.context as U | undefined;
+  const getContext = <U extends TContext>() => resolvedContext as U | undefined;
 
   const setContext = <U extends TContext>(context: U) => {
-    if (options) {
-      options.context = context;
-      // Update DevTools with new context
-      devTools.updateContext(deskId, context as Record<string, unknown>);
-      return context;
-    }
+    resolvedContext = context;
+    // Update DevTools with new context
+    devTools.updateContext(deskId, context as Record<string, unknown>);
+    return context;
   };
 
   const checkIn = async (
@@ -271,7 +264,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       meta: meta as Record<string, unknown>,
       registrySize: registryMap.size,
     });
-    devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
+    devTools.updateRegistry(deskId, registryMap, resolvedContext as Record<string, unknown>);
 
     // Call plugin hooks and track execution
     if (options?.plugins) {
@@ -354,7 +347,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       childId: id,
       registrySize: registryMap.size,
     });
-    devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
+    devTools.updateRegistry(deskId, registryMap, resolvedContext as Record<string, unknown>);
 
     // Call plugin hooks and track execution
     if (options?.plugins) {
@@ -500,7 +493,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
         previousData: previousData as Record<string, unknown>,
         registrySize: registryMap.size,
       });
-      devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
+      devTools.updateRegistry(deskId, registryMap, resolvedContext as Record<string, unknown>);
 
       if (options?.debug) {
         debug(`${DebugPrefix} update diff:`, {
@@ -550,7 +543,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       toId: to,
       registrySize: registryMap.size,
     });
-    devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
+    devTools.updateRegistry(deskId, registryMap, resolvedContext as Record<string, unknown>);
 
     if (options?.debug) {
       debug(`${DebugPrefix} switch completed:`, { from, to });
@@ -577,7 +570,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       deskId,
       registrySize: count,
     });
-    devTools.updateRegistry(deskId, registryMap, options?.context as Record<string, unknown>);
+    devTools.updateRegistry(deskId, registryMap, resolvedContext as Record<string, unknown>);
 
     debug(`${DebugPrefix} Cleared ${count} items from registry`);
   };
@@ -666,6 +659,22 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
 
   // Add deskId as internal property for plugin access
   (desk as any).__deskId = deskId;
+
+  // Resolve context (function or direct value)
+  if (options?.context) {
+    resolvedContext =
+      typeof options.context === 'function' ? options.context(desk as any) : options.context;
+  }
+
+  // Register desk with DevTools with plugin information (after context resolution)
+  devTools.registerDesk(deskId, {
+    deskId,
+    debug: options?.debug,
+    createdAt: new Date().toLocaleString(),
+    plugins: options?.plugins?.map((p) => p.name) || [],
+    label: options?.deskId || 'Default Desk',
+    context: resolvedContext,
+  });
 
   if (options?.plugins) {
     options.plugins.forEach((plugin) => {
