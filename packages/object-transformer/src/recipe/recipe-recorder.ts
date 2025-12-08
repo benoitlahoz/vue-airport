@@ -220,6 +220,71 @@ export const createRecipeRecorder = (
         return op.path.join('.') !== pathKey;
       });
     },
+
+    removeRename(parentPath: Path, from: string, to: string) {
+      // Remove the rename operation when restoring an auto-renamed node
+      const parentPathKey = parentPath.join('.');
+      operations.value = operations.value.filter((op) => {
+        if (op.type !== 'rename') return true;
+        if (op.path.join('.') !== parentPathKey) return true;
+        // Keep the operation if it doesn't match the from->to rename
+        return !(op.from === from && op.to === to);
+      });
+    },
+
+    updateDeletePath(oldPath: Path, newPath: Path) {
+      // Update the path of a delete operation when a soft-deleted node is renamed
+      const oldPathKey = oldPath.join('.');
+      const deleteOp = operations.value.find(
+        (op) => op.type === 'delete' && op.path.join('.') === oldPathKey
+      );
+      if (deleteOp && deleteOp.type === 'delete') {
+        deleteOp.path = [...newPath];
+      }
+    },
+
+    updateStructuralTransformRemoveSource(path: Path, removeSource: boolean) {
+      // Find setTransforms or applyConditions operation for this path
+      const pathKey = path.join('.');
+      const transformOp = operations.value.find(
+        (op) =>
+          (op.type === 'setTransforms' || op.type === 'applyConditions') &&
+          op.path.join('.') === pathKey
+      );
+
+      if (!transformOp) return;
+
+      // Update removeSource in the last transform of the chain
+      if (transformOp.type === 'setTransforms' && transformOp.transforms.length > 0) {
+        const lastTransform = transformOp.transforms[transformOp.transforms.length - 1];
+        if (lastTransform.params && lastTransform.params.length > 0) {
+          // For structural transforms, removeSource is typically the last parameter
+          const lastParam = lastTransform.params[lastTransform.params.length - 1];
+          if (typeof lastParam === 'object' && 'removeSource' in lastParam) {
+            lastParam.removeSource = removeSource;
+          } else if (typeof lastParam === 'boolean') {
+            // Direct boolean parameter
+            lastTransform.params[lastTransform.params.length - 1] = removeSource;
+          }
+        }
+      } else if (transformOp.type === 'applyConditions') {
+        // Update in all condition branches
+        transformOp.conditions.forEach((condition) => {
+          if (condition.transforms.length > 0) {
+            const lastTransform = condition.transforms[condition.transforms.length - 1];
+            if (lastTransform.params && lastTransform.params.length > 0) {
+              const lastParam = lastTransform.params[lastTransform.params.length - 1];
+              if (typeof lastParam === 'object' && 'removeSource' in lastParam) {
+                lastParam.removeSource = removeSource;
+              } else if (typeof lastParam === 'boolean') {
+                lastTransform.params[lastTransform.params.length - 1] = removeSource;
+              }
+            }
+          }
+        });
+      }
+    },
+
     recordAdd(parentPath: Path, key: string, value: any) {
       operations.value.push({
         type: 'add',

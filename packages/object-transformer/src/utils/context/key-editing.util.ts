@@ -112,6 +112,9 @@ export function createKeyEditingMethods(context: KeyEditingContext) {
 
             deletedNodeWithKey.key = uniqueKey;
             markKeyAsAutoRenamed(deletedNodeWithKey, newKey);
+
+            // DON'T update the delete operation path - it should reference the original key
+            // from the source data, not the current UI key
           }
 
           // Re-check for conflicts after renaming deleted node
