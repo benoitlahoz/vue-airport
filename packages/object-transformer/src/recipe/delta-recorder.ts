@@ -205,6 +205,65 @@ export class DeltaRecorder {
   }
 
   /**
+   * Remove insert operations created by a structural transform on a specific source key
+   * Used when changing or removing structural transforms
+   *
+   * @param sourceKey - The source key that was transformed (e.g., 'name')
+   * @param transformName - The transform name that created the inserts (e.g., 'To Object')
+   */
+  removeStructuralInserts(sourceKey: string, transformName?: string): void {
+    this.recipe.value.deltas = this.recipe.value.deltas.filter((delta) => {
+      if (delta.op !== 'insert') return true;
+
+      // Keep if not created by a transform
+      if (!delta.createdBy) return true;
+
+      // Remove if created by the specified transform on the specified source
+      if (delta.sourceKey === sourceKey) {
+        // If transformName specified, only remove inserts from that transform
+        if (transformName && delta.createdBy.transformName !== transformName) {
+          return true;
+        }
+        logger.debug(
+          `[DeltaRecorder] Removing insert ${delta.key} created by ${delta.createdBy.transformName}`
+        );
+        return false;
+      }
+
+      return true;
+    });
+
+    this.recipe.value.metadata.updatedAt = Date.now();
+  }
+
+  /**
+   * Remove transform operations for a specific key
+   * Used when changing from non-structural to structural transform
+   *
+   * @param key - The property key
+   * @param transformName - Optional specific transform name to remove
+   */
+  removeTransformsByKey(key: string, transformName?: string): void {
+    this.recipe.value.deltas = this.recipe.value.deltas.filter((delta) => {
+      if (delta.op !== 'transform') return true;
+
+      // Remove transforms for this key
+      if (delta.key === key) {
+        // If transformName specified, only remove that specific transform
+        if (transformName && delta.transformName !== transformName) {
+          return true;
+        }
+        logger.debug(`[DeltaRecorder] Removing transform ${delta.transformName} on ${delta.key}`);
+        return false;
+      }
+
+      return true;
+    });
+
+    this.recipe.value.metadata.updatedAt = Date.now();
+  }
+
+  /**
    * Export recipe as JSON
    */
   exportRecipe(): string {

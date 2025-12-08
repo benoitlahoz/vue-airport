@@ -57,6 +57,22 @@ export const applyNodeTransform = (
   // Cleanup split nodes if changing transform
   if (shouldChange && node.parent) {
     cleanupSplitNodes(node, node.parent);
+
+    // 🟢 REMOVE old operations from recipe when changing transforms
+    if ((desk as any).recorder && node.key) {
+      const oldTransformName = currentSelection;
+      const structuralTransformNames = ['To Object', 'Split', 'Split Regex', 'Array to Properties'];
+      const wasStructural = oldTransformName && structuralTransformNames.includes(oldTransformName);
+      const isStructural = structuralTransformNames.includes(transformName);
+
+      if (wasStructural) {
+        // Removing structural transform → remove its InsertOp
+        (desk as any).recorder.removeStructuralInserts(node.key, oldTransformName);
+      } else {
+        // Removing non-structural transform → remove its TransformOp
+        (desk as any).recorder.removeTransformsByKey(node.key, oldTransformName);
+      }
+    }
   }
 
   const entry = desk.createTransformEntry(transformName, node);
