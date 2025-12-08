@@ -1,7 +1,7 @@
 import type { ObjectNodeData, ObjectTransformerDesk, Transform } from '../../types';
 import { isStructuralResult } from '../type-guards.util';
 import { buildNodeTree } from '../node/node-builder.util';
-import { pipe, not } from 'vue-airport';
+import { not } from 'vue-airport';
 import { isMultiPartAction } from './structural-transform-handlers.util';
 import { initKeyMetadata, isKeyModified } from '../node/node-key-metadata.util';
 import { logger } from '../logger.util';
@@ -37,7 +37,7 @@ export const computeStepValue = (node: ObjectNodeData, index: number): unknown =
   // Stop at first true condition (if/else if behavior)
   let value = node.value;
   let chainState: 'pending' | 'matched' | 'unmatched' = 'pending';
-  let lastConditionMet: boolean | undefined;
+  let _lastConditionMet: boolean | undefined;
 
   for (const t of transformsUpToIndex) {
     // If transform has a condition
@@ -49,7 +49,7 @@ export const computeStepValue = (node: ObjectNodeData, index: number): unknown =
 
         if (conditionResult) {
           chainState = 'matched'; // First true condition → stop chain
-          lastConditionMet = true;
+          _lastConditionMet = true;
         }
       } else {
         // Chain already resolved, skip evaluation
@@ -70,7 +70,7 @@ export const computeStepValue = (node: ObjectNodeData, index: number): unknown =
 
   // If we went through all conditions without a match, mark as unmatched
   if (chainState === 'pending') {
-    lastConditionMet = false;
+    _lastConditionMet = false;
   }
 
   return value;
@@ -204,7 +204,7 @@ export const propagateArrayValue = (node: ObjectNodeData): void => {
  */
 
 // 🔥 MODEL MODE: Find max parts across all sibling nodes for schema uniformity
-const findMaxPartsInModelMode = (
+const _findMaxPartsInModelMode = (
   node: ObjectNodeData,
   desk: ObjectTransformerDesk
 ): number | null => {
@@ -237,7 +237,7 @@ const findMaxPartsInModelMode = (
   if (node.parent.parent?.type === 'array') {
     // Array context: get siblings from array children
     siblingObjects =
-      node.parent.parent.children?.filter((child) => child.type === 'object' && !child.deleted) ||
+      node.parent.parent.children?.filter((child: ObjectNodeData) => child.type === 'object' && !child.deleted) ||
       [];
   } else if (desk.tree?.value) {
     // Root context: get siblings from root tree
@@ -245,7 +245,7 @@ const findMaxPartsInModelMode = (
     if (rootNode.type === 'array') {
       // Root is an array - get its object children
       siblingObjects =
-        rootNode.children?.filter((child) => child.type === 'object' && !child.deleted) || [];
+        rootNode.children?.filter((child: ObjectNodeData) => child.type === 'object' && !child.deleted) || [];
       logger.debug(`[findMaxParts] Root array case - found ${siblingObjects.length} siblings`);
     } else {
       // Root is not an array - can't normalize
@@ -338,7 +338,7 @@ const createSplitNodes = (
       // IMPORTANT: Only update key if NOT manually renamed
       // This preserves "firstname", "lastname" etc.
       if (!isKeyModified(existing)) {
-        existing.key = newKey;
+        existing.key = key;
       }
 
       // Keep the same id, transforms, splitSourceId, splitIndex, etc.
@@ -401,7 +401,7 @@ export const handleStructuralSplit = (
   }
 
   const baseKey = node.key || 'part';
-  let normalizedParts = parts;
+  const normalizedParts = parts;
 
   // Check if split nodes already exist by looking for nodes with matching splitSourceId
   const existingSplitNodes =

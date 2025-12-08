@@ -1,4 +1,4 @@
-import { ref, watch, nextTick, computed } from 'vue';
+import { ref, computed } from 'vue';
 import type {
   ObjectNodeData,
   ObjectNodeType,
