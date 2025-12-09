@@ -15,8 +15,8 @@
     "clean": "turbo run clean && rimraf .nuxt",
     "test": "turbo run test",
     "changeset": "changeset",
-    "version": "changeset version",
-    "release": "turbo run build && changeset publish",
+    "changeset:version": "changeset version",
+    "changeset:release": "turbo run build && changeset publish",
     "add:component": "npx shadcn-vue@latest add"
   },
   "dependencies": {
