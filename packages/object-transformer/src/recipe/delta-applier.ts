@@ -37,19 +37,11 @@ export const applyRecipe = (
   const transformsMap = new Map(transforms.map((t) => [t.name, t]));
 
   // Handle template mode: array data with object recipe
-  if (Array.isArray(data) && recipe.metadata?.rootType === 'object') {
-    return data.map((item, index) =>
-      applyDeltas(
-        item,
-        recipe.deltas,
-        transformsMap,
-        sourceData && Array.isArray(sourceData) ? sourceData[index] : undefined
-      )
-    );
-  }
-
-  // Handle array recipe with array data
-  if (Array.isArray(data) && recipe.metadata?.rootType === 'array') {
+  // OR array recipe (built on template) applied to array data
+  if (
+    Array.isArray(data) &&
+    (recipe.metadata?.rootType === 'object' || recipe.metadata?.rootType === 'array')
+  ) {
     return data.map((item, index) =>
       applyDeltas(
         item,
@@ -262,21 +254,20 @@ const applyTransform = (
         return data; // Skip this transform if condition is missing
       }
 
+      // ✅ Use the 'condition' function (not 'fn') to evaluate conditions
+      if (!conditionFn.condition) {
+        logger.warn(`Transform "${condition.conditionName}" is not a condition, skipping`);
+        return data;
+      }
+
       const currentValue = evaluationData[delta.key];
-      const conditionResult = conditionFn.fn(currentValue, ...condition.conditionParams);
+      const conditionResult = conditionFn.condition(currentValue, ...condition.conditionParams);
 
       // If any condition is false, skip this transform
       if (!conditionResult) {
-        console.log(
-          `[applyTransform] Condition "${condition.conditionName}" failed for key "${delta.key}", skipping transform "${delta.transformName}"`
-        );
         return data;
       }
     }
-
-    console.log(
-      `[applyTransform] All ${delta.conditionStack.length} conditions passed for transform "${delta.transformName}"`
-    );
   }
 
   // Get current value

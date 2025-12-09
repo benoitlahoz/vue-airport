@@ -45,26 +45,11 @@ const hasParams = (transformName: string) => {
 const handleParamChange = () => {
   if (!node.value) return;
 
-  // 🟢 RECORD THE PARAMETER CHANGE (v4.0 Delta)
-  // Record each transform with updated params
-  const key = node.value.key;
-  if ((desk as any).recorder && key) {
-    const isModelMode = desk!.mode?.value === 'model';
-    const isTemplateRoot = !node.value.parent;
-
-    if (!isModelMode || !isTemplateRoot) {
-      // Structural transforms are handled elsewhere, skip them
-      const structuralTransformNames = ['To Object', 'Split', 'Split Regex', 'Array to Properties'];
-
-      for (const transform of node.value.transforms) {
-        if (structuralTransformNames.includes(transform.name)) continue;
-
-        (desk as any).recorder.recordTransform(key, transform.name, transform.params || [], {
-          isCondition: !!transform.condition,
-        });
-      }
-    }
-  }
+  // 🟢 v4.0: Parameter changes are NOT re-recorded
+  // The delta operations were already recorded when transforms were added
+  // Changing params just updates the in-tree state, not the recipe
+  // To persist param changes, the user must re-add the transform or we need
+  // a dedicated "update params" operation (TODO for future)
 
   // Force re-computation by triggering propagation
   desk!.propagateTransform(node.value);

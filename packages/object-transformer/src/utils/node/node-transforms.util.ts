@@ -100,27 +100,44 @@ export const applyNodeTransform = (
       const structuralTransformNames = ['To Object', 'Split', 'Split Regex', 'Array to Properties'];
       const isStructural = structuralTransformNames.includes(transformName);
 
-      if (!isStructural) {
-        // Build condition stack: all conditions that precede this transform in the chain
+      if (!isStructural && !entry.condition) {
+        // Only record non-structural, non-condition transforms
+        // Conditions are captured in conditionStack only
+
+        console.log('[applyNodeTransform] Recording transform:', {
+          key,
+          transformName: entry.name,
+          allTransforms: node.transforms.map((t) => ({ name: t.name, isCondition: !!t.condition })),
+        });
+
+        // Build condition stack: conditions since last non-condition transform
+        // When a condition appears after a normal transform, it starts a NEW conditional group
         const conditionStack: Array<{ conditionName: string; conditionParams: any[] }> = [];
 
+        // Iterate forward, collecting conditions until we hit a non-condition or reach entry
         for (const t of node.transforms) {
           if (t === entry) {
             // We've reached the transform we're recording, stop
             break;
           }
+
           if (t.condition) {
-            // This is a condition that precedes our transform
+            // This is a condition, add it to the stack
             conditionStack.push({
               conditionName: t.name,
               conditionParams: t.params || [],
             });
+          } else {
+            // Found a non-condition transform, reset the stack (new group)
+            conditionStack.length = 0;
           }
         }
 
+        console.log('[applyNodeTransform] Built conditionStack:', conditionStack);
+
         // Record only the new transform (not all transforms in the array)
         (desk as any).recorder.recordTransform(key, entry.name, entry.params || [], {
-          isCondition: !!entry.condition,
+          isCondition: false, // Never true here
           conditionStack: conditionStack.length > 0 ? conditionStack : undefined,
         });
       }
@@ -195,10 +212,27 @@ export const applyStepTransform = (
         ];
         const isStructural = structuralTransformNames.includes(entry.name);
 
-        if (!isStructural) {
+        if (!isStructural && !entry.condition) {
+          // Build condition stack: conditions since last non-condition transform
+          const conditionStack: Array<{ conditionName: string; conditionParams: any[] }> = [];
+
+          // Iterate forward, collecting conditions until nextIndex (where entry is)
+          for (let i = 0; i < nextIndex; i++) {
+            const t = node.transforms[i];
+            if (t.condition) {
+              conditionStack.push({
+                conditionName: t.name,
+                conditionParams: t.params || [],
+              });
+            } else {
+              conditionStack.length = 0; // Reset on non-condition
+            }
+          }
+
           // Record only the new transform (not all transforms in the array)
           (desk as any).recorder.recordTransform(key, entry.name, entry.params || [], {
-            isCondition: !!entry.condition,
+            isCondition: false,
+            conditionStack: conditionStack.length > 0 ? conditionStack : undefined,
           });
         }
         // Structural transforms will be handled by model-rules.util.ts recordInsert

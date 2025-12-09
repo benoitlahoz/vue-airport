@@ -160,6 +160,11 @@ export function createTransformerContext(params: CreateContextParams): ObjectTra
   // Computed: property variations across array items
   // Must be after recipeOps is created so we can use the recorder's recipe
   const propertyVariations = computed(() => {
+    console.log('[propertyVariations] originalDataRef.value:', {
+      isArray: Array.isArray(originalDataRef.value),
+      length: Array.isArray(originalDataRef.value) ? originalDataRef.value.length : 'not array',
+    });
+
     if (!Array.isArray(originalDataRef.value)) return [];
 
     // Force reactivity by accessing tree.value

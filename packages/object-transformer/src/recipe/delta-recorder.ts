@@ -125,6 +125,7 @@ export class DeltaRecorder {
     params: any[] = [],
     options?: {
       isCondition?: boolean;
+      conditionStack?: Array<{ conditionName: string; conditionParams: any[] }>;
       description?: string;
     }
   ): number {
@@ -134,6 +135,7 @@ export class DeltaRecorder {
       transformName,
       params,
       isCondition: options?.isCondition,
+      conditionStack: options?.conditionStack,
       metadata: {
         description: options?.description,
         timestamp: Date.now(),
