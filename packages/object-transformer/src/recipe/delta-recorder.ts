@@ -6,7 +6,14 @@
  */
 
 import { ref, type Ref } from 'vue';
-import type { Recipe, InsertOp, DeleteOp, TransformOp, RenameOp } from './types-v4';
+import type {
+  Recipe,
+  InsertOp,
+  DeleteOp,
+  TransformOp,
+  RenameOp,
+  UpdateParamsOp,
+} from './types-v4';
 import { createRecipe } from './types-v4';
 import { logger } from '../utils/logger.util';
 
@@ -180,6 +187,42 @@ export class DeltaRecorder {
     this.recipe.value.metadata.updatedAt = Date.now();
 
     logger.debug(`[DeltaRecorder] Rename: ${from} -> ${to}`, delta);
+    return this.recipe.value.deltas.length - 1;
+  }
+
+  /**
+   * Record an update to transform parameters
+   * This allows modifying parameters of an existing transform without re-recording
+   *
+   * @param key - Property key where the transform is applied
+   * @param transformIndex - Index of the transform in the node's transforms array
+   * @param params - New parameters to apply
+   * @param options - Optional metadata
+   * @returns Operation ID
+   */
+  recordUpdateParams(
+    key: string,
+    transformIndex: number,
+    params: any[] = [],
+    options?: {
+      description?: string;
+    }
+  ): number {
+    const delta: UpdateParamsOp = {
+      op: 'updateParams',
+      key,
+      transformIndex,
+      params,
+      metadata: {
+        description: options?.description,
+        timestamp: Date.now(),
+      },
+    };
+
+    this.recipe.value.deltas.push(delta);
+    this.recipe.value.metadata.updatedAt = Date.now();
+
+    logger.debug(`[DeltaRecorder] UpdateParams: ${key}[${transformIndex}]`, delta);
     return this.recipe.value.deltas.length - 1;
   }
 

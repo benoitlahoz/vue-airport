@@ -9,7 +9,7 @@
  * Delta Operations
  * Operations are applied sequentially to transform an object.
  */
-export type DeltaOp = RetainOp | InsertOp | DeleteOp | TransformOp | RenameOp;
+export type DeltaOp = RetainOp | InsertOp | DeleteOp | TransformOp | RenameOp | UpdateParamsOp;
 
 /**
  * Retain operation - skip N properties
@@ -101,6 +101,25 @@ export interface RenameOp {
   to: string;
   /** Optional: if this was an auto-rename to avoid conflicts */
   autoRenamed?: boolean;
+  /** Optional: metadata */
+  metadata?: {
+    description?: string;
+    timestamp?: number;
+  };
+}
+
+/**
+ * Update Parameters operation - modify parameters of an existing transform
+ * This allows changing transform/condition parameters without re-recording the entire transform
+ */
+export interface UpdateParamsOp {
+  op: 'updateParams';
+  /** Property key where the transform is applied */
+  key: string;
+  /** Index of the transform in the node's transforms array */
+  transformIndex: number;
+  /** New parameters to apply */
+  params: any[];
   /** Optional: metadata */
   metadata?: {
     description?: string;
