@@ -53,6 +53,7 @@ export class DeltaRecorder {
     key: string,
     value: any,
     options?: {
+      parentKey?: string;
       sourceKey?: string;
       createdBy?: { transformName: string; params: any[]; resultKey?: string | number };
       conditionStack?: Array<{ conditionName: string; conditionParams: any[] }>;
@@ -62,6 +63,7 @@ export class DeltaRecorder {
     const delta: InsertOp = {
       op: 'insert',
       key,
+      parentKey: options?.parentKey,
       value,
       sourceKey: options?.sourceKey,
       createdBy: options?.createdBy,

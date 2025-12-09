@@ -29,6 +29,8 @@ export interface InsertOp {
   op: 'insert';
   /** Property key to insert */
   key: string;
+  /** Optional: parent key if inserting into a nested object (e.g., 'name_object' for 'name_object.value') */
+  parentKey?: string;
   /** Initial value (can be primitive or object) */
   value: any;
   /** Optional: source key for restore operations (maps to original sourceData key) */

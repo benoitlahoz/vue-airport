@@ -148,6 +148,39 @@ const applyInsert = (
     return data;
   }
 
+  // If parentKey is specified, insert within the nested object
+  if (delta.parentKey) {
+    if (!(delta.parentKey in data)) {
+      logger.warn(`Cannot insert: parent property "${delta.parentKey}" not found`);
+      return data;
+    }
+
+    const parent = data[delta.parentKey];
+    if (typeof parent !== 'object' || parent === null) {
+      logger.warn(`Cannot insert: parent "${delta.parentKey}" is not an object`);
+      return data;
+    }
+
+    // For nested objects created by transforms (like To Object), the sourceData
+    // won't have this parent key. We need to use the CURRENT data as source.
+    // The parent object IS the source for transformations on its properties.
+    const nestedSourceData = parent;
+
+    // Apply insert to nested object
+    const updatedParent = applyInsert(
+      parent,
+      { ...delta, parentKey: undefined }, // Remove parentKey to avoid infinite recursion
+      nestedSourceData,
+      transforms
+    );
+
+    // Return data with updated parent
+    return {
+      ...data,
+      [delta.parentKey]: updatedParent,
+    };
+  }
+
   // Evaluate conditionStack if present
   if (delta.conditionStack && delta.conditionStack.length > 0) {
     for (const condition of delta.conditionStack) {

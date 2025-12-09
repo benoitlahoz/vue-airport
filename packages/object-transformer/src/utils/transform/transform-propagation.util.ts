@@ -509,7 +509,15 @@ export const handleStructuralSplit = (
         if (newNode.key) {
           const keyInResult = keys ? keys[idx] : idx;
 
+          // Check if the source node is itself a child of a structural object
+          let parentKey: string | undefined;
+          if (node.parent && node.parent.splitSourceId !== undefined) {
+            // The source node is inside a structural object, so these splits are nested
+            parentKey = node.parent.key;
+          }
+
           (desk as any).recorder.recordInsert(newNode.key, undefined, {
+            parentKey,
             sourceKey: node.key,
             createdBy: {
               transformName: transform?.name || (keys ? 'To Object' : 'Split'),
@@ -562,7 +570,15 @@ export const handleStructuralSplit = (
           // Record undefined value - applyInsert will reconstruct by applying the transform
           const keyInResult = keys ? keys[idx] : idx;
 
+          // Check if the source node is itself a child of a structural object
+          let parentKey: string | undefined;
+          if (node.parent && node.parent.splitSourceId !== undefined) {
+            // The source node is inside a structural object, so these splits are nested
+            parentKey = node.parent.key;
+          }
+
           (desk as any).recorder.recordInsert(newNode.key, undefined, {
+            parentKey,
             sourceKey: node.key,
             createdBy: {
               transformName: transform?.name || (keys ? 'To Object' : 'Split'),
