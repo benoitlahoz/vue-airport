@@ -306,12 +306,12 @@ const applyInsert = (
     let parent: any = data;
     for (const key of parentPath) {
       if (!(key in parent)) {
-        logger.warn(`Cannot insert: parent property "${key}" not found in path`);
+        // Silently skip if parent not found - it may have been conditionally created
         return data;
       }
       parent = parent[key];
       if (typeof parent !== 'object' || parent === null) {
-        logger.warn(`Cannot insert: parent "${key}" is not an object`);
+        // Silently skip if parent is not an object
         return data;
       }
     }
@@ -447,19 +447,11 @@ const applyDelete = (
     return data;
   }
 
-  // Resolve parent path for nested deletes
-  const parentPath = resolveParentPath(delta.parentOpId, delta.parentKey, opIdToKey, deltaList);
-
-  // 🔥 Evaluate conditionStack if present - ALL conditions must be true
+  // 🔥 Evaluate conditionStack FIRST (before resolving parentPath)
+  // This avoids warnings when conditions fail
   if (delta.conditionStack && delta.conditionStack.length > 0) {
     // Use sourceData for condition evaluation to get original values
     const evaluationData = sourceData && typeof sourceData === 'object' ? sourceData : data;
-
-    // For nested deletes, navigate to parent in sourceData
-    const evaluationSource =
-      parentPath.length > 0
-        ? getNestedObject(evaluationData, parentPath) || evaluationData
-        : evaluationData;
 
     for (const condition of delta.conditionStack) {
       const conditionFn = transforms?.get(condition.conditionName);
@@ -474,15 +466,18 @@ const applyDelete = (
         return data;
       }
 
-      const currentValue = evaluationSource[delta.key];
+      const currentValue = evaluationData[delta.key];
       const conditionResult = conditionFn.condition(currentValue, ...condition.conditionParams);
 
-      // If any condition is false, skip this delete
+      // If any condition is false, skip this delete silently
       if (!conditionResult) {
         return data;
       }
     }
   }
+
+  // Resolve parent path for nested deletes
+  const parentPath = resolveParentPath(delta.parentOpId, delta.parentKey, opIdToKey, deltaList);
 
   if (parentPath.length > 0) {
     // Navigate to parent object
@@ -527,6 +522,35 @@ const applyTransform = (
     return data;
   }
 
+  // 🔥 Evaluate condition stack FIRST (before checking parentPath)
+  // This avoids warnings when conditions fail
+  if (delta.conditionStack && delta.conditionStack.length > 0) {
+    // Use sourceData for condition evaluation to get original values
+    const evaluationData = sourceData && typeof sourceData === 'object' ? sourceData : data;
+
+    for (const condition of delta.conditionStack) {
+      const conditionFn = transforms.get(condition.conditionName);
+      if (!conditionFn) {
+        logger.warn(`Condition "${condition.conditionName}" not found, skipping transform`);
+        return data; // Skip this transform if condition is missing
+      }
+
+      // ✅ Use the 'condition' function (not 'fn') to evaluate conditions
+      if (!conditionFn.condition) {
+        logger.warn(`Transform "${condition.conditionName}" is not a condition, skipping`);
+        return data;
+      }
+
+      const currentValue = evaluationData[delta.key];
+      const conditionResult = conditionFn.condition(currentValue, ...condition.conditionParams);
+
+      // If any condition is false, skip this transform silently
+      if (!conditionResult) {
+        return data;
+      }
+    }
+  }
+
   // Resolve parent path for nested transforms
   const parentPath = resolveParentPath(delta.parentOpId, delta.parentKey, opIdToKey, deltaList);
 
@@ -553,34 +577,6 @@ const applyTransform = (
 
     // Update data with modified parent
     return updateNestedObject(data, parentPath, transformedParent);
-  }
-
-  // 🔥 Evaluate condition stack - ALL conditions must be true
-  if (delta.conditionStack && delta.conditionStack.length > 0) {
-    // Use sourceData for condition evaluation to get original values
-    const evaluationData = sourceData && typeof sourceData === 'object' ? sourceData : data;
-
-    for (const condition of delta.conditionStack) {
-      const conditionFn = transforms.get(condition.conditionName);
-      if (!conditionFn) {
-        logger.warn(`Condition "${condition.conditionName}" not found, skipping transform`);
-        return data; // Skip this transform if condition is missing
-      }
-
-      // ✅ Use the 'condition' function (not 'fn') to evaluate conditions
-      if (!conditionFn.condition) {
-        logger.warn(`Transform "${condition.conditionName}" is not a condition, skipping`);
-        return data;
-      }
-
-      const currentValue = evaluationData[delta.key];
-      const conditionResult = conditionFn.condition(currentValue, ...condition.conditionParams);
-
-      // If any condition is false, skip this transform
-      if (!conditionResult) {
-        return data;
-      }
-    }
   }
 
   // Get current value
