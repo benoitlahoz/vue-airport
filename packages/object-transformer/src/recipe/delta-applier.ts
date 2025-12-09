@@ -483,7 +483,7 @@ const applyDelete = (
     // Navigate to parent object
     const parent = getNestedObject(data, parentPath);
     if (!parent || typeof parent !== 'object') {
-      logger.warn(`Cannot delete: parent not found at path [${parentPath.join(' → ')}]`);
+      // Silently skip - parent may be conditionally created
       return data;
     }
 
@@ -558,7 +558,7 @@ const applyTransform = (
     // Navigate to parent object
     const parent = getNestedObject(data, parentPath);
     if (!parent || typeof parent !== 'object') {
-      logger.warn(`Cannot transform: parent not found at path [${parentPath.join(' → ')}]`);
+      // Silently skip - parent may be conditionally created
       return data;
     }
 
@@ -619,14 +619,12 @@ const applyRename = (
     // Navigate to parent object
     const parent = getNestedObject(data, parentPath);
     if (!parent || typeof parent !== 'object') {
-      logger.warn(`Cannot rename: parent not found at path [${parentPath.join(' → ')}]`);
+      // Silently skip - parent may be conditionally created
       return data;
     }
 
     if (!(delta.from in parent)) {
-      logger.warn(
-        `Cannot rename: property "${delta.from}" not found in parent at [${parentPath.join(' → ')}]`
-      );
+      // Silently skip - property may be conditionally created
       return data;
     }
 
@@ -646,7 +644,7 @@ const applyRename = (
 
   // Root level rename
   if (!(delta.from in data)) {
-    logger.warn(`Cannot rename: property "${delta.from}" not found`);
+    // Silently skip - property may be conditionally created
     return data;
   }
 
