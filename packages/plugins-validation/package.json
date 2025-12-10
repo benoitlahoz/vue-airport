@@ -1,6 +1,6 @@
 {
   "name": "@vue-airport/plugins-validation",
-  "version": "2.0.0",
+  "version": "2.0.4",
   "description": "Validation plugins for vue-airport (constraints, schema, etc.)",
   "author": "Benoit Lahoz",
   "license": "MIT",
