@@ -9,7 +9,7 @@ import { NoOp, Debug } from '../utils';
 
 export interface DeskWithContext<T = any, TContext extends Record<string, any> = {}>
   extends DeskCore<T> {
-  context?: TContext;
+  context: TContext;
 }
 
 export interface ProvideDeskResult<T = any, TContext extends Record<string, any> = {}> {

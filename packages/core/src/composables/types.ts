@@ -101,8 +101,15 @@ export interface CheckInPlugin<
 
   /**
    * Called after an item is successfully checked out.
+   *
+   * Supports two signatures for backwards compatibility:
+   * - `(id: string | number, desk: DeskCore<T>)` - legacy signature
+   * - `(id: string | number, data: T, desk: DeskCore<T>)` - new signature with item data
    */
-  onCheckOut?: (id: string | number, desk: DeskCore<T>) => void | Promise<void>;
+  onCheckOut?: {
+    (id: string | number, desk: DeskCore<T>): void | Promise<void>;
+    (id: string | number, data: T, desk: DeskCore<T>): void | Promise<void>;
+  };
 
   /**
    * Custom methods to add to the desk.

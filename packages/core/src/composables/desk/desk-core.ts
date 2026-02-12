@@ -51,7 +51,10 @@ export interface DeskCoreOptions<
     id: string | number,
     desk: DeskCore<T, TContext>
   ) => boolean | undefined | Promise<boolean | undefined>;
-  onCheckOut?: (id: string | number, desk: DeskCore<T, TContext>) => void | Promise<void>;
+  onCheckOut?: {
+    (id: string | number, desk: DeskCore<T, TContext>): void | Promise<void>;
+    (id: string | number, data: T, desk: DeskCore<T, TContext>): void | Promise<void>;
+  };
   debug?: boolean;
   devTools?: boolean;
   plugins?: CheckInPlugin<T, CheckInPluginMethods<T>, CheckInPluginComputed<T>>[];
@@ -96,8 +99,13 @@ export interface DeskCore<T = any, TContext extends Record<string, any> = {}> {
     name: string
   ) => CheckInPlugin<T, CheckInPluginMethods<T>, CheckInPluginComputed<T>> | undefined;
 
-  setContext: <U extends TContext>(context: U) => U | undefined;
-  getContext: <U extends TContext>() => U | undefined;
+  setContext: <U extends TContext>(context: U) => U;
+  getContext: <U extends TContext>() => U;
+
+  /**
+   * Direct access to the current context (always defined)
+   */
+  readonly context: TContext;
 
   checkIn: (id: string | number, data: T, meta?: Record<string, any>) => Promise<boolean>;
   checkOut: (id: string | number) => Promise<boolean>;
@@ -142,7 +150,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
   /**
    * Internal variable to store the resolved context (will be set after desk creation)
    */
-  let resolvedContext: TContext | undefined;
+  let resolvedContext: TContext = {} as TContext;
 
   /**
    * Primary storage: Map (fast lookups, O(1) operations)
@@ -200,7 +208,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
 
   const pluginCleanups: Array<() => void> = [];
 
-  const getContext = <U extends TContext>() => resolvedContext as U | undefined;
+  const getContext = <U extends TContext>() => resolvedContext as U;
 
   const setContext = <U extends TContext>(context: U) => {
     resolvedContext = context;
@@ -328,6 +336,10 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
         return false;
       }
     }
+
+    // Capture item data before deletion
+    const item = registryMap.get(id);
+
     // Update registry (O(1))
     registryMap.delete(id);
 
@@ -354,7 +366,12 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       for (const plugin of options.plugins) {
         if (plugin.onCheckOut) {
           const startTime = performance.now();
-          await plugin.onCheckOut(id, desk);
+          // Support both old (2 params) and new (3 params) signatures
+          if (plugin.onCheckOut.length === 2) {
+            await plugin.onCheckOut(id, desk);
+          } else {
+            await plugin.onCheckOut(id, item?.data as T, desk);
+          }
           const duration = performance.now() - startTime;
 
           devTools.emit({
@@ -372,7 +389,12 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
 
     // Lifecycle: after
     if (options?.onCheckOut) {
-      await options.onCheckOut(id, desk);
+      // Support both old (2 params) and new (3 params) signatures
+      if (options.onCheckOut.length === 2) {
+        await options.onCheckOut(id, desk);
+      } else {
+        await options.onCheckOut(id, item?.data as T, desk);
+      }
     }
 
     if (options?.debug) {
@@ -450,10 +472,10 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
     if (typeof existing.data === 'object' && typeof data === 'object') {
       const previousData = { ...existing.data };
 
-      // Direct mutation (performant - reactivity is ensured via syncList())
+      // Direct mutation (performant)
       Object.assign(existing.data as object, data);
 
-      // Sync list (triggers reactivity for registryList)
+      // Sync list (forces Vue reactivity by creating new array reference)
       syncList();
 
       // Invalidate sort cache only if sorted fields might have changed
@@ -640,6 +662,9 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
     pluginByName,
     setContext,
     getContext,
+    get context() {
+      return resolvedContext;
+    },
     checkIn,
     checkOut,
     get,

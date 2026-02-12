@@ -212,14 +212,23 @@ export const checkInToDesk = <T = any, TContext extends Record<string, any> = {}
         return typeof checkInOptions.data === 'function'
           ? (
               checkInOptions.data as
+                | ((desk: DeskCore<T> & TContext, id: string | number) => T)
+                | ((desk: DeskCore<T> & TContext, id: string | number) => Promise<T>)
                 | ((desk: DeskCore<T> & TContext) => T)
                 | ((desk: DeskCore<T> & TContext) => Promise<T>)
                 | (() => T)
                 | (() => Promise<T>)
-            )(desk!)
+            )(desk!, itemId)
           : checkInOptions.data;
       },
       async (newData) => {
+        debug(`${DebugPrefix} watchData triggered:`, {
+          itemId,
+          isCheckedIn: isCheckedIn.value,
+          newData,
+          type: typeof newData,
+        });
+
         if (isCheckedIn.value && newData !== undefined) {
           // Start async guard
           const updateToken = asyncGuard.startUpdate();
@@ -234,6 +243,11 @@ export const checkInToDesk = <T = any, TContext extends Record<string, any> = {}
 
           desk!.update(itemId, resolvedData);
           debug(`${DebugPrefix} Updated data for: ${itemId}`, resolvedData);
+        } else if (newData === undefined) {
+          debug(`${DebugPrefix} watchData skipped - newData is undefined`, {
+            itemId,
+            isCheckedIn: isCheckedIn.value,
+          });
         }
       },
       watchOptions
