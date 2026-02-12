@@ -51,10 +51,7 @@ export interface DeskCoreOptions<
     id: string | number,
     desk: DeskCore<T, TContext>
   ) => boolean | undefined | Promise<boolean | undefined>;
-  onCheckOut?: {
-    (id: string | number, desk: DeskCore<T, TContext>): void | Promise<void>;
-    (id: string | number, data: T, desk: DeskCore<T, TContext>): void | Promise<void>;
-  };
+  onCheckOut?: (id: string | number, data: T, desk: DeskCore<T, TContext>) => void | Promise<void>;
   debug?: boolean;
   devTools?: boolean;
   plugins?: CheckInPlugin<T, CheckInPluginMethods<T>, CheckInPluginComputed<T>>[];
@@ -366,12 +363,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       for (const plugin of options.plugins) {
         if (plugin.onCheckOut) {
           const startTime = performance.now();
-          // Support both old (2 params) and new (3 params) signatures
-          if (plugin.onCheckOut.length === 2) {
-            await plugin.onCheckOut(id, desk);
-          } else {
-            await plugin.onCheckOut(id, item?.data as T, desk);
-          }
+          await plugin.onCheckOut(id, item?.data as T, desk);
           const duration = performance.now() - startTime;
 
           devTools.emit({
@@ -389,12 +381,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
 
     // Lifecycle: after
     if (options?.onCheckOut) {
-      // Support both old (2 params) and new (3 params) signatures
-      if (options.onCheckOut.length === 2) {
-        await options.onCheckOut(id, desk);
-      } else {
-        await options.onCheckOut(id, item?.data as T, desk);
-      }
+      await options.onCheckOut(id, item?.data as T, desk);
     }
 
     if (options?.debug) {
