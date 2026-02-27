@@ -96,6 +96,7 @@ export interface CheckInPlugin<
    */
   onBeforeCheckOut?: (
     id: string | number,
+    data: T,
     desk: DeskCore<T>
   ) => boolean | undefined | Promise<boolean | undefined>;
 

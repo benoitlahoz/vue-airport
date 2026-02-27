@@ -49,6 +49,7 @@ export interface DeskCoreOptions<
   onCheckIn?: (id: string | number, data: T, desk: DeskCore<T, TContext>) => void | Promise<void>;
   onBeforeCheckOut?: (
     id: string | number,
+    data: T,
     desk: DeskCore<T, TContext>
   ) => boolean | undefined | Promise<boolean | undefined>;
   onCheckOut?: (id: string | number, data: T, desk: DeskCore<T, TContext>) => void | Promise<void>;
@@ -313,11 +314,15 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
     const existed = registryMap.has(id);
     if (!existed) return false;
 
+    // Capture item data before lifecycle hooks/deletion
+    const item = registryMap.get(id);
+    const itemData = item?.data as T;
+
     // Lifecycle: before (plugins first, then user hook)
     if (options?.plugins) {
       for (const plugin of options.plugins) {
         if (plugin.onBeforeCheckOut) {
-          const result = await plugin.onBeforeCheckOut(id, desk);
+          const result = await plugin.onBeforeCheckOut(id, itemData, desk);
           if (result === false) {
             debug(`${DebugPrefix} checkOut cancelled by plugin:`, plugin.name);
             return false;
@@ -327,15 +332,12 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
     }
 
     if (options?.onBeforeCheckOut) {
-      const result = await options.onBeforeCheckOut(id, desk);
+      const result = await options.onBeforeCheckOut(id, itemData, desk);
       if (result === false) {
         debug(`${DebugPrefix} checkOut cancelled by onBeforeCheckOut`, id);
         return false;
       }
     }
-
-    // Capture item data before deletion
-    const item = registryMap.get(id);
 
     // Update registry (O(1))
     registryMap.delete(id);
@@ -363,7 +365,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
       for (const plugin of options.plugins) {
         if (plugin.onCheckOut) {
           const startTime = performance.now();
-          await plugin.onCheckOut(id, item?.data as T, desk);
+          await plugin.onCheckOut(id, itemData, desk);
           const duration = performance.now() - startTime;
 
           devTools.emit({
@@ -381,7 +383,7 @@ export const createDeskCore = <T = any, TContext extends Record<string, any> = {
 
     // Lifecycle: after
     if (options?.onCheckOut) {
-      await options.onCheckOut(id, item?.data as T, desk);
+      await options.onCheckOut(id, itemData, desk);
     }
 
     if (options?.debug) {
